@@ -1,9 +1,15 @@
-use macroquad::prelude::*;
+use bevy::color::palettes::basic::{BLUE, GREEN, RED, WHITE, YELLOW};
+use bevy::color::palettes::css::ORANGE;
+use bevy::prelude::*;
+use bevy::sprite::Anchor;
 
 // Game constants
+const WINDOW_WIDTH: f32 = 900.0;
+const WINDOW_HEIGHT: f32 = 650.0;
 const PADDLE_WIDTH: f32 = 120.0;
 const PADDLE_HEIGHT: f32 = 20.0;
 const PADDLE_SPEED: f32 = 500.0;
+const PADDLE_MARGIN_BOTTOM: f32 = 10.0;
 const BALL_SIZE: f32 = 15.0;
 const BALL_SPEED: f32 = 300.0;
 const BRICK_WIDTH: f32 = 80.0;
@@ -11,202 +17,315 @@ const BRICK_HEIGHT: f32 = 30.0;
 const BRICK_ROWS: usize = 5;
 const BRICK_COLS: usize = 10;
 
-// Game state
-struct GameState {
-    paddle_x: f32,
-    ball_x: f32,
-    ball_y: f32,
-    ball_velocity_x: f32,
-    ball_velocity_y: f32,
-    bricks: Vec<Brick>,
-    score: i32,
-    lives: i32,
-    game_over: bool,
+#[derive(Component)]
+struct Paddle;
+
+#[derive(Component)]
+struct Ball {
+    velocity: Vec2,
 }
 
-struct Brick {
-    x: f32,
-    y: f32,
-    alive: bool,
-    color: Color,
+#[derive(Component)]
+struct Brick;
+
+#[derive(Component)]
+struct ScoreText;
+
+#[derive(Component)]
+struct LivesText;
+
+#[derive(Component)]
+struct GameOverText;
+
+#[derive(Resource, Default)]
+struct Score(i32);
+
+#[derive(Resource)]
+struct Lives(i32);
+
+#[derive(Resource, Default, PartialEq, Clone, Copy)]
+enum GameStatus {
+    #[default]
+    Playing,
+    Lost,
+    Won,
 }
 
-impl GameState {
-    fn new() -> Self {
-        let mut bricks = Vec::new();
-        let colors = [RED, ORANGE, YELLOW, GREEN, BLUE];
-
-        // Create brick grid
-        for row in 0..BRICK_ROWS {
-            for col in 0..BRICK_COLS {
-                bricks.push(Brick {
-                    x: col as f32 * (BRICK_WIDTH + 5.0) + 40.0,
-                    y: row as f32 * (BRICK_HEIGHT + 5.0) + 50.0,
-                    alive: true,
-                    color: colors[row % colors.len()],
-                });
-            }
-        }
-
-        Self {
-            paddle_x: screen_width() / 2.0 - PADDLE_WIDTH / 2.0,
-            ball_x: screen_width() / 2.0,
-            ball_y: screen_height() / 2.0,
-            ball_velocity_x: BALL_SPEED,
-            ball_velocity_y: -BALL_SPEED,
-            bricks,
-            score: 0,
-            lives: 3,
-            game_over: false,
-        }
+fn main() {
+    // WSLg's Wayland compositor combined with the llvmpipe software Vulkan
+    // renderer hits a surface-lost bug on window creation here. X11 (also
+    // provided by WSLg) works reliably, and an empty value is treated the
+    // same as unset by winit's backend auto-detection.
+    // SAFETY: called at the very start of main, before any other thread
+    // could read the environment.
+    unsafe {
+        std::env::set_var("WAYLAND_DISPLAY", "");
     }
 
-    fn update(&mut self, delta_time: f32) {
-        if self.game_over {
-            return;
-        }
+    App::new()
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                title: "Breakout".into(),
+                resolution: (WINDOW_WIDTH as u32, WINDOW_HEIGHT as u32).into(),
+                ..default()
+            }),
+            ..default()
+        }))
+        .insert_resource(ClearColor(Color::BLACK))
+        .init_resource::<Score>()
+        .insert_resource(Lives(3))
+        .init_resource::<GameStatus>()
+        .add_systems(Startup, setup)
+        .add_systems(
+            Update,
+            (restart_game, paddle_movement, ball_movement, update_ui).chain(),
+        )
+        .run();
+}
 
-        // Move paddle with arrow keys or mouse
-        if is_key_down(KeyCode::Left) || is_key_down(KeyCode::A) {
-            self.paddle_x -= PADDLE_SPEED * delta_time;
-        }
-        if is_key_down(KeyCode::Right) || is_key_down(KeyCode::D) {
-            self.paddle_x += PADDLE_SPEED * delta_time;
-        }
+fn setup(mut commands: Commands) {
+    commands.spawn(Camera2d);
 
-        // Clamp paddle to screen bounds
-        self.paddle_x = self.paddle_x.max(0.0)
-            .min(screen_width() - PADDLE_WIDTH);
+    commands.spawn((
+        Sprite::from_color(WHITE, Vec2::new(PADDLE_WIDTH, PADDLE_HEIGHT)),
+        Transform::from_xyz(
+            0.0,
+            -WINDOW_HEIGHT / 2.0 + PADDLE_HEIGHT / 2.0 + PADDLE_MARGIN_BOTTOM,
+            0.0,
+        ),
+        Paddle,
+    ));
 
-        // Move ball
-        self.ball_x += self.ball_velocity_x * delta_time;
-        self.ball_y += self.ball_velocity_y * delta_time;
+    commands.spawn((
+        Sprite::from_color(WHITE, Vec2::splat(BALL_SIZE)),
+        Transform::from_xyz(0.0, 0.0, 0.0),
+        Ball {
+            velocity: Vec2::new(BALL_SPEED, -BALL_SPEED),
+        },
+    ));
 
-        // Ball collision with walls
-        if self.ball_x <= 0.0 || self.ball_x >= screen_width() - BALL_SIZE {
-            self.ball_velocity_x *= -1.0;
-        }
-        if self.ball_y <= 0.0 {
-            self.ball_velocity_y *= -1.0;
-        }
+    spawn_bricks(&mut commands);
 
-        // Ball collision with paddle
-        if self.ball_y + BALL_SIZE >= screen_height() - PADDLE_HEIGHT - 10.0
-            && self.ball_x >= self.paddle_x
-            && self.ball_x <= self.paddle_x + PADDLE_WIDTH {
-            self.ball_velocity_y *= -1.0;
+    commands.spawn((
+        Text2d::new("Score: 0"),
+        TextFont {
+            font_size: FontSize::Px(24.0),
+            ..default()
+        },
+        TextColor(WHITE.into()),
+        Anchor::TOP_LEFT,
+        Transform::from_xyz(-WINDOW_WIDTH / 2.0 + 20.0, WINDOW_HEIGHT / 2.0 - 10.0, 1.0),
+        ScoreText,
+    ));
 
-            // Add spin based on where ball hits paddle
-            let hit_pos = (self.ball_x - self.paddle_x) / PADDLE_WIDTH;
-            self.ball_velocity_x = (hit_pos - 0.5) * BALL_SPEED * 2.0;
-        }
+    commands.spawn((
+        Text2d::new("Lives: 3"),
+        TextFont {
+            font_size: FontSize::Px(24.0),
+            ..default()
+        },
+        TextColor(WHITE.into()),
+        Anchor::TOP_LEFT,
+        Transform::from_xyz(-WINDOW_WIDTH / 2.0 + 20.0, WINDOW_HEIGHT / 2.0 - 40.0, 1.0),
+        LivesText,
+    ));
 
-        // Ball fell off bottom
-        if self.ball_y > screen_height() {
-            self.lives -= 1;
-            if self.lives <= 0 {
-                self.game_over = true;
-            } else {
-                self.reset_ball();
-            }
-        }
+    commands.spawn((
+        Text2d::new(""),
+        TextFont {
+            font_size: FontSize::Px(32.0),
+            ..default()
+        },
+        TextColor(YELLOW.into()),
+        Anchor::CENTER,
+        Transform::from_xyz(0.0, 0.0, 1.0),
+        GameOverText,
+    ));
+}
 
-        // Ball collision with bricks
-        for brick in &mut self.bricks {
-            if !brick.alive {
-                continue;
-            }
+fn spawn_bricks(commands: &mut Commands) {
+    let colors = [RED, ORANGE, YELLOW, GREEN, BLUE];
 
-            if self.ball_x + BALL_SIZE >= brick.x
-                && self.ball_x <= brick.x + BRICK_WIDTH
-                && self.ball_y + BALL_SIZE >= brick.y
-                && self.ball_y <= brick.y + BRICK_HEIGHT {
-                brick.alive = false;
-                self.ball_velocity_y *= -1.0;
-                self.score += 10;
-                break;
-            }
-        }
+    for row in 0..BRICK_ROWS {
+        for col in 0..BRICK_COLS {
+            let x = col as f32 * (BRICK_WIDTH + 5.0) + 40.0 + BRICK_WIDTH / 2.0 - WINDOW_WIDTH / 2.0;
+            let y = WINDOW_HEIGHT / 2.0
+                - (row as f32 * (BRICK_HEIGHT + 5.0) + 50.0 + BRICK_HEIGHT / 2.0);
 
-        // Check win condition
-        if self.bricks.iter().all(|b| !b.alive) {
-            self.game_over = true;
-        }
-    }
-
-    fn reset_ball(&mut self) {
-        self.ball_x = screen_width() / 2.0;
-        self.ball_y = screen_height() / 2.0;
-        self.ball_velocity_x = BALL_SPEED;
-        self.ball_velocity_y = -BALL_SPEED;
-    }
-
-    fn draw(&self) {
-        clear_background(BLACK);
-
-        // Draw paddle
-        draw_rectangle(
-            self.paddle_x,
-            screen_height() - PADDLE_HEIGHT - 10.0,
-            PADDLE_WIDTH,
-            PADDLE_HEIGHT,
-            WHITE,
-        );
-
-        // Draw ball
-        draw_circle(self.ball_x, self.ball_y, BALL_SIZE / 2.0, WHITE);
-
-        // Draw bricks
-        for brick in &self.bricks {
-            if brick.alive {
-                draw_rectangle(
-                    brick.x,
-                    brick.y,
-                    BRICK_WIDTH,
-                    BRICK_HEIGHT,
-                    brick.color,
-                );
-            }
-        }
-
-        // Draw UI
-        draw_text(&format!("Score: {}", self.score), 20.0, 30.0, 30.0, WHITE);
-        draw_text(&format!("Lives: {}", self.lives), 20.0, 60.0, 30.0, WHITE);
-
-        if self.game_over {
-            let text = if self.lives <= 0 {
-                "GAME OVER - Press R to Restart"
-            } else {
-                "YOU WIN! - Press R to Restart"
-            };
-            let text_size = 40.0;
-            let text_width = text.len() as f32 * text_size * 0.5;
-            draw_text(
-                text,
-                screen_width() / 2.0 - text_width / 2.0,
-                screen_height() / 2.0,
-                text_size,
-                YELLOW,
-            );
+            commands.spawn((
+                Sprite::from_color(colors[row % colors.len()], Vec2::new(BRICK_WIDTH, BRICK_HEIGHT)),
+                Transform::from_xyz(x, y, 0.0),
+                Brick,
+            ));
         }
     }
 }
 
-#[macroquad::main("Breakout")]
-async fn main() {
-    let mut game = GameState::new();
+fn paddle_movement(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    time: Res<Time>,
+    status: Res<GameStatus>,
+    mut paddle_query: Query<&mut Transform, With<Paddle>>,
+) {
+    if *status != GameStatus::Playing {
+        return;
+    }
+    let Ok(mut transform) = paddle_query.single_mut() else {
+        return;
+    };
 
-    loop {
-        let delta_time = get_frame_time();
+    let mut dx = 0.0;
+    if keyboard.pressed(KeyCode::ArrowLeft) || keyboard.pressed(KeyCode::KeyA) {
+        dx -= PADDLE_SPEED * time.delta_secs();
+    }
+    if keyboard.pressed(KeyCode::ArrowRight) || keyboard.pressed(KeyCode::KeyD) {
+        dx += PADDLE_SPEED * time.delta_secs();
+    }
 
-        // Reset game on R key
-        if is_key_pressed(KeyCode::R) {
-            game = GameState::new();
+    let half_range = WINDOW_WIDTH / 2.0 - PADDLE_WIDTH / 2.0;
+    transform.translation.x = (transform.translation.x + dx).clamp(-half_range, half_range);
+}
+
+fn ball_movement(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut status: ResMut<GameStatus>,
+    mut score: ResMut<Score>,
+    mut lives: ResMut<Lives>,
+    paddle_query: Query<&Transform, (With<Paddle>, Without<Ball>)>,
+    mut ball_query: Query<(&mut Transform, &mut Ball)>,
+    brick_query: Query<(Entity, &Transform), (With<Brick>, Without<Ball>, Without<Paddle>)>,
+) {
+    if *status != GameStatus::Playing {
+        return;
+    }
+    let Ok((mut ball_transform, mut ball)) = ball_query.single_mut() else {
+        return;
+    };
+
+    let dt = time.delta_secs();
+    ball_transform.translation.x += ball.velocity.x * dt;
+    ball_transform.translation.y += ball.velocity.y * dt;
+
+    // Wall collisions
+    let half_w = WINDOW_WIDTH / 2.0 - BALL_SIZE / 2.0;
+    let half_h = WINDOW_HEIGHT / 2.0 - BALL_SIZE / 2.0;
+
+    if ball_transform.translation.x <= -half_w || ball_transform.translation.x >= half_w {
+        ball.velocity.x *= -1.0;
+        ball_transform.translation.x = ball_transform.translation.x.clamp(-half_w, half_w);
+    }
+    if ball_transform.translation.y >= half_h {
+        ball.velocity.y *= -1.0;
+        ball_transform.translation.y = half_h;
+    }
+
+    // Paddle collision
+    if let Ok(paddle_transform) = paddle_query.single() {
+        let paddle_top = paddle_transform.translation.y + PADDLE_HEIGHT / 2.0;
+        let paddle_left = paddle_transform.translation.x - PADDLE_WIDTH / 2.0;
+        let paddle_right = paddle_transform.translation.x + PADDLE_WIDTH / 2.0;
+        let ball_bottom = ball_transform.translation.y - BALL_SIZE / 2.0;
+
+        if ball.velocity.y < 0.0
+            && ball_bottom <= paddle_top
+            && ball_transform.translation.y >= paddle_transform.translation.y
+            && ball_transform.translation.x >= paddle_left
+            && ball_transform.translation.x <= paddle_right
+        {
+            ball.velocity.y *= -1.0;
+
+            // Add spin based on where the ball hit the paddle
+            let hit_pos = (ball_transform.translation.x - paddle_left) / PADDLE_WIDTH;
+            ball.velocity.x = (hit_pos - 0.5) * BALL_SPEED * 2.0;
         }
+    }
 
-        game.update(delta_time);
-        game.draw();
+    // Ball fell off the bottom
+    if ball_transform.translation.y < -WINDOW_HEIGHT / 2.0 {
+        lives.0 -= 1;
+        if lives.0 <= 0 {
+            *status = GameStatus::Lost;
+        } else {
+            ball_transform.translation.x = 0.0;
+            ball_transform.translation.y = 0.0;
+            ball.velocity = Vec2::new(BALL_SPEED, -BALL_SPEED);
+        }
+        return;
+    }
 
-        next_frame().await;
+    // Ball collision with bricks
+    let total_bricks = brick_query.iter().count();
+    let mut hit = false;
+    for (entity, brick_transform) in &brick_query {
+        let dx = (ball_transform.translation.x - brick_transform.translation.x).abs();
+        let dy = (ball_transform.translation.y - brick_transform.translation.y).abs();
+
+        if dx <= (BRICK_WIDTH + BALL_SIZE) / 2.0 && dy <= (BRICK_HEIGHT + BALL_SIZE) / 2.0 {
+            commands.entity(entity).despawn();
+            ball.velocity.y *= -1.0;
+            score.0 += 10;
+            hit = true;
+            break;
+        }
+    }
+
+    if hit && total_bricks == 1 {
+        *status = GameStatus::Won;
+    }
+}
+
+fn restart_game(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    mut commands: Commands,
+    mut status: ResMut<GameStatus>,
+    mut score: ResMut<Score>,
+    mut lives: ResMut<Lives>,
+    mut paddle_query: Query<&mut Transform, (With<Paddle>, Without<Ball>)>,
+    mut ball_query: Query<(&mut Transform, &mut Ball), Without<Paddle>>,
+    brick_query: Query<Entity, With<Brick>>,
+) {
+    if !keyboard.just_pressed(KeyCode::KeyR) {
+        return;
+    }
+
+    *status = GameStatus::Playing;
+    score.0 = 0;
+    lives.0 = 3;
+
+    if let Ok(mut paddle_transform) = paddle_query.single_mut() {
+        paddle_transform.translation.x = 0.0;
+    }
+    if let Ok((mut ball_transform, mut ball)) = ball_query.single_mut() {
+        ball_transform.translation.x = 0.0;
+        ball_transform.translation.y = 0.0;
+        ball.velocity = Vec2::new(BALL_SPEED, -BALL_SPEED);
+    }
+    for entity in &brick_query {
+        commands.entity(entity).despawn();
+    }
+    spawn_bricks(&mut commands);
+}
+
+fn update_ui(
+    score: Res<Score>,
+    lives: Res<Lives>,
+    status: Res<GameStatus>,
+    mut score_text: Query<&mut Text2d, (With<ScoreText>, Without<LivesText>, Without<GameOverText>)>,
+    mut lives_text: Query<&mut Text2d, (With<LivesText>, Without<ScoreText>, Without<GameOverText>)>,
+    mut game_over_text: Query<&mut Text2d, (With<GameOverText>, Without<ScoreText>, Without<LivesText>)>,
+) {
+    if let Ok(mut text) = score_text.single_mut() {
+        text.0 = format!("Score: {}", score.0);
+    }
+    if let Ok(mut text) = lives_text.single_mut() {
+        text.0 = format!("Lives: {}", lives.0);
+    }
+    if let Ok(mut text) = game_over_text.single_mut() {
+        text.0 = match *status {
+            GameStatus::Playing => String::new(),
+            GameStatus::Lost => "GAME OVER - Press R to Restart".to_string(),
+            GameStatus::Won => "YOU WIN! - Press R to Restart".to_string(),
+        };
     }
 }
