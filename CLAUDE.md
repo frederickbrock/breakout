@@ -4,9 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-- Build: `cargo build`
-- Run: `cargo run`
-- Release build: `cargo build --release`
+- Web build (primary/default distribution target): `trunk build` (output in `dist/`)
+- Web dev server: `trunk serve` then open the shown localhost URL (default http://localhost:8080)
+- Native desktop dev loop (secondary): `cargo run`
+- Native release build: `cargo build --release`
+- One-time setup for the web build: `rustup target add wasm32-unknown-unknown` and `cargo install --locked trunk`
+
+Verifying the web build requires manually opening it in a browser (there is no X11-window
+watch loop for wasm).
 
 Single binary crate (`sim`), no workspace, no test suite or lint config in the repo currently.
 
@@ -73,7 +78,14 @@ not hand-rolled kinematics/AABB checks.
 - `main.rs::main()` sets `WAYLAND_DISPLAY` to an empty string before building the `App` —
   this is a deliberate WSLg workaround (Wayland + the llvmpipe software renderer hit a
   surface-lost bug on this setup; forcing winit onto X11 fixes it), not dead code to clean
-  up.
+  up. It is now compiled out on wasm via `#[cfg(not(target_arch = "wasm32"))]` — the
+  workaround is desktop-only and irrelevant in the browser.
+- **wasm enablement is entirely target-gated Cargo.toml / cargo config**, with no gameplay
+  logic changes: on `wasm32` avian2d drops its default `parallel` feature (rayon +
+  `bevy/multi_threaded` do not build for the browser), bevy gains the `webgl2` renderer
+  feature, and getrandom's browser-crypto `wasm_js` backend is turned on for rand via
+  `--cfg getrandom_backend="wasm_js"` in `.cargo/config.toml` (scoped to the wasm target
+  only, so native builds are untouched).
 
 ## Beads Workflow Integration
 
