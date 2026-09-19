@@ -87,6 +87,7 @@ fn main() {
     // same as unset by winit's backend auto-detection.
     // SAFETY: called at the very start of main, before any other thread
     // could read the environment.
+    #[cfg(not(target_arch = "wasm32"))]
     unsafe {
         std::env::set_var("WAYLAND_DISPLAY", "");
     }
