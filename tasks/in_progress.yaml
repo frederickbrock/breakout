@@ -1,0 +1,10 @@
+- id: SIM-001
+  title: "Add wasm32 browser build via trunk (WebGL2) and make it the default distribution target, keeping native cargo run working"
+  description: "Configure target-gated Cargo.toml features for a wasm32-unknown-unknown browser build (Bevy webgl2, avian2d without parallel/rayon, getrandom wasm_js backend), gate the desktop WSLg WAYLAND workaround, and add trunk build tooling (index.html, Trunk.toml, .cargo/config.toml)."
+  priority: high
+  depends_on: []
+  status: in_progress
+  assigned_to: executor-agent
+  branch: feat/sim-001-wasm-web-build
+  created_at: "2026-09-19T01:24:49Z"
+  picked_up_at: "2026-09-19T01:39:24Z"
