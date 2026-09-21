@@ -74,6 +74,12 @@ enum GameStatus {
 #[derive(Event)]
 struct RestartGame;
 
+
+/// Broadcast when the player presses Q to quit the game. Each subsystem
+/// that has its own state shutdowns
+#[derive(Event)]
+struct QuitGamme;
+
 /// Lets other systems (e.g. a power-up that changes paddle width) declare
 /// they must run before paddle movement each frame, without `main.rs` having
 /// to manually interleave their systems into its own `Update` chain.
@@ -102,10 +108,10 @@ fn main() {
             ..default()
         }))
         .add_plugins(PhysicsPlugins::default())
-        .insert_resource(Gravity(Vec2::ZERO))
+        .insert_resource(Gravity(Vec2::new(0.0,0.1)))
         .insert_resource(ClearColor(Color::BLACK))
         .init_resource::<Score>()
-        .insert_resource(Lives(3))
+        .insert_resource(Lives(5))
         .init_resource::<GameStatus>()
         .init_resource::<BallCollisionSignals>()
         .add_observer(on_ball_collision)
@@ -289,7 +295,7 @@ fn on_ball_collision(
     mut score: ResMut<Score>,
     mut signals: ResMut<BallCollisionSignals>,
     brick_query: Query<(), With<Brick>>,
-    paddle_query: Query<&Transform, With<Paddle>>,
+    paddle_query: Query<&Transform, With<Paddle>>
 ) {
     if *status != GameStatus::Playing {
         return;
@@ -316,6 +322,7 @@ struct BallCollisionSignals {
 /// this reacts to what [`on_ball_collision`] recorded (score, the paddle-hit
 /// "spin" feel) and keeps the ball's speed at a controlled, designed
 /// magnitude rather than letting raw momentum transfer drift it.
+
 fn ball_movement(
     mut status: ResMut<GameStatus>,
     mut lives: ResMut<Lives>,
