@@ -13,8 +13,8 @@ const WINDOW_HEIGHT: f32 = 650.0;
 const WALL_THICKNESS: f32 = 40.0;
 const PADDLE_WIDTH: f32 = 120.0;
 const PADDLE_HEIGHT: f32 = 20.0;
-const PADDLE_MASS: f32 = 5.0;
-const PADDLE_FORCE: f32 = 4000.0;
+const PADDLE_MASS: f32 = 3.0;
+const PADDLE_FORCE: f32 = 7000.0;
 const PADDLE_LINEAR_DAMPING: f32 = 4.0;
 const PADDLE_MARGIN_BOTTOM: f32 = 10.0;
 const BALL_SIZE: f32 = 15.0;
@@ -26,10 +26,10 @@ const BALL_SPEED: f32 = 300.0;
 // side-to-side forever, since nothing left in that lane can ever touch its Y
 // velocity again. Keeping a minimum vertical fraction guarantees the ball
 // always keeps drifting toward the bricks or the paddle.
-const BALL_MIN_VERTICAL_FRACTION: f32 = 0.2;
+const BALL_MIN_VERTICAL_FRACTION: f32 = 0.3;
 const BRICK_WIDTH: f32 = 80.0;
 const BRICK_HEIGHT: f32 = 30.0;
-const BRICK_ROWS: usize = 5;
+const BRICK_ROWS: usize = 6;
 const BRICK_COLS: usize = 10;
 
 #[derive(Component)]
@@ -62,6 +62,7 @@ struct Lives(i32);
 enum GameStatus {
     #[default]
     Playing,
+    Paused,
     Lost,
     Won,
 }
@@ -73,6 +74,11 @@ enum GameStatus {
 /// with no changes needed here.
 #[derive(Event)]
 struct RestartGame;
+
+/// Broadcast when the player presses Q to quit the game. Each subsystem
+/// that has its own state shutdowns
+#[derive(Event)]
+struct QuitGamme;
 
 /// Lets other systems (e.g. a power-up that changes paddle width) declare
 /// they must run before paddle movement each frame, without `main.rs` having
@@ -87,6 +93,7 @@ fn main() {
     // same as unset by winit's backend auto-detection.
     // SAFETY: called at the very start of main, before any other thread
     // could read the environment.
+    #[cfg(not(target_arch = "wasm32"))]
     unsafe {
         std::env::set_var("WAYLAND_DISPLAY", "");
     }
@@ -101,15 +108,15 @@ fn main() {
             ..default()
         }))
         .add_plugins(PhysicsPlugins::default())
-        .insert_resource(Gravity(Vec2::ZERO))
+        .insert_resource(Gravity(Vec2::new(0.0, 0.8)))
         .insert_resource(ClearColor(Color::BLACK))
         .init_resource::<Score>()
-        .insert_resource(Lives(3))
+        .insert_resource(Lives(5))
         .init_resource::<GameStatus>()
         .init_resource::<BallCollisionSignals>()
         .add_observer(on_ball_collision)
         .add_plugins(powerups::PowerUpsPlugin)
-        .add_systems(Startup, setup)
+        .add_systems(Startup, setup_level)
         .add_systems(
             Update,
             (
@@ -123,45 +130,9 @@ fn main() {
         .run();
 }
 
-fn setup(mut commands: Commands) {
-    commands.spawn(Camera2d);
-
-    // Static walls the ball (and paddle) physically bounce off, instead of
-    // manual clamp/reflect code. No bottom wall — a ball reaching the bottom
-    // is a life lost, checked separately from physics.
-    let wall_specs = [
-        // left
-        (
-            -WINDOW_WIDTH / 2.0 - WALL_THICKNESS / 2.0,
-            0.0,
-            WALL_THICKNESS,
-            WINDOW_HEIGHT + WALL_THICKNESS * 2.0,
-        ),
-        // right
-        (
-            WINDOW_WIDTH / 2.0 + WALL_THICKNESS / 2.0,
-            0.0,
-            WALL_THICKNESS,
-            WINDOW_HEIGHT + WALL_THICKNESS * 2.0,
-        ),
-        // top
-        (
-            0.0,
-            WINDOW_HEIGHT / 2.0 + WALL_THICKNESS / 2.0,
-            WINDOW_WIDTH + WALL_THICKNESS * 2.0,
-            WALL_THICKNESS,
-        ),
-    ];
-    for (x, y, w, h) in wall_specs {
-        commands.spawn((
-            RigidBody::Static,
-            Collider::rectangle(w, h),
-            Transform::from_xyz(x, y, 0.0),
-        ));
-    }
-
+fn setup_ui(mut commands: Commands) {
     commands.spawn((
-        Sprite::from_color(WHITE, Vec2::new(PADDLE_WIDTH, PADDLE_HEIGHT)),
+        Sprite::from_color(RED, Vec2::new(PADDLE_WIDTH, PADDLE_HEIGHT)),
         Transform::from_xyz(
             0.0,
             -WINDOW_HEIGHT / 2.0 + PADDLE_HEIGHT / 2.0 + PADDLE_MARGIN_BOTTOM,
@@ -231,17 +202,61 @@ fn setup(mut commands: Commands) {
     ));
 }
 
+fn setup_level(mut commands: Commands) {
+    commands.spawn(Camera2d);
+
+    // Static walls the ball (and paddle) physically bounce off, instead of
+    // manual clamp/reflect code. No bottom wall — a ball reaching the bottom
+    // is a life lost, checked separately from physics.
+    let wall_specs = [
+        // left
+        (
+            -WINDOW_WIDTH / 2.0 - WALL_THICKNESS / 2.0,
+            0.0,
+            WALL_THICKNESS,
+            WINDOW_HEIGHT + WALL_THICKNESS * 2.0,
+        ),
+        // right
+        (
+            WINDOW_WIDTH / 2.0 + WALL_THICKNESS / 2.0,
+            0.0,
+            WALL_THICKNESS,
+            WINDOW_HEIGHT + WALL_THICKNESS * 2.0,
+        ),
+        // top
+        (
+            0.0,
+            WINDOW_HEIGHT / 2.0 + WALL_THICKNESS / 2.0,
+            WINDOW_WIDTH + WALL_THICKNESS * 2.0,
+            WALL_THICKNESS,
+        ),
+    ];
+    for (x, y, w, h) in wall_specs {
+        commands.spawn((
+            RigidBody::Static,
+            Collider::rectangle(w, h),
+            Transform::from_xyz(x, y, 0.0),
+        ));
+    }
+
+    setup_ui(commands);
+}
+
 fn spawn_bricks(commands: &mut Commands) {
     let colors = [RED, ORANGE, YELLOW, GREEN, BLUE];
 
     for row in 0..BRICK_ROWS {
         for col in 0..BRICK_COLS {
-            let x = col as f32 * (BRICK_WIDTH + 5.0) + 40.0 + BRICK_WIDTH / 2.0 - WINDOW_WIDTH / 2.0;
+            let x =
+                col as f32 * (BRICK_WIDTH + 5.0) + 40.0 + BRICK_WIDTH / 2.0 - WINDOW_WIDTH / 2.0;
             let y = WINDOW_HEIGHT / 2.0
                 - (row as f32 * (BRICK_HEIGHT + 5.0) + 50.0 + BRICK_HEIGHT / 2.0);
 
             commands.spawn((
-                Sprite::from_color(colors[row % colors.len()], Vec2::new(BRICK_WIDTH, BRICK_HEIGHT)),
+                Sprite::from_color(
+                    colors[row % colors.len()],
+                    Vec2::new(BRICK_WIDTH, BRICK_HEIGHT),
+                ),
                 Transform::from_xyz(x, y, 0.0),
                 RigidBody::Static,
                 Collider::rectangle(BRICK_WIDTH, BRICK_HEIGHT),
@@ -315,13 +330,17 @@ struct BallCollisionSignals {
 /// this reacts to what [`on_ball_collision`] recorded (score, the paddle-hit
 /// "spin" feel) and keeps the ball's speed at a controlled, designed
 /// magnitude rather than letting raw momentum transfer drift it.
+
 fn ball_movement(
     mut status: ResMut<GameStatus>,
     mut lives: ResMut<Lives>,
     mut signals: ResMut<BallCollisionSignals>,
     paddle_query: Query<(&Transform, &Paddle), (Without<Ball>, Without<Brick>)>,
     brick_query: Query<(), (With<Brick>, Without<Ball>, Without<Paddle>)>,
-    mut ball_query: Query<(&mut Transform, &mut LinearVelocity), (With<Ball>, Without<Paddle>, Without<Brick>)>,
+    mut ball_query: Query<
+        (&mut Transform, &mut LinearVelocity),
+        (With<Ball>, Without<Paddle>, Without<Brick>),
+    >,
 ) {
     let broke_brick = signals.broke_brick;
     let paddle_hit_x = signals.paddle_hit_x;
@@ -425,9 +444,18 @@ fn update_ui(
     score: Res<Score>,
     lives: Res<Lives>,
     status: Res<GameStatus>,
-    mut score_text: Query<&mut Text2d, (With<ScoreText>, Without<LivesText>, Without<GameOverText>)>,
-    mut lives_text: Query<&mut Text2d, (With<LivesText>, Without<ScoreText>, Without<GameOverText>)>,
-    mut game_over_text: Query<&mut Text2d, (With<GameOverText>, Without<ScoreText>, Without<LivesText>)>,
+    mut score_text: Query<
+        &mut Text2d,
+        (With<ScoreText>, Without<LivesText>, Without<GameOverText>),
+    >,
+    mut lives_text: Query<
+        &mut Text2d,
+        (With<LivesText>, Without<ScoreText>, Without<GameOverText>),
+    >,
+    mut game_over_text: Query<
+        &mut Text2d,
+        (With<GameOverText>, Without<ScoreText>, Without<LivesText>),
+    >,
 ) {
     if let Ok(mut text) = score_text.single_mut() {
         text.0 = format!("Score: {}", score.0);
@@ -438,6 +466,7 @@ fn update_ui(
     if let Ok(mut text) = game_over_text.single_mut() {
         text.0 = match *status {
             GameStatus::Playing => String::new(),
+            GameStatus::Paused => "Paused, Press P to Resume Game".to_string(),
             GameStatus::Lost => "GAME OVER - Press R to Restart".to_string(),
             GameStatus::Won => "YOU WIN! - Press R to Restart".to_string(),
         };

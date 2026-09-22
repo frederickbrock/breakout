@@ -6,6 +6,20 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-avian2d = "0.7.0"
 bevy = "0.19.1"
 rand = "0.10.2"
+
+# Native desktop build: avian2d with its full default feature set (includes
+# `parallel`/rayon, which is fine and desirable off the web).
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+avian2d = "0.7.0"
+
+# Browser (wasm32) build. avian2d's default `parallel` feature pulls rayon +
+# bevy/multi_threaded, which do not build on wasm32-unknown-unknown, so we
+# re-enable every default feature EXCEPT `parallel`. Bevy needs the `webgl2`
+# renderer feature for the browser. getrandom is a direct dep purely to turn on
+# its browser-crypto (`wasm_js`) backend used by rand.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+avian2d = { version = "0.7.0", default-features = false, features = ["2d", "f32", "parry-f32", "debug-plugin", "xpbd_joints", "bevy_scene", "bevy_picking"] }
+bevy = { version = "0.19.1", features = ["webgl2"] }
+getrandom = { version = "0.4", features = ["wasm_js"] }

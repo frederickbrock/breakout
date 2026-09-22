@@ -8,16 +8,21 @@ const WIDTH_MULTIPLIER: f32 = 1.25;
 const DURATION: f32 = 7.0;
 
 fn color() -> Color {
-    Color::srgb(0.2, 1.0, 0.9)
+    let green: f32 = rand::random_range(0.0..1.0);
+    let red: f32 = rand::random_range(0.0..1.0);
+    let blue: f32 = rand::random_range(0.0..1.0);
+    Color::srgb(red, green, blue)
 }
 
 pub struct SuperSizerPlugin;
 
 impl Plugin for SuperSizerPlugin {
     fn build(&self, app: &mut App) {
-        app.world_mut()
-            .resource_mut::<PowerUpSpawner>()
-            .register(PowerUpKind::SuperSizer, WEIGHT, color());
+        app.world_mut().resource_mut::<PowerUpSpawner>().register(
+            PowerUpKind::SuperSizer,
+            WEIGHT,
+            color(),
+        );
 
         app.add_observer(effect).add_systems(
             Update,
