@@ -7,7 +7,8 @@ edition = "2021"
 
 [dependencies]
 bevy = "0.19.1"
-rand = "0.10.2"
+ bevy_mod_scripting = {version = "0.21.0", features=["lua54"]}
+ rand = "0.10.2"
 
 # Native desktop build: avian2d with its full default feature set (includes
 # `parallel`/rayon, which is fine and desirable off the web).
