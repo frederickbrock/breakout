@@ -1,4 +1,5 @@
 mod powerups;
+mod script_manager;
 mod spawner;
 
 use avian2d::prelude::*;
@@ -108,6 +109,7 @@ fn main() {
             ..default()
         }))
         .add_plugins(PhysicsPlugins::default())
+        .add_plugins(script_manager::ScriptPlugin)
         .insert_resource(Gravity(Vec2::new(0.0, 0.8)))
         .insert_resource(ClearColor(Color::BLACK))
         .init_resource::<Score>()

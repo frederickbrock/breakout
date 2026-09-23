@@ -116,7 +116,10 @@ fn spawn_power_ups(
     };
 
     let mut rng = rand::rng();
-    let bricks: Vec<Vec3> = brick_query.iter().map(|transform| transform.translation).collect();
+    let bricks: Vec<Vec3> = brick_query
+        .iter()
+        .map(|transform| transform.translation)
+        .collect();
     let Some(brick_pos) = bricks.choose(&mut rng) else {
         return;
     };
@@ -180,14 +183,18 @@ fn power_up_paddle_collision(
 
         if overlaps_x && overlaps_y {
             commands.entity(entity).despawn();
-            commands.trigger(PowerUpCollected { kind: power_up.kind });
+            commands.trigger(PowerUpCollected {
+                kind: power_up.kind,
+            });
         }
     }
 }
 
 fn tick_active_effects(time: Res<Time>, mut active: ResMut<ActiveEffects>) {
     let dt = time.delta();
-    active.0.retain_mut(|effect| !effect.timer.tick(dt).is_finished());
+    active
+        .0
+        .retain_mut(|effect| !effect.timer.tick(dt).is_finished());
 }
 
 fn reset_on_restart(
