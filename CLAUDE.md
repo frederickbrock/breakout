@@ -36,6 +36,8 @@ not hand-rolled kinematics/AABB checks.
   event, `ActiveEffects` resource (the "game state" active effects land in — consumers
   recompute derived values from it every frame, so an effect expiring needs no explicit
   revert step), and the generic spawn/physics/paddle-collision systems.
+- `src/script_manager/mod.rs` — `ScriptPlugin`, the Lua scripting entry point (wraps
+  bevy_mod_scripting's `BMSPlugin`). Native-only in effect; see the wasm note below.
 - `src/powerups/super_sizer.rs` — one concrete power-up (Super-Sizer: temporarily widens
   the paddle), fully self-contained as its own `Plugin`. **This is the pattern for adding a
   new power-up**: a new file with its own `Plugin` that (1) registers itself into the
@@ -86,6 +88,12 @@ not hand-rolled kinematics/AABB checks.
   feature, and getrandom's browser-crypto `wasm_js` backend is turned on for rand via
   `--cfg getrandom_backend="wasm_js"` in `.cargo/config.toml` (scoped to the wasm target
   only, so native builds are untouched).
+- **Lua scripting is native-only.** `bevy_mod_scripting` (`lua54`, which compiles mlua's
+  bundled Lua C sources) lives under the non-wasm target dependencies in Cargo.toml, so it
+  isn't compiled for wasm at all. `src/script_manager/mod.rs` cfg-gates only the
+  `BMSPlugin` registration inside `ScriptPlugin::build`, so `main.rs` adds `ScriptPlugin`
+  unconditionally and on wasm it registers no scripting runtime. Any new code touching
+  `bevy_mod_scripting` must be gated the same way or the web build breaks.
 
 ## Beads Workflow Integration
 

@@ -7,13 +7,15 @@ edition = "2021"
 
 [dependencies]
 bevy = "0.19.1"
- bevy_mod_scripting = {version = "0.21.0", features=["lua54"]}
- rand = "0.10.2"
+rand = "0.10.2"
 
 # Native desktop build: avian2d with its full default feature set (includes
 # `parallel`/rayon, which is fine and desirable off the web).
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 avian2d = "0.7.0"
+# Lua scripting is native-only: `lua54` compiles mlua's bundled Lua C sources,
+# which do not build for wasm32-unknown-unknown. On wasm, ScriptPlugin is a no-op.
+bevy_mod_scripting = { version = "0.21.0", features = ["lua54"] }
 
 # Browser (wasm32) build. avian2d's default `parallel` feature pulls rayon +
 # bevy/multi_threaded, which do not build on wasm32-unknown-unknown, so we
