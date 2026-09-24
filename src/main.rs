@@ -82,6 +82,8 @@ struct RestartGame;
 struct QuitGamme;
 
 /// Lets other systems (e.g. a power-up that changes paddle width) declare
+///
+///
 /// they must run before paddle movement each frame, without `main.rs` having
 /// to manually interleave their systems into its own `Update` chain.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
@@ -118,11 +120,12 @@ fn main() {
         .init_resource::<BallCollisionSignals>()
         .add_observer(on_ball_collision)
         .add_plugins(powerups::PowerUpsPlugin)
-        .add_systems(Startup, setup_level)
+        .add_systems(Startup, (setup_level, setup_ui))
         .add_systems(
             Update,
             (
                 restart_game,
+                handle_pause_game,
                 paddle_movement.in_set(PaddleMovementSet),
                 ball_movement,
                 update_ui,
@@ -133,40 +136,6 @@ fn main() {
 }
 
 fn setup_ui(mut commands: Commands) {
-    commands.spawn((
-        Sprite::from_color(RED, Vec2::new(PADDLE_WIDTH, PADDLE_HEIGHT)),
-        Transform::from_xyz(
-            0.0,
-            -WINDOW_HEIGHT / 2.0 + PADDLE_HEIGHT / 2.0 + PADDLE_MARGIN_BOTTOM,
-            0.0,
-        ),
-        RigidBody::Dynamic,
-        Collider::rectangle(PADDLE_WIDTH, PADDLE_HEIGHT),
-        Mass(PADDLE_MASS),
-        LockedAxes::new().lock_translation_y().lock_rotation(),
-        LinearDamping(PADDLE_LINEAR_DAMPING),
-        Restitution::ZERO,
-        ConstantForce(Vec2::ZERO),
-        Paddle {
-            width: PADDLE_WIDTH,
-        },
-    ));
-
-    commands.spawn((
-        Sprite::from_color(WHITE, Vec2::splat(BALL_SIZE)),
-        Transform::from_xyz(0.0, 0.0, 0.0),
-        RigidBody::Dynamic,
-        Collider::circle(BALL_SIZE / 2.0),
-        LinearVelocity(Vec2::new(BALL_SPEED, -BALL_SPEED)),
-        LockedAxes::ROTATION_LOCKED,
-        Restitution::new(1.0),
-        Friction::ZERO,
-        CollisionEventsEnabled,
-        Ball,
-    ));
-
-    spawn_bricks(&mut commands);
-
     commands.spawn((
         Text2d::new("Score: 0"),
         TextFont {
@@ -207,9 +176,38 @@ fn setup_ui(mut commands: Commands) {
 fn setup_level(mut commands: Commands) {
     commands.spawn(Camera2d);
 
-    // Static walls the ball (and paddle) physically bounce off, instead of
-    // manual clamp/reflect code. No bottom wall — a ball reaching the bottom
-    // is a life lost, checked separately from physics.
+    commands.spawn((
+        Sprite::from_color(RED, Vec2::new(PADDLE_WIDTH, PADDLE_HEIGHT)),
+        Transform::from_xyz(
+            0.0,
+            -WINDOW_HEIGHT / 2.0 + PADDLE_HEIGHT / 2.0 + PADDLE_MARGIN_BOTTOM,
+            0.0,
+        ),
+        RigidBody::Dynamic,
+        Collider::rectangle(PADDLE_WIDTH, PADDLE_HEIGHT),
+        Mass(PADDLE_MASS),
+        LockedAxes::new().lock_translation_y().lock_rotation(),
+        LinearDamping(PADDLE_LINEAR_DAMPING),
+        Restitution::ZERO,
+        ConstantForce(Vec2::ZERO),
+        Paddle {
+            width: PADDLE_WIDTH,
+        },
+    ));
+
+    commands.spawn((
+        Sprite::from_color(WHITE, Vec2::splat(BALL_SIZE)),
+        Transform::from_xyz(0.0, 0.0, 0.0),
+        RigidBody::Dynamic,
+        Collider::circle(BALL_SIZE / 2.0),
+        LinearVelocity(Vec2::new(BALL_SPEED, -BALL_SPEED)),
+        LockedAxes::ROTATION_LOCKED,
+        Restitution::new(1.0),
+        Friction::ZERO,
+        CollisionEventsEnabled,
+        Ball,
+    ));
+
     let wall_specs = [
         // left
         (
@@ -241,7 +239,7 @@ fn setup_level(mut commands: Commands) {
         ));
     }
 
-    setup_ui(commands);
+    spawn_bricks(&mut commands);
 }
 
 fn spawn_bricks(commands: &mut Commands) {
@@ -404,6 +402,27 @@ fn ball_movement(
             ball_transform.translation.x = 0.0;
             ball_transform.translation.y = 0.0;
             ball_velocity.0 = Vec2::new(BALL_SPEED, -BALL_SPEED);
+        }
+    }
+}
+
+fn handle_pause_game(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    mut commands: Commands,
+    mut status: ResMut<GameStatus>,
+    mut score: ResMut<Score>,
+    mut lives: ResMut<Lives>,
+    mut paddle_query: Query<(&mut Transform, &mut LinearVelocity), (With<Paddle>, Without<Ball>)>,
+    mut ball_query: Query<(&mut Transform, &mut LinearVelocity), (With<Ball>, Without<Paddle>)>,
+    brick_query: Query<Entity, With<Brick>>,
+) {
+    if *status != GameStatus::Won && *status != GameStatus::Lost {
+        if keyboard.just_pressed(KeyCode::KeyP) {
+            *status = match *status {
+                GameStatus::Playing => GameStatus::Paused,
+                GameStatus::Paused => GameStatus::Playing,
+                _ => panic!("should be unreachable!()"),
+            };
         }
     }
 }
