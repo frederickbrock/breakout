@@ -465,3 +465,202 @@ fn update_overlay(
         text.0 = message.to_string();
     }
 }
+
+/// Headless app running the real game logic (no window, renderer or
+/// scripting), with a fixed 100 ms step per `update()` and keyboard input
+/// driven by hand via [`tap`].
+#[cfg(test)]
+pub(crate) mod test_support {
+    use super::*;
+    use bevy::state::app::StatesPlugin;
+    use bevy::time::TimeUpdateStrategy;
+    use std::time::Duration;
+
+    pub(crate) fn app() -> App {
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, StatesPlugin))
+            .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_millis(
+                100,
+            )))
+            .init_resource::<ButtonInput<KeyCode>>()
+            .init_resource::<Time<Physics>>();
+        add_game(&mut app);
+        // Startup + the initial OnEnter(InGame).
+        app.update();
+        app
+    }
+
+    /// Presses and releases `key`, then runs one more frame so a state
+    /// change requested by that key press is applied.
+    pub(crate) fn tap(app: &mut App, key: KeyCode) {
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(key);
+        app.update();
+        let mut input = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+        input.release(key);
+        input.clear();
+        app.update();
+    }
+
+    pub(crate) fn count<F: bevy::ecs::query::QueryFilter>(app: &mut App) -> usize {
+        app.world_mut()
+            .query_filtered::<(), F>()
+            .iter(app.world())
+            .count()
+    }
+
+    pub(crate) fn play_state(app: &App) -> Option<PlayState> {
+        app.world()
+            .get_resource::<State<PlayState>>()
+            .map(|s| *s.get())
+    }
+
+    pub(crate) fn app_state(app: &App) -> AppState {
+        *app.world().resource::<State<AppState>>().get()
+    }
+
+    pub(crate) fn physics_paused(app: &App) -> bool {
+        app.world().resource::<Time<Physics>>().is_paused()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::test_support::*;
+    use super::*;
+
+    fn text<M: Component>(app: &mut App) -> String {
+        app.world_mut()
+            .query_filtered::<&Text2d, With<M>>()
+            .single(app.world())
+            .map(|t| t.0.clone())
+            .unwrap_or_default()
+    }
+
+    fn move_ball_below_screen(app: &mut App) {
+        let mut ball = app
+            .world_mut()
+            .query_filtered::<&mut Transform, With<Ball>>()
+            .single_mut(app.world_mut())
+            .expect("a run has exactly one ball");
+        ball.translation.y = -WINDOW_HEIGHT;
+    }
+
+    #[test]
+    fn first_launch_starts_a_playing_run() {
+        let mut app = app();
+        app.update();
+
+        assert_eq!(app_state(&app), AppState::InGame);
+        assert_eq!(play_state(&app), Some(PlayState::Playing));
+        assert!(!physics_paused(&app));
+        assert_eq!(count::<With<Ball>>(&mut app), 1);
+        assert_eq!(count::<With<Paddle>>(&mut app), 1);
+        assert_eq!(count::<With<Brick>>(&mut app), BRICK_ROWS * BRICK_COLS);
+        assert_eq!(text::<LivesText>(&mut app), "Lives: 3");
+        assert_eq!(text::<ScoreText>(&mut app), "Score: 0");
+        assert_eq!(text::<OverlayText>(&mut app), "");
+    }
+
+    #[test]
+    fn p_and_esc_toggle_pause_and_the_physics_clock() {
+        let mut app = app();
+
+        tap(&mut app, KeyCode::KeyP);
+        assert_eq!(play_state(&app), Some(PlayState::Paused));
+        assert!(physics_paused(&app));
+        assert!(text::<OverlayText>(&mut app).starts_with("Paused"));
+
+        tap(&mut app, KeyCode::Escape);
+        assert_eq!(play_state(&app), Some(PlayState::Playing));
+        assert!(!physics_paused(&app));
+        assert_eq!(text::<OverlayText>(&mut app), "");
+
+        tap(&mut app, KeyCode::Escape);
+        assert_eq!(play_state(&app), Some(PlayState::Paused));
+        tap(&mut app, KeyCode::KeyP);
+        assert_eq!(play_state(&app), Some(PlayState::Playing));
+    }
+
+    #[test]
+    fn losing_the_last_life_ends_the_run_and_r_starts_a_fresh_one() {
+        let mut app = app();
+        app.world_mut().resource_mut::<Score>().0 = 120;
+        app.world_mut().resource_mut::<Lives>().0 = 1;
+        move_ball_below_screen(&mut app);
+        app.update();
+        app.update();
+
+        assert_eq!(app_state(&app), AppState::GameOver);
+        assert_eq!(play_state(&app), None);
+        assert_eq!(
+            app.world().get_resource::<GameOutcome>(),
+            Some(&GameOutcome::Lost)
+        );
+        assert!(physics_paused(&app));
+        assert_eq!(count::<With<Ball>>(&mut app), 0);
+        assert_eq!(count::<With<Brick>>(&mut app), 0);
+        assert_eq!(count::<With<LivesText>>(&mut app), 0);
+        assert!(text::<OverlayText>(&mut app).starts_with("GAME OVER"));
+
+        // P/Esc do nothing outside a run.
+        tap(&mut app, KeyCode::KeyP);
+        assert_eq!(app_state(&app), AppState::GameOver);
+
+        tap(&mut app, KeyCode::KeyR);
+        assert_eq!(app_state(&app), AppState::InGame);
+        assert_eq!(play_state(&app), Some(PlayState::Playing));
+        assert!(!physics_paused(&app));
+        assert_eq!(app.world().resource::<Score>().0, 0);
+        assert_eq!(app.world().resource::<Lives>().0, STARTING_LIVES);
+        assert_eq!(count::<With<Ball>>(&mut app), 1);
+        assert_eq!(count::<With<Brick>>(&mut app), BRICK_ROWS * BRICK_COLS);
+        assert_eq!(text::<LivesText>(&mut app), "Lives: 3");
+        assert_eq!(text::<OverlayText>(&mut app), "");
+    }
+
+    #[test]
+    fn losing_a_life_that_is_not_the_last_keeps_playing() {
+        let mut app = app();
+        move_ball_below_screen(&mut app);
+        app.update();
+        app.update();
+
+        assert_eq!(app_state(&app), AppState::InGame);
+        assert_eq!(app.world().resource::<Lives>().0, STARTING_LIVES - 1);
+        assert_eq!(text::<LivesText>(&mut app), "Lives: 2");
+    }
+
+    #[test]
+    fn breaking_the_last_brick_wins() {
+        let mut app = app();
+        let bricks: Vec<Entity> = app
+            .world_mut()
+            .query_filtered::<Entity, With<Brick>>()
+            .iter(app.world())
+            .collect();
+        // Leave one brick standing and report it broken, as if the ball's
+        // collision had just despawned it this frame.
+        for brick in &bricks[1..] {
+            app.world_mut().despawn(*brick);
+        }
+        app.world_mut()
+            .resource_mut::<BallCollisionSignals>()
+            .broke_brick = true;
+        app.update();
+        app.update();
+
+        assert_eq!(app_state(&app), AppState::GameOver);
+        assert_eq!(
+            app.world().get_resource::<GameOutcome>(),
+            Some(&GameOutcome::Won)
+        );
+        assert!(physics_paused(&app));
+        assert!(text::<OverlayText>(&mut app).starts_with("YOU WIN"));
+
+        tap(&mut app, KeyCode::KeyR);
+        assert_eq!(app_state(&app), AppState::InGame);
+        assert_eq!(count::<With<Brick>>(&mut app), BRICK_ROWS * BRICK_COLS);
+    }
+}

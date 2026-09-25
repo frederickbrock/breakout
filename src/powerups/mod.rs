@@ -206,3 +206,98 @@ fn reset_on_restart(
         commands.entity(entity).despawn();
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_support::*;
+
+    fn spawn_falling_power_up(app: &mut App) -> Entity {
+        app.world_mut()
+            .spawn((
+                Transform::from_xyz(0.0, 200.0, 0.5),
+                PowerUp {
+                    kind: PowerUpKind::SuperSizer,
+                    velocity: Vec2::ZERO,
+                    gravity: BASE_GRAVITY,
+                },
+                DespawnOnExit(AppState::InGame),
+            ))
+            .id()
+    }
+
+    fn effect_remaining(app: &App) -> Option<std::time::Duration> {
+        app.world()
+            .resource::<ActiveEffects>()
+            .0
+            .first()
+            .map(|effect| effect.timer.remaining())
+    }
+
+    #[test]
+    fn pausing_freezes_falling_power_ups_and_effect_timers() {
+        let mut app = app();
+        let power_up = spawn_falling_power_up(&mut app);
+        app.world_mut()
+            .resource_mut::<ActiveEffects>()
+            .refresh_or_insert(PowerUpKind::SuperSizer, 5.0);
+
+        tap(&mut app, KeyCode::KeyP);
+        let y_paused = app
+            .world()
+            .get::<Transform>(power_up)
+            .unwrap()
+            .translation
+            .y;
+        let remaining_paused = effect_remaining(&app);
+        for _ in 0..10 {
+            app.update();
+        }
+        assert_eq!(
+            app.world()
+                .get::<Transform>(power_up)
+                .unwrap()
+                .translation
+                .y,
+            y_paused
+        );
+        assert_eq!(effect_remaining(&app), remaining_paused);
+
+        tap(&mut app, KeyCode::KeyP);
+        app.update();
+        assert!(
+            app.world()
+                .get::<Transform>(power_up)
+                .unwrap()
+                .translation
+                .y
+                < y_paused
+        );
+        assert!(effect_remaining(&app) < remaining_paused);
+    }
+
+    #[test]
+    fn a_new_run_clears_power_ups_and_active_effects() {
+        let mut app = app();
+        spawn_falling_power_up(&mut app);
+        app.world_mut()
+            .resource_mut::<ActiveEffects>()
+            .refresh_or_insert(PowerUpKind::SuperSizer, 5.0);
+        app.world_mut().resource_mut::<crate::Lives>().0 = 1;
+        let mut ball = app
+            .world_mut()
+            .query_filtered::<&mut Transform, With<crate::Ball>>()
+            .single_mut(app.world_mut())
+            .unwrap();
+        ball.translation.y = -WINDOW_HEIGHT;
+        app.update();
+        app.update();
+        assert_eq!(app_state(&app), AppState::GameOver);
+        assert_eq!(count::<With<PowerUp>>(&mut app), 0);
+
+        tap(&mut app, KeyCode::KeyR);
+        assert_eq!(app_state(&app), AppState::InGame);
+        assert!(app.world().resource::<ActiveEffects>().0.is_empty());
+        assert_eq!(count::<With<PowerUp>>(&mut app), 0);
+    }
+}
