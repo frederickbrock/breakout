@@ -1,0 +1,29 @@
+# Agent-team workflow config. Read by pm / coder / reviewer / tester / pr-manager.
+# Re-run the workflow-onboard skill to change it.
+version: 1
+remote: origin
+trunk: master                  # default PR base; experiment epics override via base:<branch> label
+gates:
+  spec_approval: true          # always true
+  findings_to_human: false     # reviewer/tester ask the user before bouncing
+  approve_before_test: true
+  merge: auto                  # human | auto  (note: master protection requires 1 approving review)
+max_bounces: 2
+beads:
+  sync_commit: pr              # trunk-direct | pr | manual  (master is branch-protected)
+stacks: [stack-rust-bevy]
+checks:                        # coder must pass all before opening/updating a PR
+  - cargo build
+  - cargo clippy --all-targets -- -D warnings
+  - cargo test
+  - trunk build
+functional:
+  setup: []
+  run:                         # tester runs these, in order
+    - cargo build
+    - cargo run                # native desktop (X11 via WSLg); drive + screenshot to verify
+  teardown: []
+  acceptance: native           # exercise acceptance criteria in the native window
+pr:
+  reviewers: [frederickbrock]
+  draft_first: true
