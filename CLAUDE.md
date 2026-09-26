@@ -13,7 +13,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Verifying the web build requires manually opening it in a browser (there is no X11-window
 watch loop for wasm).
 
-Single binary crate (`sim`), no workspace, no test suite or lint config in the repo currently.
+Single binary crate (`sim`), no workspace. Tests: `cargo test` — headless ECS tests that run
+the real game logic on `MinimalPlugins` via `test_support::app()` in `main.rs` (no window or
+physics simulation; drive input with `test_support::tap`). Lint: `cargo clippy --all-targets -- -D warnings`.
 
 ## Architecture
 
@@ -23,9 +25,12 @@ not hand-rolled kinematics/AABB checks.
 
 ### Module layout
 
-- `src/main.rs` — core game: `Ball`, `Paddle`, `Brick` entities/components, score/lives/
-  game-status resources, the `App` wiring, and the systems that react to physics
-  (`ball_movement`, `paddle_movement`, `restart_game`, `update_ui`).
+- `src/main.rs` — core game: `Ball`, `Paddle`, `Brick` entities/components, score/lives
+  resources, the `App` wiring (`add_game`), starting a run (`start_run`), and the systems
+  that react to physics (`ball_movement`, `paddle_movement`, `update_hud`, `update_overlay`).
+- `src/game_state.rs` — the state machine: `AppState { MainMenu, InGame, GameOver }`, the
+  `InGame` sub-state `PlayState { Playing, Paused }` (P/Esc toggles it), the `GameOutcome`
+  (won/lost) resource, and control of Avian's physics clock.
 - `src/spawner.rs` — `Spawner<T>`, a generic "every N seconds, produce one weighted-random
   thing" engine. Reusable across any future domain (obstacles, brick respawns, etc.) because
   Bevy resources are keyed by concrete type: `Spawner<PowerUpKind>` and a hypothetical
@@ -63,16 +68,26 @@ not hand-rolled kinematics/AABB checks.
   the side walls, below the bricks and above the paddle, can otherwise get stuck bouncing
   side-to-side forever, since nothing left in that lane can ever touch its Y velocity
   again).
-- **`GameStatus` does not pause Avian's physics step** — the engine keeps simulating
-  regardless of our game state, so code that transitions to `Lost`/`Won` must explicitly
-  zero `LinearVelocity` itself (see the two spots in `ball_movement`) or entities keep
-  drifting/falling off-screen after the game "ends."
+- **Game state is Bevy `States`, and physics only runs while `InGame/Playing`.**
+  `game_state.rs` pauses `Time<Physics>` on leaving `PlayState::Playing` (and on entering
+  `MainMenu`/`GameOver`) and resumes it on entering `Playing`, so pausing or ending a run
+  freezes every rigid body — nobody zeroes velocities by hand. Non-physics gameplay systems
+  (paddle input, `ball_movement`, power-up spawn/fall/pickup, effect timers) gate
+  themselves with `run_if(in_state(PlayState::Playing))`; a new per-frame gameplay system
+  must do the same or it keeps running while paused. The collision observer needs no gate:
+  with the clock stopped, no collisions fire.
+- **A run's entities are state-scoped.** Ball, paddle, bricks, HUD text and falling
+  power-ups carry `DespawnOnExit(AppState::InGame)`, so leaving the run (game over) removes
+  them. Walls, camera and the centred overlay text (pause/game-over/win message) are global.
+  `ball_movement` ends a run via `end_run` (inserts `GameOutcome`, sets `AppState::GameOver`);
+  R on the game-over screen goes back to `InGame`.
 - **`RestartGame` is a crate-wide broadcast event**, not a resource `main.rs` reaches into.
-  `restart_game` only resets what it directly owns (score/lives/ball/paddle/bricks) and
+  `start_run` (on `OnEnter(AppState::InGame)`, i.e. first launch and every restart) only
+  resets what it directly owns (score, lives = `STARTING_LIVES`, ball/paddle/bricks/HUD) and
   fires `commands.trigger(RestartGame)`; each subsystem with its own state to reset
   (currently just power-ups, via `reset_on_restart` in `powerups/mod.rs`) owns its own
   observer on that event. Adding a new stateful subsystem later means giving it its own
-  `RestartGame` observer, not editing `restart_game`.
+  `RestartGame` observer, not editing `start_run`.
 - **`PaddleMovementSet` / `TickActiveEffects`** are ordering-only `SystemSet`s that let a
   system in one module (e.g. Super-Sizer's paddle-width recompute) declare `.before(...)`/
   `.after(...)` relative to core systems in another module, without `main.rs` manually

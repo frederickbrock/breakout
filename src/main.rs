@@ -1,3 +1,4 @@
+mod game_state;
 mod powerups;
 mod script_manager;
 mod spawner;
@@ -7,6 +8,7 @@ use bevy::color::palettes::basic::{BLUE, GREEN, RED, WHITE, YELLOW};
 use bevy::color::palettes::css::ORANGE;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
+use game_state::{AppState, GameOutcome, GameStatePlugin, PlayState};
 
 // Game constants
 const WINDOW_WIDTH: f32 = 900.0;
@@ -32,6 +34,8 @@ const BRICK_WIDTH: f32 = 80.0;
 const BRICK_HEIGHT: f32 = 30.0;
 const BRICK_ROWS: usize = 6;
 const BRICK_COLS: usize = 10;
+/// Lives at the start of every run, including the first.
+const STARTING_LIVES: i32 = 3;
 
 #[derive(Component)]
 struct Paddle {
@@ -51,7 +55,7 @@ struct ScoreText;
 struct LivesText;
 
 #[derive(Component)]
-struct GameOverText;
+struct OverlayText;
 
 #[derive(Resource, Default)]
 struct Score(i32);
@@ -59,27 +63,13 @@ struct Score(i32);
 #[derive(Resource, Default)]
 struct Lives(i32);
 
-#[derive(Resource, Default, PartialEq, Clone, Copy)]
-enum GameStatus {
-    #[default]
-    Playing,
-    Paused,
-    Lost,
-    Won,
-}
-
-/// Broadcast when the player presses R to restart. Each subsystem that has
-/// its own state to reset (currently just power-ups) registers an observer
-/// on this instead of `restart_game` reaching into every subsystem by hand —
-/// a future obstacles or brick-respawn subsystem resets itself the same way,
-/// with no changes needed here.
+/// Broadcast at the start of every run (entering [`AppState::InGame`]). Each
+/// subsystem that has its own state to reset (currently just power-ups)
+/// registers an observer on this instead of `start_run` reaching into every
+/// subsystem by hand — a future obstacles or brick-respawn subsystem resets
+/// itself the same way, with no changes needed here.
 #[derive(Event)]
 struct RestartGame;
-
-/// Broadcast when the player presses Q to quit the game. Each subsystem
-/// that has its own state shutdowns
-#[derive(Event)]
-struct QuitGamme;
 
 /// Lets other systems (e.g. a power-up that changes paddle width) declare
 /// they must run before paddle movement each frame, without `main.rs` having
@@ -99,41 +89,68 @@ fn main() {
         std::env::set_var("WAYLAND_DISPLAY", "");
     }
 
-    App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "Breakout".into(),
-                resolution: (WINDOW_WIDTH as u32, WINDOW_HEIGHT as u32).into(),
-                ..default()
-            }),
+    let mut app = App::new();
+    app.add_plugins(DefaultPlugins.set(WindowPlugin {
+        primary_window: Some(Window {
+            title: "Breakout".into(),
+            resolution: (WINDOW_WIDTH as u32, WINDOW_HEIGHT as u32).into(),
             ..default()
-        }))
-        .add_plugins(PhysicsPlugins::default())
-        .add_plugins(script_manager::ScriptPlugin)
+        }),
+        ..default()
+    }))
+    .add_plugins(PhysicsPlugins::default())
+    .add_plugins(script_manager::ScriptPlugin)
+    .insert_resource(ClearColor(Color::BLACK));
+    add_game(&mut app);
+    app.run();
+}
+
+/// Everything game-specific, on top of the engine plugins (`DefaultPlugins`,
+/// Avian, scripting) that `main` adds. Split out so tests can run the real
+/// game logic on a headless `MinimalPlugins` app.
+fn add_game(app: &mut App) {
+    app.add_plugins(GameStatePlugin)
         .insert_resource(Gravity(Vec2::new(0.0, 0.8)))
-        .insert_resource(ClearColor(Color::BLACK))
         .init_resource::<Score>()
-        .insert_resource(Lives(5))
-        .init_resource::<GameStatus>()
+        .insert_resource(Lives(STARTING_LIVES))
         .init_resource::<BallCollisionSignals>()
         .add_observer(on_ball_collision)
         .add_plugins(powerups::PowerUpsPlugin)
         .add_systems(Startup, setup_level)
+        .add_systems(OnEnter(AppState::InGame), start_run)
         .add_systems(
             Update,
             (
-                restart_game,
-                paddle_movement.in_set(PaddleMovementSet),
-                ball_movement,
-                update_ui,
+                (paddle_movement.in_set(PaddleMovementSet), ball_movement)
+                    .chain()
+                    .run_if(in_state(PlayState::Playing)),
+                restart_from_game_over.run_if(in_state(AppState::GameOver)),
+                update_hud.run_if(in_state(AppState::InGame)),
+                update_overlay,
             )
                 .chain(),
-        )
-        .run();
+        );
 }
 
-fn setup_ui(mut commands: Commands) {
+/// Starts a fresh run: resets the counters this module owns, spawns the
+/// run's entities (all scoped to [`AppState::InGame`], so leaving the run
+/// despawns them), and broadcasts [`RestartGame`] for every other subsystem.
+fn start_run(
+    mut commands: Commands,
+    mut score: ResMut<Score>,
+    mut lives: ResMut<Lives>,
+    mut signals: ResMut<BallCollisionSignals>,
+) {
+    score.0 = 0;
+    lives.0 = STARTING_LIVES;
+    *signals = BallCollisionSignals::default();
+    spawn_run_entities(&mut commands);
+    commands.trigger(RestartGame);
+}
+
+fn spawn_run_entities(commands: &mut Commands) {
     commands.spawn((
+        DespawnOnExit(AppState::InGame),
         Sprite::from_color(RED, Vec2::new(PADDLE_WIDTH, PADDLE_HEIGHT)),
         Transform::from_xyz(
             0.0,
@@ -163,11 +180,13 @@ fn setup_ui(mut commands: Commands) {
         Friction::ZERO,
         CollisionEventsEnabled,
         Ball,
+        DespawnOnExit(AppState::InGame),
     ));
 
-    spawn_bricks(&mut commands);
+    spawn_bricks(commands);
 
     commands.spawn((
+        DespawnOnExit(AppState::InGame),
         Text2d::new("Score: 0"),
         TextFont {
             font_size: FontSize::Px(24.0),
@@ -180,7 +199,8 @@ fn setup_ui(mut commands: Commands) {
     ));
 
     commands.spawn((
-        Text2d::new("Lives: 3"),
+        DespawnOnExit(AppState::InGame),
+        Text2d::new(format!("Lives: {STARTING_LIVES}")),
         TextFont {
             font_size: FontSize::Px(24.0),
             ..default()
@@ -189,18 +209,6 @@ fn setup_ui(mut commands: Commands) {
         Anchor::TOP_LEFT,
         Transform::from_xyz(-WINDOW_WIDTH / 2.0 + 20.0, WINDOW_HEIGHT / 2.0 - 40.0, 1.0),
         LivesText,
-    ));
-
-    commands.spawn((
-        Text2d::new(""),
-        TextFont {
-            font_size: FontSize::Px(32.0),
-            ..default()
-        },
-        TextColor(YELLOW.into()),
-        Anchor::CENTER,
-        Transform::from_xyz(0.0, 0.0, 1.0),
-        GameOverText,
     ));
 }
 
@@ -241,7 +249,19 @@ fn setup_level(mut commands: Commands) {
         ));
     }
 
-    setup_ui(commands);
+    // Pause / game-over / win message. Global rather than run-scoped so it
+    // stays up on the game-over screen after the run's entities are gone.
+    commands.spawn((
+        Text2d::new(""),
+        TextFont {
+            font_size: FontSize::Px(32.0),
+            ..default()
+        },
+        TextColor(YELLOW.into()),
+        Anchor::CENTER,
+        Transform::from_xyz(0.0, 0.0, 1.0),
+        OverlayText,
+    ));
 }
 
 fn spawn_bricks(commands: &mut Commands) {
@@ -263,6 +283,7 @@ fn spawn_bricks(commands: &mut Commands) {
                 RigidBody::Static,
                 Collider::rectangle(BRICK_WIDTH, BRICK_HEIGHT),
                 Brick,
+                DespawnOnExit(AppState::InGame),
             ));
         }
     }
@@ -270,16 +291,11 @@ fn spawn_bricks(commands: &mut Commands) {
 
 fn paddle_movement(
     keyboard: Res<ButtonInput<KeyCode>>,
-    status: Res<GameStatus>,
     mut paddle_query: Query<&mut ConstantForce, With<Paddle>>,
 ) {
     let Ok(mut force) = paddle_query.single_mut() else {
         return;
     };
-    if *status != GameStatus::Playing {
-        force.0 = Vec2::ZERO;
-        return;
-    }
 
     let mut fx = 0.0;
     if keyboard.pressed(KeyCode::ArrowLeft) || keyboard.pressed(KeyCode::KeyA) {
@@ -297,19 +313,17 @@ fn paddle_movement(
 /// `MessageReader<CollisionStart>` never receives anything. This observer is
 /// the real way to react to it. Only the ball has `CollisionEventsEnabled`,
 /// and Avian guarantees the enabled side always ends up as `collider1`, so
-/// `on.collider1` is always the ball here.
+/// `on.collider1` is always the ball here. No state check is needed: the
+/// physics clock only runs while `InGame/Playing`, so no collisions fire
+/// outside it.
 fn on_ball_collision(
     on: On<CollisionStart>,
     mut commands: Commands,
-    status: Res<GameStatus>,
     mut score: ResMut<Score>,
     mut signals: ResMut<BallCollisionSignals>,
     brick_query: Query<(), With<Brick>>,
     paddle_query: Query<&Transform, With<Paddle>>,
 ) {
-    if *status != GameStatus::Playing {
-        return;
-    }
     let other = on.collider2;
     if brick_query.get(other).is_ok() {
         commands.entity(other).despawn();
@@ -331,26 +345,22 @@ struct BallCollisionSignals {
 /// Avian resolves the actual collision physics (detection + bounce angle);
 /// this reacts to what [`on_ball_collision`] recorded (score, the paddle-hit
 /// "spin" feel) and keeps the ball's speed at a controlled, designed
-/// magnitude rather than letting raw momentum transfer drift it.
-
+/// magnitude rather than letting raw momentum transfer drift it. Ends the
+/// run (switches to [`AppState::GameOver`]) on a win or on losing the last
+/// life; the physics clock stops with it, so nothing needs zeroing here.
 fn ball_movement(
-    mut status: ResMut<GameStatus>,
+    mut commands: Commands,
+    mut next_state: ResMut<NextState<AppState>>,
     mut lives: ResMut<Lives>,
     mut signals: ResMut<BallCollisionSignals>,
-    paddle_query: Query<(&Transform, &Paddle), (Without<Ball>, Without<Brick>)>,
-    brick_query: Query<(), (With<Brick>, Without<Ball>, Without<Paddle>)>,
-    mut ball_query: Query<
-        (&mut Transform, &mut LinearVelocity),
-        (With<Ball>, Without<Paddle>, Without<Brick>),
-    >,
+    paddle_query: Query<(&Transform, &Paddle), Without<Ball>>,
+    brick_query: Query<(), With<Brick>>,
+    mut ball_query: Query<(&mut Transform, &mut LinearVelocity), With<Ball>>,
 ) {
     let broke_brick = signals.broke_brick;
     let paddle_hit_x = signals.paddle_hit_x;
     *signals = BallCollisionSignals::default();
 
-    if *status != GameStatus::Playing {
-        return;
-    }
     let Ok((mut ball_transform, mut ball_velocity)) = ball_query.single_mut() else {
         return;
     };
@@ -386,11 +396,8 @@ fn ball_movement(
     // `on_ball_collision` may or may not have been applied yet by the time
     // this system runs this same frame.
     if broke_brick && brick_query.iter().count() <= 1 {
-        *status = GameStatus::Won;
-        // Avian keeps simulating regardless of our GameStatus, so freeze the
-        // ball in place ourselves once the game is over, or it'll keep
-        // sailing off-screen after we stop reacting to it.
-        ball_velocity.0 = Vec2::ZERO;
+        end_run(&mut commands, &mut next_state, GameOutcome::Won);
+        return;
     }
 
     // Ball fell off the bottom (no physical wall there, so this stays a
@@ -398,8 +405,7 @@ fn ball_movement(
     if ball_transform.translation.y < -WINDOW_HEIGHT / 2.0 {
         lives.0 -= 1;
         if lives.0 <= 0 {
-            *status = GameStatus::Lost;
-            ball_velocity.0 = Vec2::ZERO;
+            end_run(&mut commands, &mut next_state, GameOutcome::Lost);
         } else {
             ball_transform.translation.x = 0.0;
             ball_transform.translation.y = 0.0;
@@ -408,56 +414,27 @@ fn ball_movement(
     }
 }
 
-fn restart_game(
-    keyboard: Res<ButtonInput<KeyCode>>,
-    mut commands: Commands,
-    mut status: ResMut<GameStatus>,
-    mut score: ResMut<Score>,
-    mut lives: ResMut<Lives>,
-    mut paddle_query: Query<(&mut Transform, &mut LinearVelocity), (With<Paddle>, Without<Ball>)>,
-    mut ball_query: Query<(&mut Transform, &mut LinearVelocity), (With<Ball>, Without<Paddle>)>,
-    brick_query: Query<Entity, With<Brick>>,
-) {
-    if !keyboard.just_pressed(KeyCode::KeyR) {
-        return;
-    }
-
-    *status = GameStatus::Playing;
-    score.0 = 0;
-    lives.0 = 3;
-
-    if let Ok((mut paddle_transform, mut paddle_velocity)) = paddle_query.single_mut() {
-        paddle_transform.translation.x = 0.0;
-        paddle_velocity.0 = Vec2::ZERO;
-    }
-    if let Ok((mut ball_transform, mut ball_velocity)) = ball_query.single_mut() {
-        ball_transform.translation.x = 0.0;
-        ball_transform.translation.y = 0.0;
-        ball_velocity.0 = Vec2::new(BALL_SPEED, -BALL_SPEED);
-    }
-    for entity in &brick_query {
-        commands.entity(entity).despawn();
-    }
-    spawn_bricks(&mut commands);
-    commands.trigger(RestartGame);
+fn end_run(commands: &mut Commands, next_state: &mut NextState<AppState>, outcome: GameOutcome) {
+    commands.insert_resource(outcome);
+    next_state.set(AppState::GameOver);
 }
 
-fn update_ui(
+/// R on the game-over/win screen starts a new run; entering
+/// [`AppState::InGame`] runs [`start_run`], which does the actual resetting.
+fn restart_from_game_over(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    mut next_state: ResMut<NextState<AppState>>,
+) {
+    if keyboard.just_pressed(KeyCode::KeyR) {
+        next_state.set(AppState::InGame);
+    }
+}
+
+fn update_hud(
     score: Res<Score>,
     lives: Res<Lives>,
-    status: Res<GameStatus>,
-    mut score_text: Query<
-        &mut Text2d,
-        (With<ScoreText>, Without<LivesText>, Without<GameOverText>),
-    >,
-    mut lives_text: Query<
-        &mut Text2d,
-        (With<LivesText>, Without<ScoreText>, Without<GameOverText>),
-    >,
-    mut game_over_text: Query<
-        &mut Text2d,
-        (With<GameOverText>, Without<ScoreText>, Without<LivesText>),
-    >,
+    mut score_text: Query<&mut Text2d, (With<ScoreText>, Without<LivesText>)>,
+    mut lives_text: Query<&mut Text2d, (With<LivesText>, Without<ScoreText>)>,
 ) {
     if let Ok(mut text) = score_text.single_mut() {
         text.0 = format!("Score: {}", score.0);
@@ -465,12 +442,225 @@ fn update_ui(
     if let Ok(mut text) = lives_text.single_mut() {
         text.0 = format!("Lives: {}", lives.0);
     }
-    if let Ok(mut text) = game_over_text.single_mut() {
-        text.0 = match *status {
-            GameStatus::Playing => String::new(),
-            GameStatus::Paused => "Paused, Press P to Resume Game".to_string(),
-            GameStatus::Lost => "GAME OVER - Press R to Restart".to_string(),
-            GameStatus::Won => "YOU WIN! - Press R to Restart".to_string(),
-        };
+}
+
+fn update_overlay(
+    app_state: Res<State<AppState>>,
+    play_state: Option<Res<State<PlayState>>>,
+    outcome: Option<Res<GameOutcome>>,
+    mut overlay: Query<&mut Text2d, With<OverlayText>>,
+) {
+    let Ok(mut text) = overlay.single_mut() else {
+        return;
+    };
+    let message = match (app_state.get(), play_state.as_deref().map(State::get)) {
+        (AppState::InGame, Some(PlayState::Paused)) => "Paused - Press P or Esc to Resume",
+        (AppState::GameOver, _) => match outcome.as_deref() {
+            Some(GameOutcome::Won) => "YOU WIN! - Press R to Restart",
+            Some(GameOutcome::Lost) | None => "GAME OVER - Press R to Restart",
+        },
+        _ => "",
+    };
+    if text.0 != message {
+        text.0 = message.to_string();
+    }
+}
+
+/// Headless app running the real game logic (no window, renderer or
+/// scripting), with a fixed 100 ms step per `update()` and keyboard input
+/// driven by hand via [`tap`].
+#[cfg(test)]
+pub(crate) mod test_support {
+    use super::*;
+    use bevy::state::app::StatesPlugin;
+    use bevy::time::TimeUpdateStrategy;
+    use std::time::Duration;
+
+    pub(crate) fn app() -> App {
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, StatesPlugin))
+            .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_millis(
+                100,
+            )))
+            .init_resource::<ButtonInput<KeyCode>>()
+            .init_resource::<Time<Physics>>();
+        add_game(&mut app);
+        // Startup + the initial OnEnter(InGame).
+        app.update();
+        app
+    }
+
+    /// Presses and releases `key`, then runs one more frame so a state
+    /// change requested by that key press is applied.
+    pub(crate) fn tap(app: &mut App, key: KeyCode) {
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(key);
+        app.update();
+        let mut input = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+        input.release(key);
+        input.clear();
+        app.update();
+    }
+
+    pub(crate) fn count<F: bevy::ecs::query::QueryFilter>(app: &mut App) -> usize {
+        app.world_mut()
+            .query_filtered::<(), F>()
+            .iter(app.world())
+            .count()
+    }
+
+    pub(crate) fn play_state(app: &App) -> Option<PlayState> {
+        app.world()
+            .get_resource::<State<PlayState>>()
+            .map(|s| *s.get())
+    }
+
+    pub(crate) fn app_state(app: &App) -> AppState {
+        *app.world().resource::<State<AppState>>().get()
+    }
+
+    pub(crate) fn physics_paused(app: &App) -> bool {
+        app.world().resource::<Time<Physics>>().is_paused()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::test_support::*;
+    use super::*;
+
+    fn text<M: Component>(app: &mut App) -> String {
+        app.world_mut()
+            .query_filtered::<&Text2d, With<M>>()
+            .single(app.world())
+            .map(|t| t.0.clone())
+            .unwrap_or_default()
+    }
+
+    fn move_ball_below_screen(app: &mut App) {
+        let mut ball = app
+            .world_mut()
+            .query_filtered::<&mut Transform, With<Ball>>()
+            .single_mut(app.world_mut())
+            .expect("a run has exactly one ball");
+        ball.translation.y = -WINDOW_HEIGHT;
+    }
+
+    #[test]
+    fn first_launch_starts_a_playing_run() {
+        let mut app = app();
+        app.update();
+
+        assert_eq!(app_state(&app), AppState::InGame);
+        assert_eq!(play_state(&app), Some(PlayState::Playing));
+        assert!(!physics_paused(&app));
+        assert_eq!(count::<With<Ball>>(&mut app), 1);
+        assert_eq!(count::<With<Paddle>>(&mut app), 1);
+        assert_eq!(count::<With<Brick>>(&mut app), BRICK_ROWS * BRICK_COLS);
+        assert_eq!(text::<LivesText>(&mut app), "Lives: 3");
+        assert_eq!(text::<ScoreText>(&mut app), "Score: 0");
+        assert_eq!(text::<OverlayText>(&mut app), "");
+    }
+
+    #[test]
+    fn p_and_esc_toggle_pause_and_the_physics_clock() {
+        let mut app = app();
+
+        tap(&mut app, KeyCode::KeyP);
+        assert_eq!(play_state(&app), Some(PlayState::Paused));
+        assert!(physics_paused(&app));
+        assert!(text::<OverlayText>(&mut app).starts_with("Paused"));
+
+        tap(&mut app, KeyCode::Escape);
+        assert_eq!(play_state(&app), Some(PlayState::Playing));
+        assert!(!physics_paused(&app));
+        assert_eq!(text::<OverlayText>(&mut app), "");
+
+        tap(&mut app, KeyCode::Escape);
+        assert_eq!(play_state(&app), Some(PlayState::Paused));
+        tap(&mut app, KeyCode::KeyP);
+        assert_eq!(play_state(&app), Some(PlayState::Playing));
+    }
+
+    #[test]
+    fn losing_the_last_life_ends_the_run_and_r_starts_a_fresh_one() {
+        let mut app = app();
+        app.world_mut().resource_mut::<Score>().0 = 120;
+        app.world_mut().resource_mut::<Lives>().0 = 1;
+        move_ball_below_screen(&mut app);
+        app.update();
+        app.update();
+
+        assert_eq!(app_state(&app), AppState::GameOver);
+        assert_eq!(play_state(&app), None);
+        assert_eq!(
+            app.world().get_resource::<GameOutcome>(),
+            Some(&GameOutcome::Lost)
+        );
+        assert!(physics_paused(&app));
+        assert_eq!(count::<With<Ball>>(&mut app), 0);
+        assert_eq!(count::<With<Brick>>(&mut app), 0);
+        assert_eq!(count::<With<LivesText>>(&mut app), 0);
+        assert!(text::<OverlayText>(&mut app).starts_with("GAME OVER"));
+
+        // P/Esc do nothing outside a run.
+        tap(&mut app, KeyCode::KeyP);
+        assert_eq!(app_state(&app), AppState::GameOver);
+
+        tap(&mut app, KeyCode::KeyR);
+        assert_eq!(app_state(&app), AppState::InGame);
+        assert_eq!(play_state(&app), Some(PlayState::Playing));
+        assert!(!physics_paused(&app));
+        assert_eq!(app.world().resource::<Score>().0, 0);
+        assert_eq!(app.world().resource::<Lives>().0, STARTING_LIVES);
+        assert_eq!(count::<With<Ball>>(&mut app), 1);
+        assert_eq!(count::<With<Brick>>(&mut app), BRICK_ROWS * BRICK_COLS);
+        assert_eq!(text::<LivesText>(&mut app), "Lives: 3");
+        assert_eq!(text::<OverlayText>(&mut app), "");
+    }
+
+    #[test]
+    fn losing_a_life_that_is_not_the_last_keeps_playing() {
+        let mut app = app();
+        move_ball_below_screen(&mut app);
+        app.update();
+        app.update();
+
+        assert_eq!(app_state(&app), AppState::InGame);
+        assert_eq!(app.world().resource::<Lives>().0, STARTING_LIVES - 1);
+        assert_eq!(text::<LivesText>(&mut app), "Lives: 2");
+    }
+
+    #[test]
+    fn breaking_the_last_brick_wins() {
+        let mut app = app();
+        let bricks: Vec<Entity> = app
+            .world_mut()
+            .query_filtered::<Entity, With<Brick>>()
+            .iter(app.world())
+            .collect();
+        // Leave one brick standing and report it broken, as if the ball's
+        // collision had just despawned it this frame.
+        for brick in &bricks[1..] {
+            app.world_mut().despawn(*brick);
+        }
+        app.world_mut()
+            .resource_mut::<BallCollisionSignals>()
+            .broke_brick = true;
+        app.update();
+        app.update();
+
+        assert_eq!(app_state(&app), AppState::GameOver);
+        assert_eq!(
+            app.world().get_resource::<GameOutcome>(),
+            Some(&GameOutcome::Won)
+        );
+        assert!(physics_paused(&app));
+        assert!(text::<OverlayText>(&mut app).starts_with("YOU WIN"));
+
+        tap(&mut app, KeyCode::KeyR);
+        assert_eq!(app_state(&app), AppState::InGame);
+        assert_eq!(count::<With<Brick>>(&mut app), BRICK_ROWS * BRICK_COLS);
     }
 }
