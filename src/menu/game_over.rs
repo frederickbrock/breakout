@@ -47,6 +47,8 @@ mod tests {
     use bevy::prelude::*;
 
     fn lose(app: &mut App, score: i32) {
+        // Serve first: an anchored ball rides the paddle and can't fall.
+        tap(app, KeyCode::Space);
         app.world_mut().resource_mut::<Score>().0 = score;
         app.world_mut().resource_mut::<Lives>().0 = 1;
         let world = app.world_mut();
@@ -61,13 +63,17 @@ mod tests {
     }
 
     fn win(app: &mut App, score: i32) {
+        // Serve first: `ball_movement` only checks for a win with a ball in flight.
+        tap(app, KeyCode::Space);
         app.world_mut().resource_mut::<Score>().0 = score;
         let bricks: Vec<Entity> = app
             .world_mut()
             .query_filtered::<Entity, With<Brick>>()
             .iter(app.world())
             .collect();
-        for brick in &bricks[1..] {
+        // Clear every brick and report the last one broken, as the collision
+        // observer would have.
+        for brick in &bricks {
             app.world_mut().despawn(*brick);
         }
         app.world_mut()
