@@ -2,13 +2,19 @@ mod super_sizer;
 
 use crate::game_state::{AppState, PlayState};
 use crate::spawner::Spawner;
-use crate::{Brick, Paddle, RestartGame, PADDLE_HEIGHT, WINDOW_HEIGHT};
+use crate::{
+    Brick, BrickDestroyed, BrickHealth, Paddle, RestartGame, PADDLE_HEIGHT, WINDOW_HEIGHT,
+};
 use bevy::prelude::*;
-use rand::seq::IndexedRandom;
+use rand::seq::IteratorRandom;
 
 const POWER_UP_SIZE: f32 = 24.0;
-const SPAWN_INTERVAL_MIN: f32 = 7.0;
-const SPAWN_INTERVAL_MAX: f32 = 10.0;
+/// How many bricks carry a power-up each run.
+const POWER_UP_BRICKS: usize = 6;
+/// Hits a power-up brick takes to break.
+const POWER_UP_BRICK_HITS: u8 = 2;
+/// Violet "reactor core" look of a power-up brick (#b58cff).
+const POWER_UP_BRICK_COLOR: Color = Color::srgb_u8(0xb5, 0x8c, 0xff);
 const BASE_GRAVITY: f32 = 140.0;
 const GRAVITY_STEP: f32 = 20.0;
 const MAX_GRAVITY: f32 = 420.0;
@@ -29,6 +35,19 @@ pub struct PowerUp {
     velocity: Vec2,
     gravity: f32,
 }
+
+/// A brick carrying a power-up: chosen at the start of a run by
+/// [`assign_power_up_bricks`], dropped by [`drop_power_up`] when it breaks.
+#[derive(Component)]
+pub struct PowerUpBrick {
+    kind: PowerUpKind,
+    color: Color,
+}
+
+/// Power-ups dropped so far this run; each successive drop falls a little
+/// faster.
+#[derive(Resource, Default)]
+struct PowerUpDrops(u32);
 
 /// Fires when a falling [`PowerUp`] is caught by the paddle. Each power-up
 /// kind reacts to this via its own observer (see [`super_sizer`]).
@@ -81,15 +100,19 @@ pub struct PowerUpsPlugin;
 
 impl Plugin for PowerUpsPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(PowerUpSpawner::new(SPAWN_INTERVAL_MIN..=SPAWN_INTERVAL_MAX))
+        // The registry must exist before `SuperSizerPlugin` registers into it.
+        app.init_resource::<PowerUpSpawner>()
+            .init_resource::<PowerUpDrops>()
             .init_resource::<ActiveEffects>()
             .add_observer(reset_on_restart)
+            .add_observer(assign_power_up_bricks)
+            .add_observer(drop_power_up)
             // Everything that moves power-ups or counts down their timers
             // runs only while playing, so pausing or ending the run freezes
             // falling power-ups and active effects alike.
             .add_systems(
                 Update,
-                (spawn_power_ups, power_up_physics, power_up_paddle_collision)
+                (power_up_physics, power_up_paddle_collision)
                     .chain()
                     .run_if(in_state(PlayState::Playing)),
             )
@@ -104,36 +127,54 @@ impl Plugin for PowerUpsPlugin {
     }
 }
 
-fn spawn_power_ups(
+/// At the start of every run, turns [`POWER_UP_BRICKS`] random bricks into
+/// violet 2-hit power-up bricks, each with a weighted-random kind from
+/// [`PowerUpSpawner`]. Runs on [`RestartGame`], which `start_run` triggers
+/// after queuing the brick spawns, so the new run's bricks already exist.
+fn assign_power_up_bricks(
+    _restart: On<RestartGame>,
     mut commands: Commands,
-    time: Res<Time>,
-    mut spawner: ResMut<PowerUpSpawner>,
-    brick_query: Query<&Transform, With<Brick>>,
+    spawner: Res<PowerUpSpawner>,
+    mut bricks: Query<(Entity, &mut BrickHealth, &mut Sprite), With<Brick>>,
 ) {
-    // `dispensed()` before `tick()` is how many power-ups came before this
-    // one (0 for the first), matching the "each successive power-up is a
-    // little heavier" ramp; `tick()` itself increments it past this point.
-    let dispensed_before_this_one = spawner.dispensed();
-    let Some(result) = spawner.tick(time.delta()) else {
-        return;
-    };
-
-    let mut rng = rand::rng();
-    let bricks: Vec<Vec3> = brick_query
+    let chosen = bricks
         .iter()
-        .map(|transform| transform.translation)
-        .collect();
-    let Some(brick_pos) = bricks.choose(&mut rng) else {
+        .map(|(entity, _, _)| entity)
+        .sample(&mut rand::rng(), POWER_UP_BRICKS);
+    for entity in chosen {
+        let Some(pick) = spawner.pick() else {
+            return;
+        };
+        let Ok((_, mut health, mut sprite)) = bricks.get_mut(entity) else {
+            continue;
+        };
+        health.0 = POWER_UP_BRICK_HITS;
+        sprite.color = POWER_UP_BRICK_COLOR;
+        commands.entity(entity).insert(PowerUpBrick {
+            kind: pick.kind,
+            color: pick.color,
+        });
+    }
+}
+
+/// A broken power-up brick drops its power-up where it stood. Each
+/// successive drop in a run is a little heavier.
+fn drop_power_up(
+    on: On<BrickDestroyed>,
+    mut commands: Commands,
+    mut drops: ResMut<PowerUpDrops>,
+    bricks: Query<&PowerUpBrick>,
+) {
+    let Ok(power_up_brick) = bricks.get(on.brick) else {
         return;
     };
-
-    let gravity = (BASE_GRAVITY + dispensed_before_this_one as f32 * GRAVITY_STEP).min(MAX_GRAVITY);
-
+    let gravity = (BASE_GRAVITY + drops.0 as f32 * GRAVITY_STEP).min(MAX_GRAVITY);
+    drops.0 += 1;
     commands.spawn((
-        Sprite::from_color(result.color, Vec2::splat(POWER_UP_SIZE)),
-        Transform::from_xyz(brick_pos.x, brick_pos.y, 0.5),
+        Sprite::from_color(power_up_brick.color, Vec2::splat(POWER_UP_SIZE)),
+        Transform::from_xyz(on.position.x, on.position.y, 0.5),
         PowerUp {
-            kind: result.kind,
+            kind: power_up_brick.kind,
             velocity: Vec2::ZERO,
             gravity,
         },
@@ -196,11 +237,11 @@ fn tick_active_effects(time: Res<Time>, mut active: ResMut<ActiveEffects>) {
 fn reset_on_restart(
     _restart: On<RestartGame>,
     mut commands: Commands,
-    mut spawner: ResMut<PowerUpSpawner>,
+    mut drops: ResMut<PowerUpDrops>,
     mut active: ResMut<ActiveEffects>,
     power_up_query: Query<Entity, With<PowerUp>>,
 ) {
-    spawner.reset();
+    drops.0 = 0;
     active.clear();
     for entity in &power_up_query {
         commands.entity(entity).despawn();
@@ -299,6 +340,185 @@ mod tests {
         tap(&mut app, KeyCode::KeyR);
         assert_eq!(app_state(&app), AppState::InGame);
         assert!(app.world().resource::<ActiveEffects>().0.is_empty());
+        assert_eq!(count::<With<PowerUp>>(&mut app), 0);
+    }
+
+    fn power_up_bricks(app: &mut App) -> Vec<Entity> {
+        app.world_mut()
+            .query_filtered::<Entity, With<PowerUpBrick>>()
+            .iter(app.world())
+            .collect()
+    }
+
+    fn power_up_brick_positions(app: &mut App) -> Vec<(i32, i32)> {
+        let mut positions: Vec<(i32, i32)> = app
+            .world_mut()
+            .query_filtered::<&Transform, With<PowerUpBrick>>()
+            .iter(app.world())
+            .map(|t| (t.translation.x as i32, t.translation.y as i32))
+            .collect();
+        positions.sort();
+        positions
+    }
+
+    fn position(app: &App, entity: Entity) -> Vec2 {
+        app.world()
+            .get::<Transform>(entity)
+            .unwrap()
+            .translation
+            .truncate()
+    }
+
+    /// Every falling power-up: (entity, position, kind, gravity).
+    fn falling(app: &mut App) -> Vec<(Entity, Vec2, PowerUpKind, f32)> {
+        app.world_mut()
+            .query::<(Entity, &Transform, &PowerUp)>()
+            .iter(app.world())
+            .map(|(e, t, p)| (e, t.translation.truncate(), p.kind, p.gravity))
+            .collect()
+    }
+
+    fn break_brick(app: &mut App, brick: Entity) {
+        hit(app, brick);
+        hit(app, brick);
+        assert!(app.world().get_entity(brick).is_err());
+    }
+
+    #[test]
+    fn each_run_has_exactly_six_violet_power_up_bricks() {
+        let mut app = app();
+        assert_eq!(power_up_bricks(&mut app).len(), POWER_UP_BRICKS);
+        assert_eq!(
+            bricks(&mut app).len(),
+            crate::BRICK_ROWS * crate::BRICK_COLS
+        );
+
+        for brick in bricks(&mut app) {
+            let entity = app.world().entity(brick);
+            let health = entity.get::<BrickHealth>().unwrap().0;
+            match entity.get::<PowerUpBrick>() {
+                Some(power_up_brick) => {
+                    assert_eq!(health, POWER_UP_BRICK_HITS);
+                    assert_eq!(entity.get::<Sprite>().unwrap().color, POWER_UP_BRICK_COLOR);
+                    assert!(power_up_brick.kind == PowerUpKind::SuperSizer);
+                }
+                None => assert_eq!(health, 1),
+            }
+        }
+    }
+
+    #[test]
+    fn power_up_bricks_are_rechosen_every_run() {
+        let mut app = app();
+        let first = power_up_brick_positions(&mut app);
+
+        tap(&mut app, KeyCode::Space);
+        app.world_mut().resource_mut::<crate::Lives>().0 = 1;
+        let ball = app
+            .world_mut()
+            .query_filtered::<Entity, With<crate::Ball>>()
+            .single(app.world())
+            .unwrap();
+        app.world_mut()
+            .get_mut::<Transform>(ball)
+            .unwrap()
+            .translation
+            .y = -WINDOW_HEIGHT;
+        app.update();
+        app.update();
+        assert_eq!(app_state(&app), AppState::GameOver);
+        tap(&mut app, KeyCode::KeyR);
+
+        let second = power_up_brick_positions(&mut app);
+        assert_eq!(second.len(), POWER_UP_BRICKS);
+        // Same six by chance: 1 in C(60, 6) ≈ 5e7.
+        assert_ne!(first, second);
+    }
+
+    #[test]
+    fn a_single_hit_only_cracks_a_power_up_brick() {
+        let mut app = app();
+        let brick = power_up_bricks(&mut app)[0];
+        hit(&mut app, brick);
+        for _ in 0..5 {
+            app.update();
+        }
+
+        let entity = app.world().entity(brick);
+        assert_eq!(entity.get::<BrickHealth>().unwrap().0, 1);
+        assert_ne!(entity.get::<Sprite>().unwrap().color, POWER_UP_BRICK_COLOR);
+        assert_eq!(app.world().resource::<crate::Score>().0, 10);
+        assert_eq!(count::<With<PowerUp>>(&mut app), 0);
+    }
+
+    #[test]
+    fn breaking_a_power_up_brick_drops_its_power_up_where_it_stood() {
+        let mut app = app();
+        let [first, second] = power_up_bricks(&mut app)[..2] else {
+            unreachable!()
+        };
+        let at = position(&app, first);
+
+        break_brick(&mut app, first);
+        assert_eq!(app.world().resource::<crate::Score>().0, 20);
+        let dropped = falling(&mut app);
+        assert_eq!(dropped.len(), 1);
+        let (_, pos, kind, gravity) = dropped[0];
+        assert_eq!(pos, at);
+        assert!(kind == PowerUpKind::SuperSizer);
+        assert_eq!(gravity, BASE_GRAVITY);
+
+        // The next drop this run is heavier.
+        break_brick(&mut app, second);
+        let gravities: Vec<f32> = falling(&mut app).iter().map(|f| f.3).collect();
+        assert!(gravities.contains(&(BASE_GRAVITY + GRAVITY_STEP)));
+
+        // A normal brick drops nothing.
+        let normal = app
+            .world_mut()
+            .query_filtered::<Entity, (With<Brick>, Without<PowerUpBrick>)>()
+            .iter(app.world())
+            .next()
+            .unwrap();
+        hit(&mut app, normal);
+        assert_eq!(count::<With<PowerUp>>(&mut app), 2);
+    }
+
+    #[test]
+    fn catching_a_dropped_power_up_widens_the_paddle() {
+        let mut app = app();
+        let brick = power_up_bricks(&mut app)[0];
+        break_brick(&mut app, brick);
+        let (power_up, ..) = falling(&mut app)[0];
+        let paddle = app
+            .world_mut()
+            .query_filtered::<Entity, With<Paddle>>()
+            .single(app.world())
+            .unwrap();
+        let paddle_at = app.world().get::<Transform>(paddle).unwrap().translation;
+        app.world_mut()
+            .get_mut::<Transform>(power_up)
+            .unwrap()
+            .translation = paddle_at;
+        app.update();
+        app.update();
+
+        assert_eq!(count::<With<PowerUp>>(&mut app), 0);
+        assert!(app
+            .world()
+            .resource::<ActiveEffects>()
+            .is_active(PowerUpKind::SuperSizer));
+        assert!(app.world().get::<Paddle>(paddle).unwrap().width > crate::PADDLE_WIDTH);
+    }
+
+    #[test]
+    fn no_power_ups_appear_without_breaking_a_power_up_brick() {
+        let mut app = app();
+        // 30 s at the test app's 100 ms step; the old timer fired every 7-10 s.
+        for _ in 0..300 {
+            app.update();
+        }
+        assert_eq!(app_state(&app), AppState::InGame);
         assert_eq!(count::<With<PowerUp>>(&mut app), 0);
     }
 

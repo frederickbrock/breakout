@@ -44,16 +44,20 @@ not hand-rolled kinematics/AABB checks.
   over the frozen game while `PlayState::Paused`) and `game_over.rs` ("GAME OVER" or
   "YOU WIN!", final score, Play again / Main menu). Pause and game-over roots use
   `OVERLAY_DIM` as background so the game shows through.
-- `src/spawner.rs` — `Spawner<T>`, a generic "every N seconds, produce one weighted-random
-  thing" engine. Reusable across any future domain (obstacles, brick respawns, etc.) because
+- `src/spawner.rs` — `Spawner<T>`, a generic weighted registry of spawnable kinds
+  (`register(kind, weight, color)` + `pick()`, no timer). Reusable across any future domain (obstacles, brick respawns, etc.) because
   Bevy resources are keyed by concrete type: `Spawner<PowerUpKind>` and a hypothetical
   `Spawner<ObstacleKind>` are automatically independent resources (same trick Bevy itself
-  uses for `Time<T>`/`Events<T>`). It only decides *when* and *which kind*; actually
-  spawning an entity (components, physics) stays domain-specific.
+  uses for `Time<T>`/`Events<T>`). It only decides *which kind*; when to pick and
+  actually spawning an entity (components, physics) stay domain-specific.
 - `src/powerups/mod.rs` — the power-up framework: `PowerUp` component, `PowerUpCollected`
   event, `ActiveEffects` resource (the "game state" active effects land in — consumers
   recompute derived values from it every frame, so an effect expiring needs no explicit
-  revert step), and the generic spawn/physics/paddle-collision systems.
+  revert step), `PowerUpBrick` (each run `assign_power_up_bricks`, a `RestartGame` observer,
+  turns 6 random bricks violet and 2-hit, each with a kind picked from `PowerUpSpawner`),
+  and the drop/fall/paddle-pickup systems. A power-up only ever appears when a power-up
+  brick breaks: `drop_power_up` observes `BrickDestroyed` and spawns it at the brick's
+  position (no timed drops).
 - `src/script_manager/mod.rs` — `ScriptPlugin`, the Lua scripting entry point (wraps
   bevy_mod_scripting's `BMSPlugin`). Native-only in effect; see the wasm note below.
 - `src/powerups/super_sizer.rs` — one concrete power-up (Super-Sizer: temporarily widens
@@ -74,6 +78,13 @@ not hand-rolled kinematics/AABB checks.
   ball has `CollisionEventsEnabled`; Avian guarantees the enabled side always ends up as
   `collider1`, which is why `on_ball_collision` can assume `on.collider1` is the ball
   without checking.
+- **Bricks have `BrickHealth`** (1 by default; power-up bricks get 2). `on_ball_collision`
+  scores 10 per hit and darkens a brick that survives; on the last hit it triggers
+  `BrickDestroyed { brick, position }` *before* despawning, so observers can still read
+  the brick. Other modules (power-ups) hook brick breaks through that event rather than
+  editing `on_ball_collision`. The run is won when a brick broke and none are left. Tests
+  fake a ball contact with `test_support::hit(app, brick)`, which triggers `CollisionStart`
+  exactly as Avian does.
 - **Ball speed is deliberately kept at a controlled, constant magnitude**, not left to
   Avian's real momentum transfer — `ball_movement` renormalizes `LinearVelocity` back to
   `BALL_SPEED` after every frame's bounce (with a minimum-vertical-component clamp to
@@ -96,7 +107,7 @@ not hand-rolled kinematics/AABB checks.
   `game_state.rs` pauses `Time<Physics>` on leaving `PlayState::Playing` (and on entering
   `MainMenu`/`GameOver`) and resumes it on entering `Playing`, so pausing or ending a run
   freezes every rigid body — nobody zeroes velocities by hand. Non-physics gameplay systems
-  (paddle input, `ball_movement`, power-up spawn/fall/pickup, effect timers) gate
+  (paddle input, `ball_movement`, power-up fall/pickup, effect timers) gate
   themselves with `run_if(in_state(PlayState::Playing))`; a new per-frame gameplay system
   must do the same or it keeps running while paused. The collision observer needs no gate:
   with the clock stopped, no collisions fire.
@@ -111,8 +122,10 @@ not hand-rolled kinematics/AABB checks.
   `start_run` (on `OnEnter(AppState::InGame)`, i.e. first launch and every restart) only
   resets what it directly owns (score, lives = `STARTING_LIVES`, ball/paddle/bricks/HUD) and
   fires `commands.trigger(RestartGame)`; each subsystem with its own state to reset
-  (currently just power-ups, via `reset_on_restart` in `powerups/mod.rs`) owns its own
-  observer on that event. Adding a new stateful subsystem later means giving it its own
+  (currently just power-ups: `reset_on_restart` clears drops and effects, and
+  `assign_power_up_bricks` picks the run's power-up bricks, which already exist then
+  because `start_run` queues their spawns before the trigger) owns its own observer on
+  that event. Adding a new stateful subsystem later means giving it its own
   `RestartGame` observer, not editing `start_run`.
 - **`PaddleMovementSet` / `TickActiveEffects`** are ordering-only `SystemSet`s that let a
   system in one module (e.g. Super-Sizer's paddle-width recompute) declare `.before(...)`/
