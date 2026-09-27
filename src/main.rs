@@ -1,4 +1,5 @@
 mod game_state;
+mod menu;
 mod powerups;
 mod script_manager;
 mod spawner;
@@ -109,7 +110,7 @@ fn main() {
 /// Avian, scripting) that `main` adds. Split out so tests can run the real
 /// game logic on a headless `MinimalPlugins` app.
 fn add_game(app: &mut App) {
-    app.add_plugins(GameStatePlugin)
+    app.add_plugins((GameStatePlugin, menu::MenuPlugin))
         .insert_resource(Gravity(Vec2::new(0.0, 0.8)))
         .init_resource::<Score>()
         .insert_resource(Lives(STARTING_LIVES))
@@ -476,7 +477,8 @@ pub(crate) mod test_support {
     use bevy::time::TimeUpdateStrategy;
     use std::time::Duration;
 
-    pub(crate) fn app() -> App {
+    /// A headless app as just launched: sitting on the main menu.
+    pub(crate) fn launch() -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, StatesPlugin))
             .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_millis(
@@ -485,7 +487,17 @@ pub(crate) mod test_support {
             .init_resource::<ButtonInput<KeyCode>>()
             .init_resource::<Time<Physics>>();
         add_game(&mut app);
-        // Startup + the initial OnEnter(InGame).
+        // Startup + the initial OnEnter(MainMenu).
+        app.update();
+        app
+    }
+
+    /// A headless app that has left the main menu and is in a fresh run.
+    pub(crate) fn app() -> App {
+        let mut app = launch();
+        app.world_mut()
+            .resource_mut::<NextState<AppState>>()
+            .set(AppState::InGame);
         app.update();
         app
     }
@@ -548,7 +560,7 @@ mod tests {
     }
 
     #[test]
-    fn first_launch_starts_a_playing_run() {
+    fn leaving_the_menu_for_a_run_starts_playing() {
         let mut app = app();
         app.update();
 
