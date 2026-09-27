@@ -40,10 +40,18 @@ not hand-rolled kinematics/AABB checks.
   button's behaviour is its own `.observe(...)` (e.g. `go_to(AppState::InGame)`), so a new
   screen (pause, game over) is a new file with its own plugin, not an edit to a shared
   match. The screens: `main_menu.rs` (Start/Settings/Quit — Quit is native-only),
-  `settings.rs` (placeholder, Back or Esc returns), `pause.rs` (Resume / Main menu, shown
+  `settings.rs` (the "Paddle control: Mouse/Keyboard" toggle; Back or Esc returns), `pause.rs` (Resume / Main menu, shown
   over the frozen game while `PlayState::Paused`) and `game_over.rs` ("GAME OVER" or
   "YOU WIN!", final score, Play again / Main menu). Pause and game-over roots use
   `OVERLAY_DIM` as background so the game shows through.
+- `src/controls.rs` — player controls: the session-only `ControlSettings` resource
+  (`PaddleControl::Mouse` by default, or `Keyboard`, toggled on the Settings screen) and
+  the mouse side of paddle control. While `Playing` in Mouse mode, `track_cursor` turns
+  cursor movement into a `PaddleTarget` (world X); `paddle_movement` then drives the
+  paddle's `LinearVelocity.x` toward it (`clamp_paddle_x` keeps it between the walls for
+  the current `Paddle.width`, `follow_velocity` is the capped proportional drive), so Avian
+  still resolves ball bounces. Arrow keys / A/D push with `ConstantForce` in both modes, and
+  a held key clears the mouse target. Tests set `PaddleTarget` directly (no window).
 - `src/spawner.rs` — `Spawner<T>`, a generic "every N seconds, produce one weighted-random
   thing" engine. Reusable across any future domain (obstacles, brick respawns, etc.) because
   Bevy resources are keyed by concrete type: `Spawner<PowerUpKind>` and a hypothetical
