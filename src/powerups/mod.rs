@@ -279,6 +279,7 @@ mod tests {
     #[test]
     fn a_new_run_clears_power_ups_and_active_effects() {
         let mut app = app();
+        tap(&mut app, KeyCode::Space);
         spawn_falling_power_up(&mut app);
         app.world_mut()
             .resource_mut::<ActiveEffects>()
