@@ -80,9 +80,6 @@ struct ScoreText;
 #[derive(Component)]
 struct LivesText;
 
-#[derive(Component)]
-struct OverlayText;
-
 #[derive(Resource, Default)]
 struct Score(i32);
 
@@ -168,7 +165,6 @@ fn add_game(app: &mut App) {
                     .run_if(in_state(PlayState::Playing)),
                 restart_from_game_over.run_if(in_state(AppState::GameOver)),
                 update_hud.run_if(in_state(AppState::InGame)),
-                update_overlay,
             )
                 .chain(),
         );
@@ -292,20 +288,6 @@ fn setup_level(mut commands: Commands) {
             Transform::from_xyz(x, y, 0.0),
         ));
     }
-
-    // Pause / game-over / win message. Global rather than run-scoped so it
-    // stays up on the game-over screen after the run's entities are gone.
-    commands.spawn((
-        Text2d::new(""),
-        TextFont {
-            font_size: FontSize::Px(32.0),
-            ..default()
-        },
-        TextColor(YELLOW.into()),
-        Anchor::CENTER,
-        Transform::from_xyz(0.0, 0.0, 1.0),
-        OverlayText,
-    ));
 }
 
 fn spawn_bricks(commands: &mut Commands) {
@@ -543,7 +525,8 @@ fn end_run(commands: &mut Commands, next_state: &mut NextState<AppState>, outcom
     next_state.set(AppState::GameOver);
 }
 
-/// R on the game-over/win screen starts a new run; entering
+/// R on the game-over/win screen starts a new run (a shortcut for its Play
+/// again button); entering
 /// [`AppState::InGame`] runs [`start_run`], which does the actual resetting.
 fn restart_from_game_over(
     keyboard: Res<ButtonInput<KeyCode>>,
@@ -565,28 +548,6 @@ fn update_hud(
     }
     if let Ok(mut text) = lives_text.single_mut() {
         text.0 = format!("Lives: {}", lives.0);
-    }
-}
-
-fn update_overlay(
-    app_state: Res<State<AppState>>,
-    play_state: Option<Res<State<PlayState>>>,
-    outcome: Option<Res<GameOutcome>>,
-    mut overlay: Query<&mut Text2d, With<OverlayText>>,
-) {
-    let Ok(mut text) = overlay.single_mut() else {
-        return;
-    };
-    let message = match (app_state.get(), play_state.as_deref().map(State::get)) {
-        (AppState::InGame, Some(PlayState::Paused)) => "Paused - Press P or Esc to Resume",
-        (AppState::GameOver, _) => match outcome.as_deref() {
-            Some(GameOutcome::Won) => "YOU WIN! - Press R to Restart",
-            Some(GameOutcome::Lost) | None => "GAME OVER - Press R to Restart",
-        },
-        _ => "",
-    };
-    if text.0 != message {
-        text.0 = message.to_string();
     }
 }
 
@@ -733,7 +694,6 @@ mod tests {
         assert_eq!(count::<With<Brick>>(&mut app), BRICK_ROWS * BRICK_COLS);
         assert_eq!(text::<LivesText>(&mut app), "Lives: 3");
         assert_eq!(text::<ScoreText>(&mut app), "Score: 0");
-        assert_eq!(text::<OverlayText>(&mut app), "");
     }
 
     #[test]
@@ -743,12 +703,10 @@ mod tests {
         tap(&mut app, KeyCode::KeyP);
         assert_eq!(play_state(&app), Some(PlayState::Paused));
         assert!(physics_paused(&app));
-        assert!(text::<OverlayText>(&mut app).starts_with("Paused"));
 
         tap(&mut app, KeyCode::Escape);
         assert_eq!(play_state(&app), Some(PlayState::Playing));
         assert!(!physics_paused(&app));
-        assert_eq!(text::<OverlayText>(&mut app), "");
 
         tap(&mut app, KeyCode::Escape);
         assert_eq!(play_state(&app), Some(PlayState::Paused));
@@ -776,7 +734,6 @@ mod tests {
         assert_eq!(count::<With<Ball>>(&mut app), 0);
         assert_eq!(count::<With<Brick>>(&mut app), 0);
         assert_eq!(count::<With<LivesText>>(&mut app), 0);
-        assert!(text::<OverlayText>(&mut app).starts_with("GAME OVER"));
 
         // P/Esc do nothing outside a run.
         tap(&mut app, KeyCode::KeyP);
@@ -791,7 +748,6 @@ mod tests {
         assert_eq!(count::<With<Ball>>(&mut app), 1);
         assert_eq!(count::<With<Brick>>(&mut app), BRICK_ROWS * BRICK_COLS);
         assert_eq!(text::<LivesText>(&mut app), "Lives: 3");
-        assert_eq!(text::<OverlayText>(&mut app), "");
     }
 
     #[test]
@@ -833,7 +789,6 @@ mod tests {
             Some(&GameOutcome::Won)
         );
         assert!(physics_paused(&app));
-        assert!(text::<OverlayText>(&mut app).starts_with("YOU WIN"));
 
         tap(&mut app, KeyCode::KeyR);
         assert_eq!(app_state(&app), AppState::InGame);

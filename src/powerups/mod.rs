@@ -521,4 +521,23 @@ mod tests {
         assert_eq!(app_state(&app), AppState::InGame);
         assert_eq!(count::<With<PowerUp>>(&mut app), 0);
     }
+
+    #[test]
+    fn abandoning_a_paused_run_for_the_main_menu_clears_power_ups() {
+        let mut app = app();
+        spawn_falling_power_up(&mut app);
+        app.world_mut()
+            .resource_mut::<ActiveEffects>()
+            .refresh_or_insert(PowerUpKind::SuperSizer, 5.0);
+
+        tap(&mut app, KeyCode::Escape);
+        crate::menu::test_helpers::press(&mut app, "Main menu");
+        assert_eq!(app_state(&app), AppState::MainMenu);
+        assert_eq!(count::<With<PowerUp>>(&mut app), 0);
+
+        crate::menu::test_helpers::press(&mut app, "Start");
+        assert_eq!(app_state(&app), AppState::InGame);
+        assert!(app.world().resource::<ActiveEffects>().0.is_empty());
+        assert_eq!(count::<With<PowerUp>>(&mut app), 0);
+    }
 }
