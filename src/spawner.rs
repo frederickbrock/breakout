@@ -47,7 +47,11 @@ impl<T: Copy + Send + Sync + 'static> Spawner<T> {
     /// plugin at build time, so the spawner needs no central list of every
     /// kind that exists.
     pub fn register(&mut self, kind: T, weight: f32, color: Color) {
-        self.defs.push(SpawnDef { kind, weight, color });
+        self.defs.push(SpawnDef {
+            kind,
+            weight,
+            color,
+        });
     }
 
     pub fn dispensed(&self) -> u32 {
