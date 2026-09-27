@@ -433,8 +433,7 @@ mod tests {
         assert!(physics_paused(&app));
         let shown = texts(&mut app);
         assert!(shown.contains(&"Settings".to_string()));
-        assert!(shown.contains(&"Coming soon".to_string()));
-        assert_eq!(button_labels(&mut app), ["Back"]);
+        assert_eq!(button_labels(&mut app), ["Paddle control: Mouse", "Back"]);
 
         tap(&mut app, KeyCode::Escape);
         assert_eq!(app_state(&app), AppState::MainMenu);
@@ -443,9 +442,41 @@ mod tests {
         tap(&mut app, KeyCode::KeyS);
         tap(&mut app, KeyCode::Space);
         assert_eq!(app_state(&app), AppState::Settings);
+        tap(&mut app, KeyCode::ArrowDown);
         tap(&mut app, KeyCode::Enter);
         assert_eq!(app_state(&app), AppState::MainMenu);
         assert_eq!(count::<With<Ball>>(&mut app), 0);
+    }
+
+    #[test]
+    fn the_paddle_control_button_toggles_mouse_and_keyboard() {
+        use crate::controls::{ControlSettings, PaddleControl};
+        let paddle = |app: &App| app.world().resource::<ControlSettings>().paddle;
+        let mut app = launch();
+        press(&mut app, "Settings");
+        assert_eq!(paddle(&app), PaddleControl::Mouse);
+        assert_eq!(focused_label(&mut app), "Paddle control: Mouse");
+
+        tap(&mut app, KeyCode::Enter);
+        assert_eq!(paddle(&app), PaddleControl::Keyboard);
+        assert_eq!(
+            button_labels(&mut app),
+            ["Paddle control: Keyboard", "Back"]
+        );
+        assert_eq!(app_state(&app), AppState::Settings);
+
+        press(&mut app, "Paddle control: Keyboard");
+        assert_eq!(paddle(&app), PaddleControl::Mouse);
+        assert_eq!(button_labels(&mut app), ["Paddle control: Mouse", "Back"]);
+
+        // The choice survives leaving and re-entering Settings.
+        tap(&mut app, KeyCode::Space);
+        tap(&mut app, KeyCode::Escape);
+        press(&mut app, "Settings");
+        assert_eq!(
+            button_labels(&mut app),
+            ["Paddle control: Keyboard", "Back"]
+        );
     }
 
     #[test]
