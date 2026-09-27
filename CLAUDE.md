@@ -91,6 +91,8 @@ not hand-rolled kinematics/AABB checks.
   ball. It sits `BALL_ANCHOR_GAP` above the paddle so the serve doesn't start in contact and
   trigger the paddle-hit spin rule. Tests serve with `tap(&mut app, KeyCode::Space)` (or
   `test_support::click`) before anything that needs the ball in flight.
+  On the pause menu, Space activates the focused button (Resume), and that press doesn't
+  also serve: menu activation changes state a frame later, after input is cleared.
 - **Game state is Bevy `States`, and physics only runs while `InGame/Playing`.**
   `game_state.rs` pauses `Time<Physics>` on leaving `PlayState::Playing` (and on entering
   `MainMenu`/`GameOver`) and resumes it on entering `Playing`, so pausing or ending a run
