@@ -10,7 +10,9 @@
 //! Only one menu is expected on screen at a time; each screen's root carries
 //! `DespawnOnExit(<its state>)` so it disappears when its state is left.
 
+mod game_over;
 mod main_menu;
+mod pause;
 mod settings;
 
 use bevy::prelude::*;
@@ -20,18 +22,23 @@ pub struct MenuPlugin;
 
 impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((main_menu::MainMenuPlugin, settings::SettingsPlugin))
-            .add_systems(
-                Update,
-                (
-                    focus_first_button,
-                    hover_moves_focus,
-                    keyboard_navigation,
-                    activate_buttons,
-                    update_button_colors,
-                )
-                    .chain(),
-            );
+        app.add_plugins((
+            main_menu::MainMenuPlugin,
+            settings::SettingsPlugin,
+            pause::PauseMenuPlugin,
+            game_over::GameOverPlugin,
+        ))
+        .add_systems(
+            Update,
+            (
+                focus_first_button,
+                hover_moves_focus,
+                keyboard_navigation,
+                activate_buttons,
+                update_button_colors,
+            )
+                .chain(),
+        );
     }
 }
 
@@ -60,6 +67,8 @@ const BUTTON_HOVERED: Color = Color::srgb(0.25, 0.25, 0.35);
 const BUTTON_PRESSED: Color = Color::srgb(0.1, 0.35, 0.15);
 const BORDER_NORMAL: Color = Color::srgb(0.3, 0.3, 0.35);
 const BORDER_FOCUSED: Color = Color::srgb(1.0, 0.85, 0.2);
+/// Background for menus shown over the game (pause, game over).
+const OVERLAY_DIM: Color = Color::srgba(0.0, 0.0, 0.0, 0.6);
 
 /// Full-window, centred column that lives only while in `state`.
 pub fn menu_screen<S: States>(state: S) -> impl Bundle {
@@ -252,15 +261,13 @@ fn update_button_colors(
     }
 }
 
+/// Finding and driving on-screen menu buttons from headless tests.
 #[cfg(test)]
-mod tests {
+pub(crate) mod test_helpers {
     use super::*;
-    use crate::game_state::{AppState, PlayState};
-    use crate::test_support::*;
-    use crate::{Ball, Brick, Lives, Score, STARTING_LIVES};
 
     /// Labels of the on-screen menu buttons, in navigation order.
-    fn button_labels(app: &mut App) -> Vec<String> {
+    pub(crate) fn button_labels(app: &mut App) -> Vec<String> {
         let world = app.world_mut();
         let lists: Vec<Entity> = world
             .query_filtered::<Entity, With<MenuList>>()
@@ -277,7 +284,7 @@ mod tests {
         labels
     }
 
-    fn button(app: &mut App, label: &str) -> Entity {
+    pub(crate) fn button(app: &mut App, label: &str) -> Entity {
         let world = app.world_mut();
         let buttons: Vec<(Entity, Entity)> = world
             .query_filtered::<(Entity, &Children), With<MenuButton>>()
@@ -291,7 +298,7 @@ mod tests {
             .unwrap_or_else(|| panic!("no {label} button on screen"))
     }
 
-    fn focused_label(app: &mut App) -> String {
+    pub(crate) fn focused_label(app: &mut App) -> String {
         let world = app.world_mut();
         let focused = world
             .query_filtered::<&Children, With<Focused>>()
@@ -300,7 +307,7 @@ mod tests {
         world.entity(focused).get::<Text>().unwrap().0.clone()
     }
 
-    fn texts(app: &mut App) -> Vec<String> {
+    pub(crate) fn texts(app: &mut App) -> Vec<String> {
         let world = app.world_mut();
         world
             .query::<&Text>()
@@ -309,11 +316,27 @@ mod tests {
             .collect()
     }
 
-    fn set_interaction(app: &mut App, label: &str, interaction: Interaction) {
+    pub(crate) fn set_interaction(app: &mut App, label: &str, interaction: Interaction) {
         let entity = button(app, label);
         *app.world_mut().get_mut::<Interaction>(entity).unwrap() = interaction;
         app.update();
     }
+
+    /// Clicks the button labelled `label` and lets the resulting state
+    /// transition happen.
+    pub(crate) fn press(app: &mut App, label: &str) {
+        set_interaction(app, label, Interaction::Pressed);
+        app.update();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::test_helpers::*;
+    use super::*;
+    use crate::game_state::{AppState, PlayState};
+    use crate::test_support::*;
+    use crate::{Ball, Brick, Lives, Score, STARTING_LIVES};
 
     #[test]
     fn launch_shows_the_main_menu_with_no_run_behind_it() {
