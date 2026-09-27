@@ -27,7 +27,7 @@ not hand-rolled kinematics/AABB checks.
 
 - `src/main.rs` — core game: `Ball`, `Paddle`, `Brick` entities/components, score/lives
   resources, the `App` wiring (`add_game`), starting a run (`start_run`), and the systems
-  that react to physics (`ball_movement`, `paddle_movement`, `update_hud`, `update_overlay`).
+  that react to physics (`ball_movement`, `paddle_movement`, `update_hud`).
 - `src/game_state.rs` — the state machine: `AppState { MainMenu, Settings, InGame, GameOver }`
   (the app launches into `MainMenu`), the
   `InGame` sub-state `PlayState { Playing, Paused }` (P/Esc toggles it), the `GameOutcome`
@@ -39,8 +39,11 @@ not hand-rolled kinematics/AABB checks.
   Mouse hover/press looks, Up/Down/W/S focus (wrapping) and activation come for free; each
   button's behaviour is its own `.observe(...)` (e.g. `go_to(AppState::InGame)`), so a new
   screen (pause, game over) is a new file with its own plugin, not an edit to a shared
-  match. `main_menu.rs` (Start/Settings/Quit — Quit is native-only) and `settings.rs`
-  (placeholder, Back or Esc returns) are the screens.
+  match. The screens: `main_menu.rs` (Start/Settings/Quit — Quit is native-only),
+  `settings.rs` (placeholder, Back or Esc returns), `pause.rs` (Resume / Main menu, shown
+  over the frozen game while `PlayState::Paused`) and `game_over.rs` ("GAME OVER" or
+  "YOU WIN!", final score, Play again / Main menu). Pause and game-over roots use
+  `OVERLAY_DIM` as background so the game shows through.
 - `src/spawner.rs` — `Spawner<T>`, a generic "every N seconds, produce one weighted-random
   thing" engine. Reusable across any future domain (obstacles, brick respawns, etc.) because
   Bevy resources are keyed by concrete type: `Spawner<PowerUpKind>` and a hypothetical
@@ -88,9 +91,11 @@ not hand-rolled kinematics/AABB checks.
   with the clock stopped, no collisions fire.
 - **A run's entities are state-scoped.** Ball, paddle, bricks, HUD text and falling
   power-ups carry `DespawnOnExit(AppState::InGame)`, so leaving the run (game over) removes
-  them. Walls, camera and the centred overlay text (pause/game-over/win message) are global.
+  them. Walls and camera are global.
   `ball_movement` ends a run via `end_run` (inserts `GameOutcome`, sets `AppState::GameOver`);
-  R on the game-over screen goes back to `InGame`.
+  R on the game-over screen goes back to `InGame` (a shortcut for its Play again button);
+  Main menu from the pause or game-over screen leaves `InGame`, so the run is torn down and
+  the next Start begins fresh.
 - **`RestartGame` is a crate-wide broadcast event**, not a resource `main.rs` reaches into.
   `start_run` (on `OnEnter(AppState::InGame)`, i.e. first launch and every restart) only
   resets what it directly owns (score, lives = `STARTING_LIVES`, ball/paddle/bricks/HUD) and
