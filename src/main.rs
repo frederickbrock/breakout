@@ -871,14 +871,21 @@ mod tests {
         tap(&mut app, KeyCode::KeyP);
         assert_eq!(play_state(&app), Some(PlayState::Paused));
 
-        tap(&mut app, KeyCode::Space);
+        // A click that isn't on a pause-menu button does nothing.
         click(&mut app);
+        assert_eq!(play_state(&app), Some(PlayState::Paused));
         assert!(is_anchored(&mut app));
 
-        tap(&mut app, KeyCode::KeyP);
+        // Space on the pause menu activates the focused Resume button: the
+        // game resumes, but that same press doesn't also serve the ball.
+        tap(&mut app, KeyCode::Space);
         assert_eq!(play_state(&app), Some(PlayState::Playing));
         assert!(is_anchored(&mut app));
         assert_resting_on_paddle(&mut app);
+
+        // The next press serves.
+        tap(&mut app, KeyCode::Space);
+        assert!(!is_anchored(&mut app));
     }
 
     #[test]
