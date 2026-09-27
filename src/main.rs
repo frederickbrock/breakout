@@ -323,6 +323,7 @@ fn spawn_bricks(commands: &mut Commands) {
 /// toward the cursor target instead (see `controls`); a held key takes over
 /// and clears that target.
 fn paddle_movement(
+    time: Res<Time>,
     keyboard: Res<ButtonInput<KeyCode>>,
     settings: Res<ControlSettings>,
     mut target: ResMut<PaddleTarget>,
@@ -348,7 +349,8 @@ fn paddle_movement(
     if settings.paddle == PaddleControl::Mouse {
         if let Some(target_x) = target.x {
             let target_x = controls::clamp_paddle_x(target_x, paddle.width);
-            velocity.0.x = controls::follow_velocity(transform.translation.x, target_x);
+            velocity.0.x =
+                controls::follow_velocity(transform.translation.x, target_x, time.delta_secs());
         }
     }
 }
@@ -1124,6 +1126,41 @@ mod tests {
         assert_eq!(
             app.world().get_resource::<GameOutcome>(),
             Some(&GameOutcome::Won)
+        );
+    }
+
+    #[test]
+    fn in_mouse_mode_a_paddle_edge_hit_still_spins_the_ball() {
+        let mut app = app();
+        assert_eq!(
+            app.world().resource::<ControlSettings>().paddle,
+            PaddleControl::Mouse
+        );
+        tap(&mut app, KeyCode::Space);
+        aim_mouse_at(&mut app, 0.0);
+        let (ball, paddle) = (ball(&mut app), paddle(&mut app));
+        // Coming down onto the paddle's right edge.
+        {
+            let paddle_at = translation(&app, paddle);
+            let mut transform = app.world_mut().get_mut::<Transform>(ball).unwrap();
+            transform.translation.x = paddle_at.x + PADDLE_WIDTH * 0.45;
+        }
+        app.world_mut().get_mut::<LinearVelocity>(ball).unwrap().0 = Vec2::new(0.0, -BALL_SPEED);
+        app.world_mut().trigger(CollisionStart {
+            collider1: ball,
+            collider2: paddle,
+            body1: Some(ball),
+            body2: Some(paddle),
+        });
+        app.update();
+
+        let v = ball_velocity(&mut app);
+        assert!(v.y > 0.0, "bounced up, got {v:?}");
+        // A centre hit goes straight up; near the edge the ball leaves at a
+        // clearly angled side trajectory (over 25° off vertical).
+        assert!(
+            v.x / v.y > 25f32.to_radians().tan(),
+            "near the edge the ball leaves at a side angle, got {v:?}"
         );
     }
 }

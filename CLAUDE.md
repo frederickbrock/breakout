@@ -50,7 +50,8 @@ not hand-rolled kinematics/AABB checks.
   the mouse side of paddle control. While `Playing` in Mouse mode, `track_cursor` turns
   cursor movement into a `PaddleTarget` (world X); `paddle_movement` then drives the
   paddle's `LinearVelocity.x` toward it (`clamp_paddle_x` keeps it between the walls for
-  the current `Paddle.width`, `follow_velocity` is the capped proportional drive), so Avian
+  the current `Paddle.width`, `follow_velocity` is the capped proportional drive, limited to ~80% of the gap per frame so
+  low frame rates don't overshoot), so Avian
   still resolves ball bounces. Arrow keys / A/D push with `ConstantForce` in both modes, and
   a held key clears the mouse target. Tests set `PaddleTarget` directly (no window).
 - `src/spawner.rs` — `Spawner<T>`, a generic weighted registry of spawnable kinds

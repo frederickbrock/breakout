@@ -58,6 +58,10 @@ pub struct PaddleTarget {
 const FOLLOW_GAIN: f32 = 20.0;
 /// Top horizontal speed while following the mouse.
 const MAX_FOLLOW_SPEED: f32 = 2000.0;
+/// Most of the gap a single frame may close. The velocity is set once per
+/// frame but Avian integrates it over every fixed step in that frame, so at
+/// a low frame rate an uncapped gain would overshoot and ring.
+const MAX_GAP_PER_FRAME: f32 = 0.8;
 
 /// The paddle-centre X for a cursor at `cursor_x`, clamped so a paddle of
 /// `paddle_width` stays between the side walls.
@@ -69,8 +73,17 @@ pub fn clamp_paddle_x(cursor_x: f32, paddle_width: f32) -> f32 {
 /// Horizontal velocity that moves a paddle at `paddle_x` toward `target_x`
 /// (already clamped), proportional to the gap and capped. Driving velocity
 /// rather than teleporting keeps Avian resolving the ball bounce.
-pub fn follow_velocity(paddle_x: f32, target_x: f32) -> f32 {
-    ((target_x - paddle_x) * FOLLOW_GAIN).clamp(-MAX_FOLLOW_SPEED, MAX_FOLLOW_SPEED)
+///
+/// `frame_dt` is this frame's length in seconds: the gain is limited so the
+/// frame closes at most [`MAX_GAP_PER_FRAME`] of the gap however many physics
+/// steps run in it, so a slow frame rate can't make the paddle overshoot.
+pub fn follow_velocity(paddle_x: f32, target_x: f32, frame_dt: f32) -> f32 {
+    let gain = if frame_dt > 0.0 {
+        FOLLOW_GAIN.min(MAX_GAP_PER_FRAME / frame_dt)
+    } else {
+        FOLLOW_GAIN
+    };
+    ((target_x - paddle_x) * gain).clamp(-MAX_FOLLOW_SPEED, MAX_FOLLOW_SPEED)
 }
 
 pub struct ControlsPlugin;
@@ -144,11 +157,25 @@ mod tests {
 
     #[test]
     fn follow_velocity_heads_for_the_target_and_is_capped() {
-        assert_eq!(follow_velocity(0.0, 0.0), 0.0);
-        assert!(follow_velocity(0.0, 10.0) > 0.0);
-        assert!(follow_velocity(0.0, -10.0) < 0.0);
-        assert_eq!(follow_velocity(-400.0, 400.0), MAX_FOLLOW_SPEED);
-        assert_eq!(follow_velocity(400.0, -400.0), -MAX_FOLLOW_SPEED);
+        let dt = 1.0 / 60.0;
+        assert_eq!(follow_velocity(0.0, 0.0, dt), 0.0);
+        assert!(follow_velocity(0.0, 10.0, dt) > 0.0);
+        assert!(follow_velocity(0.0, -10.0, dt) < 0.0);
+        assert_eq!(follow_velocity(-400.0, 400.0, dt), MAX_FOLLOW_SPEED);
+        assert_eq!(follow_velocity(400.0, -400.0, dt), -MAX_FOLLOW_SPEED);
+    }
+
+    #[test]
+    fn a_slow_frame_never_overshoots_the_target() {
+        for fps in [240.0, 60.0, 20.0, 10.0, 5.0, 2.0] {
+            let dt = 1.0 / fps;
+            let gap = 50.0;
+            let moved = follow_velocity(0.0, gap, dt) * dt;
+            assert!(
+                moved > 0.0 && moved <= gap * MAX_GAP_PER_FRAME + 1e-3,
+                "{fps} fps moved {moved}"
+            );
+        }
     }
 
     #[test]
