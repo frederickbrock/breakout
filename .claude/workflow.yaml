@@ -7,7 +7,7 @@ gates:
   spec_approval: true          # always true
   findings_to_human: false     # reviewer/tester ask the user before bouncing
   approve_before_test: true
-  merge: auto                  # human | auto  (note: master protection requires 1 approving review)
+  merge: auto                  # human | auto  (master protection: no required review; required checks native + web, test once green)
 max_bounces: 2
 beads:
   sync_commit: pr              # trunk-direct | pr | manual  (master is branch-protected)
