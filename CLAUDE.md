@@ -28,9 +28,19 @@ not hand-rolled kinematics/AABB checks.
 - `src/main.rs` — core game: `Ball`, `Paddle`, `Brick` entities/components, score/lives
   resources, the `App` wiring (`add_game`), starting a run (`start_run`), and the systems
   that react to physics (`ball_movement`, `paddle_movement`, `update_hud`, `update_overlay`).
-- `src/game_state.rs` — the state machine: `AppState { MainMenu, InGame, GameOver }`, the
+- `src/game_state.rs` — the state machine: `AppState { MainMenu, Settings, InGame, GameOver }`
+  (the app launches into `MainMenu`), the
   `InGame` sub-state `PlayState { Playing, Paused }` (P/Esc toggles it), the `GameOutcome`
   (won/lost) resource, and control of Avian's physics clock.
+- `src/menu/` — menu screens and the reusable widget kit they share. `mod.rs` holds the kit:
+  `menu_screen(state)` (state-scoped full-window root), `menu_list()` (a `MenuList` column
+  whose children order is the keyboard navigation order), `menu_button(label)`, the
+  `Focused` marker, and the `ButtonActivated` entity event fired on click or Enter/Space.
+  Mouse hover/press looks, Up/Down/W/S focus (wrapping) and activation come for free; each
+  button's behaviour is its own `.observe(...)` (e.g. `go_to(AppState::InGame)`), so a new
+  screen (pause, game over) is a new file with its own plugin, not an edit to a shared
+  match. `main_menu.rs` (Start/Settings/Quit — Quit is native-only) and `settings.rs`
+  (placeholder, Back or Esc returns) are the screens.
 - `src/spawner.rs` — `Spawner<T>`, a generic "every N seconds, produce one weighted-random
   thing" engine. Reusable across any future domain (obstacles, brick respawns, etc.) because
   Bevy resources are keyed by concrete type: `Spawner<PowerUpKind>` and a hypothetical

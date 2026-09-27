@@ -13,10 +13,11 @@ use bevy::prelude::*;
 
 #[derive(States, Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum AppState {
-    /// Title screen. Nothing enters it yet — the main menu (sim-v0i.2) will
-    /// make it the initial state.
-    MainMenu,
+    /// Title screen; the app launches here.
     #[default]
+    MainMenu,
+    /// Settings screen, reached from the main menu.
+    Settings,
     InGame,
     GameOver,
 }
@@ -50,6 +51,7 @@ impl Plugin for GameStatePlugin {
             .add_systems(OnEnter(PlayState::Playing), resume_physics)
             .add_systems(OnExit(PlayState::Playing), pause_physics)
             .add_systems(OnEnter(AppState::MainMenu), pause_physics)
+            .add_systems(OnEnter(AppState::Settings), pause_physics)
             .add_systems(OnEnter(AppState::GameOver), pause_physics)
             .add_systems(Update, toggle_pause.run_if(in_state(AppState::InGame)));
     }
