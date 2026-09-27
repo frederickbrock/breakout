@@ -4,7 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-- Web build (primary/default distribution target): `trunk build` (output in `dist/`)
+- Web build (primary/default distribution target): `trunk build` (output in `dist/`, which is
+  git-ignored; CI builds its own for GitHub Pages)
 - Web dev server: `trunk serve` then open the shown localhost URL (default http://localhost:8080)
 - Native desktop dev loop (secondary): `cargo run`
 - Native release build: `cargo build --release`
