@@ -13,6 +13,9 @@ rand = "0.10.2"
 # `parallel`/rayon, which is fine and desirable off the web).
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 avian2d = "0.7.0"
+# Asset hot reload (edit a PNG while `cargo run` is live). Native-only: the
+# browser build has no filesystem to watch.
+bevy = { version = "0.19.1", features = ["file_watcher"] }
 # Lua scripting is native-only: `lua54` compiles mlua's bundled Lua C sources,
 # which do not build for wasm32-unknown-unknown. On wasm, ScriptPlugin is a no-op.
 bevy_mod_scripting = { version = "0.21.0", features = ["lua54"] }

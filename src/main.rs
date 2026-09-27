@@ -3,9 +3,11 @@ mod menu;
 mod powerups;
 mod script_manager;
 mod spawner;
+mod sprites;
 mod theme;
 
 use avian2d::prelude::*;
+use bevy::asset::AssetMetaCheck;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
 use game_state::{AppState, GameOutcome, GameStatePlugin, PlayState};
@@ -135,16 +137,26 @@ fn main() {
     }
 
     let mut app = App::new();
-    app.add_plugins(DefaultPlugins.set(WindowPlugin {
-        primary_window: Some(Window {
-            title: "Breakout".into(),
-            resolution: (WINDOW_WIDTH as u32, WINDOW_HEIGHT as u32).into(),
-            ..default()
-        }),
-        ..default()
-    }))
+    app.add_plugins(
+        DefaultPlugins
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "Breakout".into(),
+                    resolution: (WINDOW_WIDTH as u32, WINDOW_HEIGHT as u32).into(),
+                    ..default()
+                }),
+                ..default()
+            })
+            // No `.meta` files ship with the assets; without this the browser
+            // build requests one per asset and trunk's server answers 404.
+            .set(AssetPlugin {
+                meta_check: AssetMetaCheck::Never,
+                ..default()
+            }),
+    )
     .add_plugins(PhysicsPlugins::default())
     .add_plugins(script_manager::ScriptPlugin)
+    .add_plugins(sprites::SpritesPlugin)
     .insert_resource(ClearColor(theme::VOID));
     add_game(&mut app);
     app.run();
