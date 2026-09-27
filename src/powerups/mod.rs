@@ -412,6 +412,7 @@ mod tests {
         let mut app = app();
         let first = power_up_brick_positions(&mut app);
 
+        tap(&mut app, KeyCode::Space);
         app.world_mut().resource_mut::<crate::Lives>().0 = 1;
         let ball = app
             .world_mut()
