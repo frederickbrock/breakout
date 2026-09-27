@@ -44,6 +44,9 @@ const BRICK_WIDTH: f32 = 80.0;
 const BRICK_HEIGHT: f32 = 30.0;
 const BRICK_ROWS: usize = 6;
 const BRICK_COLS: usize = 10;
+/// How much a multi-hit brick darkens (`Luminance::darker`) each time it
+/// survives a hit.
+const CRACKED_DARKEN: f32 = 0.3;
 /// Lives at the start of every run, including the first.
 const STARTING_LIVES: i32 = 3;
 
@@ -68,6 +71,11 @@ type AnchoredBall = (With<Ball>, With<Anchored>);
 #[derive(Component)]
 struct Brick;
 
+/// Hits a brick still takes before it breaks. Every brick spawns with 1;
+/// other subsystems (power-up bricks) raise it at the start of a run.
+#[derive(Component)]
+struct BrickHealth(u8);
+
 #[derive(Component)]
 struct ScoreText;
 
@@ -87,6 +95,16 @@ struct Lives(i32);
 /// itself the same way, with no changes needed here.
 #[derive(Event)]
 struct RestartGame;
+
+/// Fired by [`on_ball_collision`] when a brick takes its last hit, *before*
+/// the brick is despawned, so observers can still read its other components.
+/// `powerups` observes it to drop a power-up brick's power-up; this module
+/// knows nothing about power-ups.
+#[derive(Event)]
+struct BrickDestroyed {
+    brick: Entity,
+    position: Vec2,
+}
 
 /// Lets other systems (e.g. a power-up that changes paddle width) declare
 /// they must run before paddle movement each frame, without `main.rs` having
@@ -293,6 +311,7 @@ fn spawn_bricks(commands: &mut Commands) {
                 RigidBody::Static,
                 Collider::rectangle(BRICK_WIDTH, BRICK_HEIGHT),
                 Brick,
+                BrickHealth(1),
                 DespawnOnExit(AppState::InGame),
             ));
         }
@@ -348,14 +367,28 @@ fn on_ball_collision(
     mut commands: Commands,
     mut score: ResMut<Score>,
     mut signals: ResMut<BallCollisionSignals>,
-    brick_query: Query<(), With<Brick>>,
+    mut brick_query: Query<(&Transform, &mut BrickHealth, &mut Sprite), With<Brick>>,
     paddle_query: Query<&Transform, With<Paddle>>,
 ) {
     let other = on.collider2;
-    if brick_query.get(other).is_ok() {
-        commands.entity(other).despawn();
+    if let Ok((transform, mut health, mut sprite)) = brick_query.get_mut(other) {
+        // Already broken by an earlier contact; its despawn is still queued.
+        if health.0 == 0 {
+            return;
+        }
         score.0 += 10;
-        signals.broke_brick = true;
+        health.0 -= 1;
+        if health.0 == 0 {
+            // Trigger before the despawn so observers can still read the brick.
+            commands.trigger(BrickDestroyed {
+                brick: other,
+                position: transform.translation.truncate(),
+            });
+            commands.entity(other).despawn();
+            signals.broke_brick = true;
+        } else {
+            sprite.color = sprite.color.darker(CRACKED_DARKEN);
+        }
     } else if let Ok(paddle_transform) = paddle_query.get(other) {
         signals.paddle_hit_x = Some(paddle_transform.translation.x);
     }
@@ -420,10 +453,11 @@ fn ball_movement(
         ball_velocity.0 = v;
     }
 
-    // `<= 1` rather than `== 0` covers both cases: the despawn command from
-    // `on_ball_collision` may or may not have been applied yet by the time
-    // this system runs this same frame.
-    if broke_brick && brick_query.iter().count() <= 1 {
+    // `on_ball_collision`'s despawn is already applied by now (Avian
+    // triggers collisions from an exclusive system in FixedPostUpdate, whose
+    // commands flush before Update), so the run is won only once no brick is
+    // left at all, cracked multi-hit bricks included.
+    if broke_brick && brick_query.is_empty() {
         end_run(&mut commands, &mut next_state, GameOutcome::Won);
         return;
     }
@@ -616,6 +650,32 @@ pub(crate) mod test_support {
     pub(crate) fn physics_paused(app: &App) -> bool {
         app.world().resource::<Time<Physics>>().is_paused()
     }
+
+    /// Every brick entity currently in the world.
+    pub(crate) fn bricks(app: &mut App) -> Vec<Entity> {
+        app.world_mut()
+            .query_filtered::<Entity, With<Brick>>()
+            .iter(app.world())
+            .collect()
+    }
+
+    /// Fakes one ball contact with `brick` the way Avian does it
+    /// (`trigger_collision_events` triggers `CollisionStart` on the world),
+    /// then applies the observer's commands.
+    pub(crate) fn hit(app: &mut App, brick: Entity) {
+        let ball = app
+            .world_mut()
+            .query_filtered::<Entity, With<Ball>>()
+            .single(app.world())
+            .expect("a run has exactly one ball");
+        app.world_mut().trigger(CollisionStart {
+            collider1: ball,
+            collider2: brick,
+            body1: Some(ball),
+            body2: Some(brick),
+        });
+        app.world_mut().flush();
+    }
 }
 
 #[cfg(test)]
@@ -731,9 +791,9 @@ mod tests {
             .query_filtered::<Entity, With<Brick>>()
             .iter(app.world())
             .collect();
-        // Leave one brick standing and report it broken, as if the ball's
-        // collision had just despawned it this frame.
-        for brick in &bricks[1..] {
+        // Clear every brick and report the last one broken, as the collision
+        // observer would have.
+        for brick in &bricks {
             app.world_mut().despawn(*brick);
         }
         app.world_mut()
@@ -993,5 +1053,77 @@ mod tests {
 
         assert_eq!(paddle_state(&mut app).2.x, -PADDLE_FORCE);
         assert_eq!(app.world().resource::<PaddleTarget>().x, None);
+    }
+
+    fn score(app: &App) -> i32 {
+        app.world().resource::<Score>().0
+    }
+
+    #[test]
+    fn a_normal_brick_breaks_in_one_hit() {
+        let mut app = app();
+        let brick = bricks(&mut app)[0];
+        app.world_mut().get_mut::<BrickHealth>(brick).unwrap().0 = 1;
+
+        hit(&mut app, brick);
+        assert!(app.world().get_entity(brick).is_err());
+        assert_eq!(score(&app), 10);
+        assert_eq!(bricks(&mut app).len(), BRICK_ROWS * BRICK_COLS - 1);
+    }
+
+    #[test]
+    fn a_two_hit_brick_cracks_then_breaks() {
+        let mut app = app();
+        let brick = bricks(&mut app)[0];
+        app.world_mut().get_mut::<BrickHealth>(brick).unwrap().0 = 2;
+        let intact = app.world().get::<Sprite>(brick).unwrap().color;
+
+        hit(&mut app, brick);
+        assert_eq!(app.world().get::<BrickHealth>(brick).unwrap().0, 1);
+        assert_ne!(app.world().get::<Sprite>(brick).unwrap().color, intact);
+        assert_eq!(score(&app), 10);
+        assert!(!app.world().resource::<BallCollisionSignals>().broke_brick);
+
+        // One contact is one hit: nothing more happens on later frames.
+        for _ in 0..3 {
+            app.update();
+        }
+        assert_eq!(app.world().get::<BrickHealth>(brick).unwrap().0, 1);
+
+        hit(&mut app, brick);
+        assert!(app.world().get_entity(brick).is_err());
+        assert_eq!(score(&app), 20);
+    }
+
+    #[test]
+    fn clearing_every_brick_including_two_hit_ones_wins() {
+        let mut app = app();
+        tap(&mut app, KeyCode::Space);
+        let all = bricks(&mut app);
+        for brick in &all[2..] {
+            app.world_mut().despawn(*brick);
+        }
+        let (a, b) = (all[0], all[1]);
+        app.world_mut().get_mut::<BrickHealth>(a).unwrap().0 = 1;
+        app.world_mut().get_mut::<BrickHealth>(b).unwrap().0 = 2;
+
+        hit(&mut app, a);
+        app.update();
+        app.update();
+        assert_eq!(app_state(&app), AppState::InGame, "one brick is left");
+
+        hit(&mut app, b);
+        app.update();
+        app.update();
+        assert_eq!(app_state(&app), AppState::InGame, "a cracked brick is left");
+
+        hit(&mut app, b);
+        app.update();
+        app.update();
+        assert_eq!(app_state(&app), AppState::GameOver);
+        assert_eq!(
+            app.world().get_resource::<GameOutcome>(),
+            Some(&GameOutcome::Won)
+        );
     }
 }
