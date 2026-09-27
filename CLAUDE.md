@@ -78,6 +78,15 @@ not hand-rolled kinematics/AABB checks.
   the side walls, below the bricks and above the paddle, can otherwise get stuck bouncing
   side-to-side forever, since nothing left in that lane can ever touch its Y velocity
   again).
+- **The ball is served from the paddle.** At the start of a run and after every lost life
+  the ball carries `Anchored` plus Avian's `RigidBodyDisabled` and `ColliderDisabled`
+  (always together, via `anchored()`), so it has no velocity and nothing collides with it;
+  `follow_paddle` keeps it centred on top of the paddle, and `launch_ball` (Space or left
+  click, only while `Playing`) removes all three and sends it off at `BALL_SPEED`, 45°
+  toward the side the paddle is moving (right if still). `ball_movement` ignores an anchored
+  ball. It sits `BALL_ANCHOR_GAP` above the paddle so the serve doesn't start in contact and
+  trigger the paddle-hit spin rule. Tests serve with `tap(&mut app, KeyCode::Space)` (or
+  `test_support::click`) before anything that needs the ball in flight.
 - **Game state is Bevy `States`, and physics only runs while `InGame/Playing`.**
   `game_state.rs` pauses `Time<Physics>` on leaving `PlayState::Playing` (and on entering
   `MainMenu`/`GameOver`) and resumes it on entering `Playing`, so pausing or ending a run
