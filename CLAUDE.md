@@ -84,7 +84,9 @@ not hand-rolled kinematics/AABB checks.
   resolved by the pure `resolve_blast(grid, origin, kind)` on a `BrickCell`-keyed snapshot,
   so each hit point is removed (and scored) once, then applied through the normal break path
   (`BrickDestroyed { by_blast: true }`, score, `broke_brick`, `BrickDamaged` for survivors)
-  with a placeholder `BlastFlash` per explosion. `BricksPlugin` also runs the
+  and then triggers `BrickExploded { cell, position, kind }` once per explosion (origin first,
+  then each chained one) for visuals to observe; the placeholder `BlastFlash` is one such
+  observer (the particles epic replaces it). `BricksPlugin` also runs the
   shield-glass flash timer
   (`ShieldFlash`, frozen while paused). Colours come from `theme::brick_color(class)` and
   `theme::brick_face(class, health)` (cracked below full health).
