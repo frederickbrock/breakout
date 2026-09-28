@@ -27,7 +27,8 @@ const PADDLE_FORCE: f32 = 7000.0;
 const PADDLE_LINEAR_DAMPING: f32 = 4.0;
 const PADDLE_MARGIN_BOTTOM: f32 = 10.0;
 /// Width of each paddle end prong (purely visual).
-const PRONG_WIDTH: f32 = 10.0;
+/// Width of each paddle end prong (the sprite is 54 px at 2x).
+const PRONG_WIDTH: f32 = 27.0;
 const BALL_SIZE: f32 = 15.0;
 const BALL_SPEED: f32 = 300.0;
 /// Gap between the anchored ball and the paddle, so the launch doesn't start
@@ -94,11 +95,32 @@ struct ScoreText;
 #[derive(Component)]
 struct LivesText;
 
-/// Lighter end caps on the paddle, kept at its ends by [`place_prongs`] as
-/// its width changes (Super-Sizer). `side` is -1 (left) or 1 (right).
+/// The paddle's end prongs, kept at its ends by [`place_paddle_pieces`] as its
+/// width changes (Super-Sizer). `side` is -1 (left) or 1 (right).
 #[derive(Component)]
 struct PaddleProng {
     side: f32,
+}
+
+/// The paddle's glowing field between the prongs, stretched by
+/// [`place_paddle_pieces`] to fill the gap.
+#[derive(Component)]
+struct PaddleField;
+
+/// Where the paddle's visual pieces go for a paddle `width` wide: each prong
+/// is centred `prong_offset` either side of the middle, and the field fills
+/// the `field_width` between them.
+#[derive(Debug, PartialEq)]
+struct PaddlePieces {
+    prong_offset: f32,
+    field_width: f32,
+}
+
+fn paddle_pieces(width: f32) -> PaddlePieces {
+    PaddlePieces {
+        prong_offset: (width - PRONG_WIDTH) / 2.0,
+        field_width: (width - 2.0 * PRONG_WIDTH).max(0.0),
+    }
 }
 
 /// Mesh and material for the round ball, made once at startup.
@@ -204,6 +226,7 @@ fn add_game(app: &mut App) {
         GameStatePlugin,
         menu::MenuPlugin,
         controls::ControlsPlugin,
+        sprites::SkinPlugin,
         bricks::BricksPlugin,
     ))
     .insert_resource(Gravity(Vec2::new(0.0, 0.8)))
@@ -232,7 +255,7 @@ fn add_game(app: &mut App) {
                 .run_if(in_state(PlayState::Playing)),
             restart_from_game_over.run_if(in_state(AppState::GameOver)),
             update_hud.run_if(in_state(AppState::InGame)),
-            place_prongs,
+            place_paddle_pieces,
         )
             .chain(),
     );
@@ -263,7 +286,8 @@ fn spawn_run_entities(commands: &mut Commands, ball_look: &BallLook) {
     );
     commands.spawn((
         DespawnOnExit(AppState::InGame),
-        Sprite::from_color(theme::EMITTER, Vec2::new(PADDLE_WIDTH, PADDLE_HEIGHT)),
+        // No sprite of its own: it's drawn by its three children.
+        Visibility::default(),
         Transform::from_translation(paddle_start),
         RigidBody::Dynamic,
         Collider::rectangle(PADDLE_WIDTH, PADDLE_HEIGHT),
@@ -275,7 +299,7 @@ fn spawn_run_entities(commands: &mut Commands, ball_look: &BallLook) {
         Paddle {
             width: PADDLE_WIDTH,
         },
-        children![prong(-1.0), prong(1.0)],
+        children![prong(-1.0), paddle_field(), prong(1.0)],
     ));
 
     commands.spawn((
@@ -383,24 +407,40 @@ fn spawn_hud_line(
     ));
 }
 
-/// One of the paddle's end prongs; positioned by [`place_prongs`].
+/// One of the paddle's end prongs; positioned by [`place_paddle_pieces`].
 fn prong(side: f32) -> impl Bundle {
+    let pieces = paddle_pieces(PADDLE_WIDTH);
     (
         PaddleProng { side },
         Sprite::from_color(theme::EMITTER_PRONG, Vec2::new(PRONG_WIDTH, PADDLE_HEIGHT)),
-        Transform::from_xyz(side * (PADDLE_WIDTH - PRONG_WIDTH) / 2.0, 0.0, 0.1),
+        Transform::from_xyz(side * pieces.prong_offset, 0.0, 0.1),
+    )
+}
+
+/// The paddle's middle field; sized by [`place_paddle_pieces`].
+fn paddle_field() -> impl Bundle {
+    let pieces = paddle_pieces(PADDLE_WIDTH);
+    (
+        PaddleField,
+        Sprite::from_color(theme::EMITTER, Vec2::new(pieces.field_width, PADDLE_HEIGHT)),
+        Transform::default(),
     )
 }
 
 /// Keeps the prongs at the paddle's ends when its width changes.
-fn place_prongs(
+fn place_paddle_pieces(
     paddles: Query<(&Paddle, &Children), Changed<Paddle>>,
     mut prongs: Query<(&PaddleProng, &mut Transform)>,
+    mut fields: Query<&mut Sprite, With<PaddleField>>,
 ) {
     for (paddle, children) in &paddles {
+        let pieces = paddle_pieces(paddle.width);
         for child in children.iter() {
             if let Ok((prong, mut transform)) = prongs.get_mut(child) {
-                transform.translation.x = prong.side * (paddle.width - PRONG_WIDTH) / 2.0;
+                transform.translation.x = prong.side * pieces.prong_offset;
+            }
+            if let Ok(mut sprite) = fields.get_mut(child) {
+                sprite.custom_size = Some(Vec2::new(pieces.field_width, PADDLE_HEIGHT));
             }
         }
     }
@@ -1606,6 +1646,75 @@ mod tests {
         assert_eq!(
             title_or_default(Some("Breakout [tester@tester sim-rdl.2]".into())),
             "Breakout [tester@tester sim-rdl.2]"
+        );
+    }
+
+    #[test]
+    fn paddle_pieces_fit_seamlessly_at_normal_and_super_sized_widths() {
+        for (width, offset, field) in [(120.0, 46.5, 66.0), (150.0, 61.5, 96.0)] {
+            let pieces = paddle_pieces(width);
+            assert_eq!(
+                pieces,
+                PaddlePieces {
+                    prong_offset: offset,
+                    field_width: field
+                }
+            );
+            // Outer prong edge on the paddle's edge; inner edge meets the field.
+            assert_eq!(pieces.prong_offset + PRONG_WIDTH / 2.0, width / 2.0);
+            assert_eq!(
+                pieces.prong_offset - PRONG_WIDTH / 2.0,
+                pieces.field_width / 2.0
+            );
+        }
+    }
+
+    fn paddle_look(app: &mut App) -> (Vec<f32>, f32, f32) {
+        let paddle = paddle(app);
+        let width = app.world().get::<Paddle>(paddle).unwrap().width;
+        let world = app.world_mut();
+        let mut prongs: Vec<f32> = world
+            .query_filtered::<&Transform, With<PaddleProng>>()
+            .iter(world)
+            .map(|t| t.translation.x)
+            .collect();
+        prongs.sort_by(f32::total_cmp);
+        let field = world
+            .query_filtered::<&Sprite, With<PaddleField>>()
+            .single(world)
+            .unwrap()
+            .custom_size
+            .unwrap()
+            .x;
+        (prongs, field, width)
+    }
+
+    #[test]
+    fn the_paddle_is_two_prongs_and_a_field_that_follow_super_sizer() {
+        let mut app = app();
+        let paddle = paddle(&mut app);
+        assert!(
+            !app.world().entity(paddle).contains::<Sprite>(),
+            "drawn by its pieces"
+        );
+        assert_eq!(
+            paddle_look(&mut app),
+            (vec![-46.5, 46.5], 66.0, PADDLE_WIDTH)
+        );
+
+        app.world_mut().trigger(powerups::PowerUpCollected {
+            kind: powerups::PowerUpKind::SuperSizer,
+        });
+        app.update();
+        assert_eq!(paddle_look(&mut app), (vec![-61.5, 61.5], 96.0, 150.0));
+
+        // The effect runs out (7 s at the test app's 100 ms step).
+        for _ in 0..80 {
+            app.update();
+        }
+        assert_eq!(
+            paddle_look(&mut app),
+            (vec![-46.5, 46.5], 66.0, PADDLE_WIDTH)
         );
     }
 }

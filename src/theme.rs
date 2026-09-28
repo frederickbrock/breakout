@@ -40,6 +40,9 @@ pub const REACTOR: Color = hex(0xb58cff);
 /// violet bricks they drop from.
 pub const POWER_UP: Color = EMITTER;
 
+/// A sprite's tint when it draws its own image unmodified.
+pub const UNTINTED: Color = Color::WHITE;
+
 /// HUD values and headings.
 pub const INK: Color = hex(0xdde6f1);
 /// HUD labels ("SCORE", "LIVES").
