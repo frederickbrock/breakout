@@ -129,7 +129,7 @@ fn main() {
         DefaultPlugins
             .set(WindowPlugin {
                 primary_window: Some(Window {
-                    title: "Breakout".into(),
+                    title: window_title(),
                     resolution: (WINDOW_WIDTH as u32, WINDOW_HEIGHT as u32).into(),
                     ..default()
                 }),
@@ -148,6 +148,26 @@ fn main() {
     .insert_resource(ClearColor(Color::BLACK));
     add_game(&mut app);
     app.run();
+}
+
+/// Env var `scripts/native-run.sh` sets so each agent's window has a unique,
+/// targetable title. Native only; the browser has no window title to set.
+#[cfg(not(target_arch = "wasm32"))]
+const WINDOW_TITLE_ENV: &str = "BREAKOUT_WINDOW_TITLE";
+
+fn window_title() -> String {
+    #[cfg(not(target_arch = "wasm32"))]
+    let custom = std::env::var(WINDOW_TITLE_ENV).ok();
+    #[cfg(target_arch = "wasm32")]
+    let custom = None;
+    title_or_default(custom)
+}
+
+/// The window title: `custom` if set and non-blank, else "Breakout".
+fn title_or_default(custom: Option<String>) -> String {
+    custom
+        .filter(|title| !title.trim().is_empty())
+        .unwrap_or_else(|| "Breakout".to_string())
 }
 
 /// Everything game-specific, on top of the engine plugins (`DefaultPlugins`,
@@ -1049,6 +1069,16 @@ mod tests {
         assert_eq!(
             app.world().get_resource::<GameOutcome>(),
             Some(&GameOutcome::Won)
+        );
+    }
+
+    #[test]
+    fn the_window_title_defaults_to_breakout() {
+        assert_eq!(title_or_default(None), "Breakout");
+        assert_eq!(title_or_default(Some("  ".into())), "Breakout");
+        assert_eq!(
+            title_or_default(Some("Breakout [tester@tester sim-rdl.2]".into())),
+            "Breakout [tester@tester sim-rdl.2]"
         );
     }
 }
