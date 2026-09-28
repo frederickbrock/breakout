@@ -13,8 +13,8 @@ const POWER_UP_SIZE: f32 = 24.0;
 const POWER_UP_BRICKS: usize = 6;
 /// Hits a power-up brick takes to break.
 const POWER_UP_BRICK_HITS: u8 = 2;
-/// Violet "reactor core" look of a power-up brick (#b58cff).
-const POWER_UP_BRICK_COLOR: Color = Color::srgb_u8(0xb5, 0x8c, 0xff);
+/// Violet "reactor core" look of a power-up brick.
+const POWER_UP_BRICK_COLOR: Color = crate::theme::REACTOR;
 const BASE_GRAVITY: f32 = 140.0;
 const GRAVITY_STEP: f32 = 20.0;
 const MAX_GRAVITY: f32 = 420.0;
@@ -446,7 +446,10 @@ mod tests {
 
         let entity = app.world().entity(brick);
         assert_eq!(entity.get::<BrickHealth>().unwrap().0, 1);
-        assert_ne!(entity.get::<Sprite>().unwrap().color, POWER_UP_BRICK_COLOR);
+        assert_eq!(
+            entity.get::<Sprite>().unwrap().color,
+            crate::theme::cracked(POWER_UP_BRICK_COLOR)
+        );
         assert_eq!(app.world().resource::<crate::Score>().0, 10);
         assert_eq!(count::<With<PowerUp>>(&mut app), 0);
     }

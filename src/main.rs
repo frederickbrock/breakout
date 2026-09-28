@@ -5,11 +5,10 @@ mod powerups;
 mod script_manager;
 mod spawner;
 mod sprites;
+mod theme;
 
 use avian2d::prelude::*;
 use bevy::asset::AssetMetaCheck;
-use bevy::color::palettes::basic::{BLUE, GREEN, RED, WHITE, YELLOW};
-use bevy::color::palettes::css::ORANGE;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
 use controls::{ControlSettings, PaddleControl, PaddleTarget};
@@ -25,6 +24,8 @@ const PADDLE_MASS: f32 = 3.0;
 const PADDLE_FORCE: f32 = 7000.0;
 const PADDLE_LINEAR_DAMPING: f32 = 4.0;
 const PADDLE_MARGIN_BOTTOM: f32 = 10.0;
+/// Width of each paddle end prong (purely visual).
+const PRONG_WIDTH: f32 = 10.0;
 const BALL_SIZE: f32 = 15.0;
 const BALL_SPEED: f32 = 300.0;
 /// Gap between the anchored ball and the paddle, so the launch doesn't start
@@ -46,9 +47,6 @@ const BRICK_WIDTH: f32 = 80.0;
 const BRICK_HEIGHT: f32 = 30.0;
 const BRICK_ROWS: usize = 6;
 const BRICK_COLS: usize = 10;
-/// How much a multi-hit brick darkens (`Luminance::darker`) each time it
-/// survives a hit.
-const CRACKED_DARKEN: f32 = 0.3;
 /// Lives at the start of every run, including the first.
 const STARTING_LIVES: i32 = 3;
 
@@ -83,6 +81,20 @@ struct ScoreText;
 
 #[derive(Component)]
 struct LivesText;
+
+/// Lighter end caps on the paddle, kept at its ends by [`place_prongs`] as
+/// its width changes (Super-Sizer). `side` is -1 (left) or 1 (right).
+#[derive(Component)]
+struct PaddleProng {
+    side: f32,
+}
+
+/// Mesh and material for the round ball, made once at startup.
+#[derive(Resource)]
+struct BallLook {
+    mesh: Handle<Mesh>,
+    material: Handle<ColorMaterial>,
+}
 
 #[derive(Resource, Default)]
 struct Score(i32);
@@ -147,7 +159,7 @@ fn main() {
     .add_plugins(PhysicsPlugins::default())
     .add_plugins(script_manager::ScriptPlugin)
     .add_plugins(sprites::SpritesPlugin)
-    .insert_resource(ClearColor(Color::BLACK));
+    .insert_resource(ClearColor(theme::VOID));
     add_game(&mut app);
     app.run();
 }
@@ -199,6 +211,7 @@ fn add_game(app: &mut App) {
                     .run_if(in_state(PlayState::Playing)),
                 restart_from_game_over.run_if(in_state(AppState::GameOver)),
                 update_hud.run_if(in_state(AppState::InGame)),
+                place_prongs,
             )
                 .chain(),
         );
@@ -212,15 +225,16 @@ fn start_run(
     mut score: ResMut<Score>,
     mut lives: ResMut<Lives>,
     mut signals: ResMut<BallCollisionSignals>,
+    ball_look: Res<BallLook>,
 ) {
     score.0 = 0;
     lives.0 = STARTING_LIVES;
     *signals = BallCollisionSignals::default();
-    spawn_run_entities(&mut commands);
+    spawn_run_entities(&mut commands, &ball_look);
     commands.trigger(RestartGame);
 }
 
-fn spawn_run_entities(commands: &mut Commands) {
+fn spawn_run_entities(commands: &mut Commands, ball_look: &BallLook) {
     let paddle_start = Vec3::new(
         0.0,
         -WINDOW_HEIGHT / 2.0 + PADDLE_HEIGHT / 2.0 + PADDLE_MARGIN_BOTTOM,
@@ -228,7 +242,7 @@ fn spawn_run_entities(commands: &mut Commands) {
     );
     commands.spawn((
         DespawnOnExit(AppState::InGame),
-        Sprite::from_color(RED, Vec2::new(PADDLE_WIDTH, PADDLE_HEIGHT)),
+        Sprite::from_color(theme::EMITTER, Vec2::new(PADDLE_WIDTH, PADDLE_HEIGHT)),
         Transform::from_translation(paddle_start),
         RigidBody::Dynamic,
         Collider::rectangle(PADDLE_WIDTH, PADDLE_HEIGHT),
@@ -240,10 +254,12 @@ fn spawn_run_entities(commands: &mut Commands) {
         Paddle {
             width: PADDLE_WIDTH,
         },
+        children![prong(-1.0), prong(1.0)],
     ));
 
     commands.spawn((
-        Sprite::from_color(WHITE, Vec2::splat(BALL_SIZE)),
+        Mesh2d(ball_look.mesh.clone()),
+        MeshMaterial2d(ball_look.material.clone()),
         Transform::from_translation(anchor_position(paddle_start)),
         RigidBody::Dynamic,
         Collider::circle(BALL_SIZE / 2.0),
@@ -259,35 +275,32 @@ fn spawn_run_entities(commands: &mut Commands) {
 
     spawn_bricks(commands);
 
-    commands.spawn((
-        DespawnOnExit(AppState::InGame),
-        Text2d::new("Score: 0"),
-        TextFont {
-            font_size: FontSize::Px(24.0),
-            ..default()
-        },
-        TextColor(WHITE.into()),
-        Anchor::TOP_LEFT,
-        Transform::from_xyz(-WINDOW_WIDTH / 2.0 + 20.0, WINDOW_HEIGHT / 2.0 - 10.0, 1.0),
+    spawn_hud_line(
+        commands,
+        "SCORE ",
+        "0",
+        WINDOW_HEIGHT / 2.0 - 10.0,
         ScoreText,
-    ));
-
-    commands.spawn((
-        DespawnOnExit(AppState::InGame),
-        Text2d::new(format!("Lives: {STARTING_LIVES}")),
-        TextFont {
-            font_size: FontSize::Px(24.0),
-            ..default()
-        },
-        TextColor(WHITE.into()),
-        Anchor::TOP_LEFT,
-        Transform::from_xyz(-WINDOW_WIDTH / 2.0 + 20.0, WINDOW_HEIGHT / 2.0 - 40.0, 1.0),
+    );
+    spawn_hud_line(
+        commands,
+        "LIVES ",
+        &STARTING_LIVES.to_string(),
+        WINDOW_HEIGHT / 2.0 - 40.0,
         LivesText,
-    ));
+    );
 }
 
-fn setup_level(mut commands: Commands) {
+fn setup_level(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
     commands.spawn(Camera2d);
+    commands.insert_resource(BallLook {
+        mesh: meshes.add(Circle::new(BALL_SIZE / 2.0)),
+        material: materials.add(theme::STEEL),
+    });
 
     // Static walls the ball (and paddle) physically bounce off, instead of
     // manual clamp/reflect code. No bottom wall — a ball reaching the bottom
@@ -324,8 +337,55 @@ fn setup_level(mut commands: Commands) {
     }
 }
 
+/// A HUD line: an uppercase label in the label colour followed by a value
+/// span in ink. `marker` goes on the value span, which [`update_hud`] writes.
+fn spawn_hud_line(
+    commands: &mut Commands,
+    label: &str,
+    value: &str,
+    y: f32,
+    marker: impl Component,
+) {
+    let font = TextFont {
+        font_size: FontSize::Px(24.0),
+        ..default()
+    };
+    commands.spawn((
+        DespawnOnExit(AppState::InGame),
+        Text2d::new(label),
+        font.clone(),
+        TextColor(theme::LABEL),
+        Anchor::TOP_LEFT,
+        Transform::from_xyz(-WINDOW_WIDTH / 2.0 + 20.0, y, 1.0),
+        children![(TextSpan::new(value), font, TextColor(theme::INK), marker)],
+    ));
+}
+
+/// One of the paddle's end prongs; positioned by [`place_prongs`].
+fn prong(side: f32) -> impl Bundle {
+    (
+        PaddleProng { side },
+        Sprite::from_color(theme::EMITTER_PRONG, Vec2::new(PRONG_WIDTH, PADDLE_HEIGHT)),
+        Transform::from_xyz(side * (PADDLE_WIDTH - PRONG_WIDTH) / 2.0, 0.0, 0.1),
+    )
+}
+
+/// Keeps the prongs at the paddle's ends when its width changes.
+fn place_prongs(
+    paddles: Query<(&Paddle, &Children), Changed<Paddle>>,
+    mut prongs: Query<(&PaddleProng, &mut Transform)>,
+) {
+    for (paddle, children) in &paddles {
+        for child in children.iter() {
+            if let Ok((prong, mut transform)) = prongs.get_mut(child) {
+                transform.translation.x = prong.side * (paddle.width - PRONG_WIDTH) / 2.0;
+            }
+        }
+    }
+}
+
 fn spawn_bricks(commands: &mut Commands) {
-    let colors = [RED, ORANGE, YELLOW, GREEN, BLUE];
+    let colors = theme::BRICK_ROWS;
 
     for row in 0..BRICK_ROWS {
         for col in 0..BRICK_COLS {
@@ -421,7 +481,7 @@ fn on_ball_collision(
             commands.entity(other).despawn();
             signals.broke_brick = true;
         } else {
-            sprite.color = sprite.color.darker(CRACKED_DARKEN);
+            sprite.color = theme::cracked(sprite.color);
         }
     } else if let Ok(paddle_transform) = paddle_query.get(other) {
         signals.paddle_hit_x = Some(paddle_transform.translation.x);
@@ -593,14 +653,14 @@ fn restart_from_game_over(
 fn update_hud(
     score: Res<Score>,
     lives: Res<Lives>,
-    mut score_text: Query<&mut Text2d, (With<ScoreText>, Without<LivesText>)>,
-    mut lives_text: Query<&mut Text2d, (With<LivesText>, Without<ScoreText>)>,
+    mut score_text: Query<&mut TextSpan, (With<ScoreText>, Without<LivesText>)>,
+    mut lives_text: Query<&mut TextSpan, (With<LivesText>, Without<ScoreText>)>,
 ) {
     if let Ok(mut text) = score_text.single_mut() {
-        text.0 = format!("Score: {}", score.0);
+        text.0 = score.0.to_string();
     }
     if let Ok(mut text) = lives_text.single_mut() {
-        text.0 = format!("Lives: {}", lives.0);
+        text.0 = lives.0.to_string();
     }
 }
 
@@ -622,7 +682,11 @@ pub(crate) mod test_support {
                 100,
             )))
             .init_resource::<ButtonInput<KeyCode>>()
-            .init_resource::<Time<Physics>>();
+            .init_resource::<Time<Physics>>()
+            // The ball's mesh and material are made at startup.
+            .add_plugins(AssetPlugin::default())
+            .init_asset::<Mesh>()
+            .init_asset::<ColorMaterial>();
         add_game(&mut app);
         // Startup + the initial OnEnter(MainMenu).
         app.update();
@@ -719,7 +783,7 @@ mod tests {
 
     fn text<M: Component>(app: &mut App) -> String {
         app.world_mut()
-            .query_filtered::<&Text2d, With<M>>()
+            .query_filtered::<&TextSpan, With<M>>()
             .single(app.world())
             .map(|t| t.0.clone())
             .unwrap_or_default()
@@ -745,8 +809,8 @@ mod tests {
         assert_eq!(count::<With<Ball>>(&mut app), 1);
         assert_eq!(count::<With<Paddle>>(&mut app), 1);
         assert_eq!(count::<With<Brick>>(&mut app), BRICK_ROWS * BRICK_COLS);
-        assert_eq!(text::<LivesText>(&mut app), "Lives: 3");
-        assert_eq!(text::<ScoreText>(&mut app), "Score: 0");
+        assert_eq!(text::<LivesText>(&mut app), "3");
+        assert_eq!(text::<ScoreText>(&mut app), "0");
     }
 
     #[test]
@@ -800,7 +864,7 @@ mod tests {
         assert_eq!(app.world().resource::<Lives>().0, STARTING_LIVES);
         assert_eq!(count::<With<Ball>>(&mut app), 1);
         assert_eq!(count::<With<Brick>>(&mut app), BRICK_ROWS * BRICK_COLS);
-        assert_eq!(text::<LivesText>(&mut app), "Lives: 3");
+        assert_eq!(text::<LivesText>(&mut app), "3");
     }
 
     #[test]
@@ -813,7 +877,7 @@ mod tests {
 
         assert_eq!(app_state(&app), AppState::InGame);
         assert_eq!(app.world().resource::<Lives>().0, STARTING_LIVES - 1);
-        assert_eq!(text::<LivesText>(&mut app), "Lives: 2");
+        assert_eq!(text::<LivesText>(&mut app), "2");
     }
 
     #[test]
@@ -1159,6 +1223,80 @@ mod tests {
             app.world().get_resource::<GameOutcome>(),
             Some(&GameOutcome::Won)
         );
+    }
+
+    #[test]
+    fn the_ball_is_a_round_steel_mesh() {
+        let mut app = app();
+        let ball = ball(&mut app);
+        let entity = app.world().entity(ball);
+        assert!(entity.contains::<Mesh2d>());
+        assert!(!entity.contains::<Sprite>());
+        let material = entity
+            .get::<MeshMaterial2d<ColorMaterial>>()
+            .unwrap()
+            .0
+            .clone();
+        let color = app
+            .world()
+            .resource::<Assets<ColorMaterial>>()
+            .get(&material)
+            .unwrap()
+            .color;
+        assert_eq!(color, theme::STEEL);
+    }
+
+    #[test]
+    fn the_paddle_prongs_stay_at_its_ends_when_it_widens() {
+        let mut app = app();
+        let prong_xs = |app: &mut App| {
+            let mut xs: Vec<f32> = app
+                .world_mut()
+                .query_filtered::<&Transform, With<PaddleProng>>()
+                .iter(app.world())
+                .map(|t| t.translation.x)
+                .collect();
+            xs.sort_by(f32::total_cmp);
+            xs
+        };
+        let edge = (PADDLE_WIDTH - PRONG_WIDTH) / 2.0;
+        assert_eq!(prong_xs(&mut app), [-edge, edge]);
+
+        // Super-Sizer widens the paddle (it recomputes the width every frame).
+        app.world_mut().trigger(powerups::PowerUpCollected {
+            kind: powerups::PowerUpKind::SuperSizer,
+        });
+        app.update();
+        let paddle = paddle(&mut app);
+        let width = app.world().get::<Paddle>(paddle).unwrap().width;
+        assert!(width > PADDLE_WIDTH);
+        let wide_edge = (width - PRONG_WIDTH) / 2.0;
+        assert_eq!(prong_xs(&mut app), [-wide_edge, wide_edge]);
+    }
+
+    #[test]
+    fn the_hud_shows_uppercase_labels_and_ink_values() {
+        let mut app = app();
+        let world = app.world_mut();
+        let mut labels: Vec<(String, Color)> = world
+            .query::<(&Text2d, &TextColor)>()
+            .iter(world)
+            .map(|(t, c)| (t.0.clone(), c.0))
+            .collect();
+        labels.sort_by(|a, b| a.0.cmp(&b.0));
+        assert_eq!(
+            labels,
+            [
+                ("LIVES ".to_string(), theme::LABEL),
+                ("SCORE ".to_string(), theme::LABEL)
+            ]
+        );
+        let values: Vec<Color> = world
+            .query_filtered::<&TextColor, With<TextSpan>>()
+            .iter(world)
+            .map(|c| c.0)
+            .collect();
+        assert_eq!(values, [theme::INK, theme::INK]);
     }
 
     #[test]

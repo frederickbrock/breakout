@@ -48,6 +48,16 @@ not hand-rolled kinematics/AABB checks.
   over the frozen game while `PlayState::Paused`) and `game_over.rs` ("GAME OVER" or
   "YOU WIN!", final score, Play again / Main menu). Pause and game-over roots use
   `OVERLAY_DIM` as background so the game shows through.
+- `src/theme.rs` — the Steelbreak palette: every colour the game draws with (void clear
+  colour, steel ball, cyan emitter paddle and its prongs, ceramic/titanium/tungsten brick
+  rows, reactor-violet power-up bricks and `cracked()`, power-up drops, HUD ink/label,
+  menu buttons and the overlay dim). Use a `theme::` constant instead of a colour literal;
+  the later sprite swap and palette tweaks touch only this file. The ball is a round
+  `Mesh2d(Circle)` (handles in the `BallLook` resource, made in `setup_level`), and the
+  paddle's end prongs are child sprites kept at its ends by `place_prongs` as Super-Sizer
+  changes its width. The HUD is `SCORE `/`LIVES ` labels with the value in a `TextSpan`
+  child (the markers sit on the span). The headless test app adds `AssetPlugin` plus
+  `Mesh`/`ColorMaterial` assets for the ball.
 - `src/controls.rs` — player controls: the session-only `ControlSettings` resource
   (`PaddleControl::Mouse` by default, or `Keyboard`, toggled on the Settings screen) and
   the mouse side of paddle control. While `Playing` in Mouse mode, `track_cursor` turns
