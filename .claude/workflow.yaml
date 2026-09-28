@@ -21,7 +21,11 @@ functional:
   setup: []
   run:                         # tester runs these, in order
     - cargo build
-    - cargo run                # native desktop (X11 via WSLg); drive + screenshot to verify
+    - scripts/native-run.sh --label <issue-id>   # native desktop (X11 via WSLg); never a bare `cargo run`
+  # Drive and screenshot ONLY the window id native-run.sh prints (xdotool key/mousemove/click
+  # --window <id>, import -window <id>, scripts/window-close.py <id>); never search for a
+  # window named plain "Breakout". Exit 75 = display busy (another agent holds it): use
+  # --wait <secs> or retry later. How-to: scripts/README.md.
   teardown: []
   acceptance: native           # exercise acceptance criteria in the native window
 pr:
