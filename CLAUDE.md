@@ -67,14 +67,18 @@ not hand-rolled kinematics/AABB checks.
   low frame rates don't overshoot), so Avian
   still resolves ball bounces. Arrow keys / A/D push with `ConstantForce` in both modes, and
   a held key clears the mouse target. Tests set `PaddleTarget` directly (no window).
-- `src/bricks.rs` — the brick model: `BrickClass` (`Ceramic`, `Titanium`, `Tungsten`,
+- `src/bricks/` (`mod.rs`) — the brick model: `BrickClass` (`Ceramic`, `Titanium`, `Tungsten`,
   `Reactor` = the power-up brick, `Explosive(ExplosiveKind::{Charge, Breach, Demolition})`,
   `Regen`, `Shield`) with `max_hits()` (1/2/3/2/1/2/1), a `BrickCell { row, col }` on
   every brick (row 0 at the top), and the pure `generate_board(rng) -> [[BrickClass; 10]; 7]`:
   a weighted fill (ceramic 30, titanium 20, tungsten 12, explosive 16 split over the three
   variants, regen 12, shield 10), then one bounded patch pass that places exactly
   `REACTOR_BRICKS` (6) reactors and guarantees at least one of every other class and
-  variant. Tested with a seeded rng. `BricksPlugin` runs the shield-glass flash timer
+  variant. Tested with a seeded rng. Per-class behaviours are submodules composed into
+  `BricksPlugin`: `regen.rs` (a regen brick that survives a hit gets a 3 s `RegenTimer`,
+  restarted by each further non-lethal hit; when it runs out the brick heals to full and
+  loses its cracked look; ticks only while `Playing`). `BricksPlugin` also runs the
+  shield-glass flash timer
   (`ShieldFlash`, frozen while paused). Colours come from `theme::brick_color(class)` and
   `theme::brick_face(class, health)` (cracked below full health).
 - `src/spawner.rs` — `Spawner<T>`, a generic weighted registry of spawnable kinds
@@ -114,7 +118,8 @@ not hand-rolled kinematics/AABB checks.
 - **Bricks have a `BrickClass` and `BrickHealth`** (spawned at the class's `max_hits()`).
   `on_ball_collision` scores 10 per hit and shows a surviving brick's cracked face; on the last hit it triggers
   `BrickDestroyed { brick, position }` *before* despawning, so observers can still read
-  the brick. Other modules (power-ups) hook brick breaks through that event rather than
+  the brick; a hit it survives triggers `BrickDamaged { brick }` instead (regen reacts to
+  that; explosions will fire it too). Other modules (power-ups) hook brick breaks through that event rather than
   editing `on_ball_collision`. The run is won when a brick broke and none are left. Tests
   fake a ball contact with `test_support::hit(app, brick)`, which triggers `CollisionStart`
   exactly as Avian does (`hit_moving` also sets the ball's velocity; `brick_of(app, class)`
