@@ -1,0 +1,31 @@
+Sci-fi industrial game art, clean hard-surface rendering: machined steel, bevelled
+metal plates, bolts and seams, crisp specular edges, subtle glossy highlights.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Subject: the "regen alloy" brick class — same shared plate shape, bevel profile,
+bolted corners and seam-glow layout as the reference image (a titanium-alloy plate),
+but re-surfaced as a self-repairing green alloy. Face gradient from pale mint-green
+(#dcffe6) at the top, through saturated green (#3fcf6e) at the middle, to deep dark
+green (#0f4a24) at the bottom. Seam line colour #9dffbe with a glowing accent line
+#3dff7a. Etch a fine organic-looking vein/lattice pattern into the face — thin
+branching lines like circuitry grown into metal — while keeping the surface clearly
+machined and hard-surfaced, not soft or biological.
+
+Reference: keep the exact plate silhouette, aspect ratio, corner bevel and bolt
+positions of the attached reference image — only the face material/colour and the
+vein/lattice etching change.
+
+Use in game: one brick among a 10x6 grid in a Breakout-style arcade game, strictly
+rectangular, wider than tall (roughly 8:3 aspect ratio), filling its bounding box
+edge to edge with only the reference's small bevel radius at the corners. Intact
+state only (no cracks, no damage, no fracture lines).
+
+Single isolated object, centred, whole object inside frame, orthographic front
+view, plain flat solid #FF00FF magenta background (this object is green, so the key
+colour must be magenta, not green, or the background will not separate cleanly), no
+shadow on the background, no scenery, no other objects, no text, no numbers, no
+hit-count pips, no logos, no letters.

@@ -64,3 +64,28 @@ processing = [
   "saved as RGB (opaque, no alpha) with PNG optimize+max compression to fit the 1500KB budget (1412KB)",
   "custom local fix: a soft radial darkening (numpy, ellipse falloff centred on the top-left corner, ~1000x550px radius) applied on top, because the picked render's leftmost ceiling lamp sits inside the ~300x120 game-px HUD text corner and was too bright for white HUD text to read against; verified by compositing simulated white HUD text plus the actual ball/brick sprites at 1x scale on top before finalizing",
 ]
+
+[[asset]]
+id = "bricks-steelbreak-2"
+issue = "sim-rdl.5.4"
+files = [
+  "assets/sprites/bricks/explosive_intact.png",
+  "assets/sprites/bricks/explosive_cracked.png",
+  "assets/sprites/bricks/regen_intact.png",
+  "assets/sprites/bricks/regen_cracked.png",
+  "assets/sprites/bricks/shield_intact.png",
+  "assets/sprites/bricks/shield_cracked.png",
+]
+source = "explosive: r1/v2 (intact), r4/v4 (cracked); regen: r2/v3 (intact), r5/v4 (cracked); shield: r3/v4 (intact), r6/v4 (cracked) — all on the sim-rdl.5.1 r1/v1 plate silhouette (used as --ref by the concept-artist)"
+model = "google/gemini-2.5-flash-image"
+prompt_file = "art/prompts/sim-rdl.5.4-r1.txt"
+prompt_file_r2 = "art/prompts/sim-rdl.5.4-r2.txt"
+prompt_file_r3 = "art/prompts/sim-rdl.5.4-r3.txt"
+prompt_file_r4 = "art/prompts/sim-rdl.5.4-r4.txt"
+prompt_file_r5 = "art/prompts/sim-rdl.5.4-r5.txt"
+prompt_file_r6 = "art/prompts/sim-rdl.5.4-r6.txt"
+processing = [
+  "explosive/shield: process --bg flood --tolerance 40 --trim --size 160x60 --fit stretch (green #00FF00 key)",
+  "regen: process --bg key --key-color #b64e8f --tolerance 40 --trim --size 160x60 --fit stretch (magenta #FF00FF key, per the brief's exception — green brick vs green key)",
+  "no recolor step this time: each class was generated directly in its final colour (unlike sim-rdl.5.1's recolor-from-titanium approach), since the concept-artist ran one full round per class",
+]

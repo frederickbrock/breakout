@@ -1,0 +1,31 @@
+Sci-fi industrial game art, clean hard-surface rendering: machined steel, bevelled
+metal plates, bolts and seams, crisp specular edges, subtle glossy highlights.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Subject: the "shield glass" brick class — same shared plate shape, bevel profile,
+bolted corners and seam-glow layout as the reference image (a titanium-alloy plate),
+but re-surfaced as a translucent tempered-glass panel set in a thin steel frame.
+Glass face gradient from pale icy cyan (#e6fdff) at the top, through saturated cyan
+(#5fe3f5) at the middle, to deep teal (#0e4a57) at the bottom, with a subtle
+hex-cell refraction pattern visible inside the glass (faint hexagonal facets, not a
+flat printed texture). Seam line colour #b8f6ff with a glowing accent line #4fd8ff.
+The steel frame around the glass keeps the same bolt positions and bevel as the
+reference.
+
+Reference: keep the exact plate silhouette, aspect ratio, corner bevel and bolt
+positions of the attached reference image — only the face material (metal becomes
+glass) and colour change.
+
+Use in game: one brick among a 10x6 grid in a Breakout-style arcade game, strictly
+rectangular, wider than tall (roughly 8:3 aspect ratio), filling its bounding box
+edge to edge with only the reference's small bevel radius at the corners. Intact
+state only (no cracks, no shatter web, no damage).
+
+Single isolated object, centred, whole object inside frame, orthographic front
+view, plain flat solid #00FF00 green background, no shadow on the background, no
+scenery, no other objects, no text, no numbers, no hit-count pips, no logos, no
+letters.
