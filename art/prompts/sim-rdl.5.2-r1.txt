@@ -1,0 +1,21 @@
+Sci-fi industrial game art, clean hard-surface rendering: machined steel, bevelled
+metal plates, bolts and seams, crisp specular edges, subtle glossy highlights.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Subject: the game's ball — a small polished steel sphere. It must read clearly as a
+three-dimensional sphere, not a flat disc or circle: a hard, tight specular
+highlight from the cold key light, a cool cyan-white rim light (#a9dcff) along the
+upper-left edge, and a warm amber rim light (#ffab4d) along the lower-right edge,
+with the body a smooth polished-steel grey (#a9bacd) gradient between the rims. No
+scratches, no bolts, no seams, no facets — a single smooth, glossy metal ball.
+
+Use in game: a small fast-moving ball bouncing between a paddle and a wall of
+bricks, so it must stay readable and clearly spherical even at very small size.
+
+Single isolated object, centred, whole sphere inside frame, orthographic front
+view, plain flat solid #00FF00 green background, no shadow on the background, no
+scenery, no other objects, no text, no numbers, no logos.
