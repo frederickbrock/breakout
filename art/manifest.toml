@@ -25,3 +25,26 @@ processing = [
   "recolor titanium_intact.png -> reactor_intact.png --color #9579d7 --strength 1",
   "recolor titanium_cracked.png -> reactor_cracked.png --color #9579d7 --strength 1",
 ]
+
+[[asset]]
+id = "ball-paddle-powerup"
+issue = "sim-rdl.5.2"
+files = [
+  "assets/sprites/ball.png",
+  "assets/sprites/paddle_prong_left.png",
+  "assets/sprites/paddle_prong_right.png",
+  "assets/sprites/paddle_field.png",
+  "assets/sprites/powerup.png",
+]
+source = "r1/v3 (ball), r2/v3 (paddle assembly), r3/v2 (power-up icon)"
+model = "google/gemini-2.5-flash-image"
+prompt_file = "art/prompts/sim-rdl.5.2-r1.txt"
+prompt_file_paddle = "art/prompts/sim-rdl.5.2-r2.txt"
+prompt_file_powerup = "art/prompts/sim-rdl.5.2-r3.txt"
+processing = [
+  "process round-1/v3.png -> ball.png --bg flood --tolerance 70 --trim --size 60x60",
+  "process round-3/v2.png -> powerup.png --bg flood --tolerance 55 --trim --size 48x48",
+  "paddle assembly (round-2/v3.png) manually cropped: left block region -> decontaminate edge colour (push opaque RGB outward to avoid green-spill blend on resize) -> resize 54x40 -> paddle_prong_left.png",
+  "paddle_prong_right.png = paddle_prong_left.png mirrored horizontally (true mirrored pair, per acceptance criteria)",
+  "paddle_field.png = pure core of the glow bar cropped from round-2/v3.png (no background touching this crop) -> resize 93x40 --fit stretch; fully opaque by design (a solid stretchable fill, not a silhouette sprite)",
+]

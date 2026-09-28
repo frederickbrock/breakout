@@ -1,0 +1,24 @@
+Sci-fi industrial game art, clean hard-surface rendering: machined steel, bevelled
+metal plates, bolts and seams, crisp specular edges, subtle glossy highlights.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Subject: the player's paddle — a magnetic emitter, not a solid bar. It is built from
+two identical machined-steel prong housings, one at the far left and one at the far
+right (mirror images of each other), each a short, thick, bevelled metal block with
+a bolt or two and a small emitter nozzle facing inward. Between the two prongs there
+is NO solid surface at all — only a glowing horizontal energy field bridging the gap,
+a bright cyan-white bar (#4fd8ff core, #a9dcff hot centre) with a soft glow, like a
+horizontal lightsaber blade or containment field. The whole shape is a long, low,
+wide horizontal band (roughly 6:1 width:height), flat-topped and flat-bottomed.
+
+Use in game: this whole assembly slides left and right at the bottom of the screen
+to bounce a ball; the empty gap must clearly read as energy, not glass or plastic,
+and the field must look like it could stretch wider without changing the prongs.
+
+Single isolated object, centred, whole assembly inside frame, orthographic front
+view, plain flat solid #00FF00 green background, no shadow on the background, no
+scenery, no other objects, no text, no numbers, no logos.
