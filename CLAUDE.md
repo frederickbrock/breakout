@@ -67,6 +67,16 @@ not hand-rolled kinematics/AABB checks.
   low frame rates don't overshoot), so Avian
   still resolves ball bounces. Arrow keys / A/D push with `ConstantForce` in both modes, and
   a held key clears the mouse target. Tests set `PaddleTarget` directly (no window).
+- `src/bricks.rs` — the brick model: `BrickClass` (`Ceramic`, `Titanium`, `Tungsten`,
+  `Reactor` = the power-up brick, `Explosive(ExplosiveKind::{Charge, Breach, Demolition})`,
+  `Regen`, `Shield`) with `max_hits()` (1/2/3/2/1/2/1), a `BrickCell { row, col }` on
+  every brick (row 0 at the top), and the pure `generate_board(rng) -> [[BrickClass; 10]; 7]`:
+  a weighted fill (ceramic 30, titanium 20, tungsten 12, explosive 16 split over the three
+  variants, regen 12, shield 10), then one bounded patch pass that places exactly
+  `REACTOR_BRICKS` (6) reactors and guarantees at least one of every other class and
+  variant. Tested with a seeded rng. `BricksPlugin` runs the shield-glass flash timer
+  (`ShieldFlash`, frozen while paused). Colours come from `theme::brick_color(class)` and
+  `theme::brick_face(class, health)` (cracked below full health).
 - `src/spawner.rs` — `Spawner<T>`, a generic weighted registry of spawnable kinds
   (`register(kind, weight, color)` + `pick()`, no timer). Reusable across any future domain (obstacles, brick respawns, etc.) because
   Bevy resources are keyed by concrete type: `Spawner<PowerUpKind>` and a hypothetical
@@ -76,8 +86,8 @@ not hand-rolled kinematics/AABB checks.
 - `src/powerups/mod.rs` — the power-up framework: `PowerUp` component, `PowerUpCollected`
   event, `ActiveEffects` resource (the "game state" active effects land in — consumers
   recompute derived values from it every frame, so an effect expiring needs no explicit
-  revert step), `PowerUpBrick` (each run `assign_power_up_bricks`, a `RestartGame` observer,
-  turns 6 random bricks violet and 2-hit, each with a kind picked from `PowerUpSpawner`),
+  revert step), `PowerUpBrick` (each run `attach_reactor_power_ups`, a `RestartGame`
+  observer, gives every reactor-class brick a kind picked from `PowerUpSpawner`),
   and the drop/fall/paddle-pickup systems. A power-up only ever appears when a power-up
   brick breaks: `drop_power_up` observes `BrickDestroyed` and spawns it at the brick's
   position (no timed drops).
@@ -101,13 +111,20 @@ not hand-rolled kinematics/AABB checks.
   ball has `CollisionEventsEnabled`; Avian guarantees the enabled side always ends up as
   `collider1`, which is why `on_ball_collision` can assume `on.collider1` is the ball
   without checking.
-- **Bricks have `BrickHealth`** (1 by default; power-up bricks get 2). `on_ball_collision`
-  scores 10 per hit and darkens a brick that survives; on the last hit it triggers
+- **Bricks have a `BrickClass` and `BrickHealth`** (spawned at the class's `max_hits()`).
+  `on_ball_collision` scores 10 per hit and shows a surviving brick's cracked face; on the last hit it triggers
   `BrickDestroyed { brick, position }` *before* despawning, so observers can still read
   the brick. Other modules (power-ups) hook brick breaks through that event rather than
   editing `on_ball_collision`. The run is won when a brick broke and none are left. Tests
   fake a ball contact with `test_support::hit(app, brick)`, which triggers `CollisionStart`
-  exactly as Avian does.
+  exactly as Avian does (`hit_moving` also sets the ball's velocity; `brick_of(app, class)`
+  finds a brick of a class).
+- **Direction-dependent brick rules read `BallApproach`, not `LinearVelocity`.** Avian
+  triggers `CollisionStart` after its solver, so the ball's `LinearVelocity` at the event
+  has usually already been reflected. `record_ball_approach` copies it into the ball's
+  `BallApproach` in `FixedPostUpdate` `PhysicsSystems::First`, just before each physics step.
+  Shield glass takes damage only if `BallApproach.y < 0` (the ball was moving down at
+  contact); otherwise it only flashes (no damage, no score).
 - **Ball speed is deliberately kept at a controlled, constant magnitude**, not left to
   Avian's real momentum transfer — `ball_movement` renormalizes `LinearVelocity` back to
   `BALL_SPEED` after every frame's bounce (with a minimum-vertical-component clamp to
@@ -146,7 +163,7 @@ not hand-rolled kinematics/AABB checks.
   resets what it directly owns (score, lives = `STARTING_LIVES`, ball/paddle/bricks/HUD) and
   fires `commands.trigger(RestartGame)`; each subsystem with its own state to reset
   (currently just power-ups: `reset_on_restart` clears drops and effects, and
-  `assign_power_up_bricks` picks the run's power-up bricks, which already exist then
+  `attach_reactor_power_ups` equips the run's reactor bricks, which already exist then
   because `start_run` queues their spawns before the trigger) owns its own observer on
   that event. Adding a new stateful subsystem later means giving it its own
   `RestartGame` observer, not editing `start_run`.
