@@ -248,6 +248,24 @@ fn reset_on_restart(
     }
 }
 
+/// Spawns a falling power-up the way [`drop_power_up`] does (flat-colour
+/// sprite included), for tests in other modules.
+#[cfg(test)]
+pub(crate) fn test_spawn_power_up(app: &mut App) -> Entity {
+    app.world_mut()
+        .spawn((
+            Sprite::from_color(crate::theme::POWER_UP, Vec2::splat(POWER_UP_SIZE)),
+            Transform::from_xyz(0.0, 200.0, 0.5),
+            PowerUp {
+                kind: PowerUpKind::SuperSizer,
+                velocity: Vec2::ZERO,
+                gravity: BASE_GRAVITY,
+            },
+            DespawnOnExit(AppState::InGame),
+        ))
+        .id()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
