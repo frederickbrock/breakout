@@ -1,0 +1,22 @@
+Sci-fi industrial game art, clean hard-surface rendering: machined steel, bevelled
+metal plates, bolts and seams, crisp specular edges, subtle glossy highlights.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Subject: a falling power-up pickup icon for the game. It reads as a small, compact,
+generic "power-up" capsule/orb — a rounded hexagonal or capsule-shaped chunk of
+energy housed in a thin dark-steel frame, glowing violet from within (face gradient
+#f6ecff pale centre to #a98cf0 mid to #331f5c deep edge, matching the reactor-core
+brick it drops from), with a soft outward violet glow/bloom around the housing. Keep
+it simple and iconic — no complex mechanical detail, no internal circuitry, it must
+read instantly as "grab this" at a glance while falling.
+
+Use in game: a small icon that falls down the screen and is caught by the paddle;
+must stay legible and clearly violet/glowing even very small.
+
+Single isolated object, centred, whole icon inside frame, orthographic front view,
+plain flat solid #00FF00 green background, no shadow on the background, no scenery,
+no other objects, no text, no numbers, no logos.

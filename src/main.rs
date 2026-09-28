@@ -4,8 +4,10 @@ mod menu;
 mod powerups;
 mod script_manager;
 mod spawner;
+mod sprites;
 
 use avian2d::prelude::*;
+use bevy::asset::AssetMetaCheck;
 use bevy::color::palettes::basic::{BLUE, GREEN, RED, WHITE, YELLOW};
 use bevy::color::palettes::css::ORANGE;
 use bevy::prelude::*;
@@ -125,19 +127,49 @@ fn main() {
     }
 
     let mut app = App::new();
-    app.add_plugins(DefaultPlugins.set(WindowPlugin {
-        primary_window: Some(Window {
-            title: "Breakout".into(),
-            resolution: (WINDOW_WIDTH as u32, WINDOW_HEIGHT as u32).into(),
-            ..default()
-        }),
-        ..default()
-    }))
+    app.add_plugins(
+        DefaultPlugins
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: window_title(),
+                    resolution: (WINDOW_WIDTH as u32, WINDOW_HEIGHT as u32).into(),
+                    ..default()
+                }),
+                ..default()
+            })
+            // No `.meta` files ship with the assets; without this the browser
+            // build requests one per asset and trunk's server answers 404.
+            .set(AssetPlugin {
+                meta_check: AssetMetaCheck::Never,
+                ..default()
+            }),
+    )
     .add_plugins(PhysicsPlugins::default())
     .add_plugins(script_manager::ScriptPlugin)
+    .add_plugins(sprites::SpritesPlugin)
     .insert_resource(ClearColor(Color::BLACK));
     add_game(&mut app);
     app.run();
+}
+
+/// Env var `scripts/native-run.sh` sets so each agent's window has a unique,
+/// targetable title. Native only; the browser has no window title to set.
+#[cfg(not(target_arch = "wasm32"))]
+const WINDOW_TITLE_ENV: &str = "BREAKOUT_WINDOW_TITLE";
+
+fn window_title() -> String {
+    #[cfg(not(target_arch = "wasm32"))]
+    let custom = std::env::var(WINDOW_TITLE_ENV).ok();
+    #[cfg(target_arch = "wasm32")]
+    let custom = None;
+    title_or_default(custom)
+}
+
+/// The window title: `custom` if set and non-blank, else "Breakout".
+fn title_or_default(custom: Option<String>) -> String {
+    custom
+        .filter(|title| !title.trim().is_empty())
+        .unwrap_or_else(|| "Breakout".to_string())
 }
 
 /// Everything game-specific, on top of the engine plugins (`DefaultPlugins`,
@@ -1161,6 +1193,16 @@ mod tests {
         assert!(
             v.x / v.y > 25f32.to_radians().tan(),
             "near the edge the ball leaves at a side angle, got {v:?}"
+        );
+    }
+
+    #[test]
+    fn the_window_title_defaults_to_breakout() {
+        assert_eq!(title_or_default(None), "Breakout");
+        assert_eq!(title_or_default(Some("  ".into())), "Breakout");
+        assert_eq!(
+            title_or_default(Some("Breakout [tester@tester sim-rdl.2]".into())),
+            "Breakout [tester@tester sim-rdl.2]"
         );
     }
 }

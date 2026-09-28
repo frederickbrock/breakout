@@ -7,7 +7,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Web build (primary/default distribution target): `trunk build` (output in `dist/`, which is
   git-ignored; CI builds its own for GitHub Pages)
 - Web dev server: `trunk serve` then open the shown localhost URL (default http://localhost:8080)
-- Native desktop dev loop (secondary): `cargo run`
+- Native desktop dev loop (secondary): `cargo run` for a human. **Agents** use
+  `scripts/native-run.sh --label <issue-id>` instead: it takes an exclusive lock on the shared
+  X display, gives the window a unique title (`BREAKOUT_WINDOW_TITLE`, native only), prints
+  the window id to drive by, and tears the process group down on exit. See `scripts/README.md`.
 - Native release build: `cargo build --release`
 - One-time setup for the web build: `rustup target add wasm32-unknown-unknown` and `cargo install --locked trunk`
 
@@ -152,6 +155,13 @@ not hand-rolled kinematics/AABB checks.
   feature, and getrandom's browser-crypto `wasm_js` backend is turned on for rand via
   `--cfg getrandom_backend="wasm_js"` in `.cargo/config.toml` (scoped to the wasm target
   only, so native builds are untouched).
+- **Assets on both targets.** `assets/` is served as-is: natively Bevy reads it from the
+  repo root, and `index.html`'s `<link data-trunk rel="copy-dir" href="assets" />` copies it
+  into `dist/` for the browser. `main()` sets `AssetPlugin { meta_check:
+  AssetMetaCheck::Never }` because no `.meta` files ship (otherwise the web build requests
+  one per asset and 404s). Hot reload (bevy's `file_watcher` feature) is enabled only in the
+  non-wasm target dependencies, so editing a PNG under `cargo run` updates it live and the
+  wasm build doesn't pull the watcher in.
 - **Lua scripting is native-only.** `bevy_mod_scripting` (`lua54`, which compiles mlua's
   bundled Lua C sources) lives under the non-wasm target dependencies in Cargo.toml, so it
   isn't compiled for wasm at all. `src/script_manager/mod.rs` cfg-gates only the
