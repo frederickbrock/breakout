@@ -33,6 +33,8 @@ pub const REGEN: Color = hex(0x3fcf6e);
 pub const SHIELD: Color = hex(0x5fe3f5);
 /// Brief flash on shield glass hit from below or the side.
 pub const SHIELD_FLASH: Color = INK;
+/// The placeholder burst where an explosive goes off (explosive glow).
+pub const BLAST_FLASH: Color = hex(0xff9a92);
 /// Reactor (power-up) bricks: reactor-core violet.
 pub const REACTOR: Color = hex(0xb58cff);
 
