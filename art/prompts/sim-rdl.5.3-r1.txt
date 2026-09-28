@@ -1,0 +1,37 @@
+Sci-fi industrial game art, clean hard-surface rendering: machined steel, bevelled
+metal plates, bolts and seams, crisp specular edges, subtle glossy highlights.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+cyan energy #4fd8ff used only for restrained energy accents. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Subject: a full-screen background backdrop for a Breakout-style arcade game — a
+dark, empty hangar bay deep in space, viewed straight-on. Wide horizontal
+composition (roughly 1800x1300, an almost-square widescreen play-field view — keep
+the important shapes readable if slightly cropped top/bottom or left/right).
+
+Composition, top to bottom:
+- A horizontal steel girder truss spans the very top edge, with a row of small dim
+  indicator lights along it (like distant hangar lamps), matching the reference
+  image's mood.
+- Thin vertical steel truss columns with cross-bracing run down the far left and
+  far right edges of the frame, framing the play area like the sides of a hangar
+  bay, but staying narrow and out of the way of the centre.
+- The centre-to-upper area (where the game's brick wall will later be drawn) is a
+  large, calm, very low-contrast dark void — soft, smooth, almost flat gradient,
+  with only faint hints of distant structure (a subtle circular containment-ring
+  outline, a few soft out-of-focus points of starlight) — deliberately restrained
+  and unbusy so foreground game objects stand out strongly against it.
+- The upper-left corner in particular must be noticeably darker and emptier than
+  the rest of the image (a clean, low-detail dark patch), because bright white
+  score/lives text will be overlaid there.
+- The lower half (where the ball and paddle will play) can have a little more
+  visual interest: a faint warm amber glow low in the lower-right, a cool cyan-white
+  glow low in the lower-left, hinting at hangar floor lighting, still soft and
+  restrained, not busy or high-contrast.
+
+No bricks, no ball, no paddle, no characters, no vehicles, no readable text,
+numbers, logos or UI elements anywhere in the image — this is an empty backdrop
+only. No lens flare, no heavy bloom, no dense scenery, no clutter in the middle of
+the frame. Full painted scenery background, not an isolated object — no flat key
+colour, no transparent areas.

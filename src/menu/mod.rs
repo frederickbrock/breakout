@@ -63,6 +63,7 @@ pub struct ButtonActivated {
 }
 
 use crate::theme::{BORDER_FOCUSED, BORDER_NORMAL, BUTTON_HOVERED, BUTTON_NORMAL, BUTTON_PRESSED};
+const BUTTON_MIN_WIDTH: f32 = 240.0;
 /// Background for menus shown over the game (pause, game over).
 const OVERLAY_DIM: Color = crate::theme::OVERLAY_DIM;
 
@@ -82,13 +83,15 @@ pub fn menu_screen<S: States>(state: S) -> impl Bundle {
     )
 }
 
-/// Container for a screen's buttons; see [`MenuList`].
+/// Container for a screen's buttons; see [`MenuList`]. Stretches every
+/// button to the widest one, so a long label widens the whole column evenly
+/// instead of overflowing its button.
 pub fn menu_list() -> impl Bundle {
     (
         MenuList,
         Node {
             flex_direction: FlexDirection::Column,
-            align_items: AlignItems::Center,
+            align_items: AlignItems::Stretch,
             row_gap: px(12),
             ..default()
         },
@@ -112,8 +115,11 @@ pub fn menu_button(label: &str) -> impl Bundle {
     (
         MenuButton,
         Node {
-            width: px(240),
+            // At least 240 px; wider when the label needs it (the label never
+            // wraps, see below), with some room either side of the text.
+            min_width: px(BUTTON_MIN_WIDTH),
             height: px(56),
+            padding: UiRect::horizontal(px(24)),
             border: UiRect::all(px(3)),
             justify_content: JustifyContent::Center,
             align_items: AlignItems::Center,
@@ -121,7 +127,7 @@ pub fn menu_button(label: &str) -> impl Bundle {
         },
         BackgroundColor(BUTTON_NORMAL),
         BorderColor::all(BORDER_NORMAL),
-        children![heading(label, 28.0)],
+        children![(heading(label, 28.0), TextLayout::no_wrap())],
     )
 }
 
@@ -429,8 +435,7 @@ mod tests {
         assert!(physics_paused(&app));
         let shown = texts(&mut app);
         assert!(shown.contains(&"Settings".to_string()));
-        assert!(shown.contains(&"Coming soon".to_string()));
-        assert_eq!(button_labels(&mut app), ["Back"]);
+        assert_eq!(button_labels(&mut app), ["Paddle control: Mouse", "Back"]);
 
         tap(&mut app, KeyCode::Escape);
         assert_eq!(app_state(&app), AppState::MainMenu);
@@ -439,9 +444,65 @@ mod tests {
         tap(&mut app, KeyCode::KeyS);
         tap(&mut app, KeyCode::Space);
         assert_eq!(app_state(&app), AppState::Settings);
+        tap(&mut app, KeyCode::ArrowDown);
         tap(&mut app, KeyCode::Enter);
         assert_eq!(app_state(&app), AppState::MainMenu);
         assert_eq!(count::<With<Ball>>(&mut app), 0);
+    }
+
+    #[test]
+    fn the_paddle_control_button_toggles_mouse_and_keyboard() {
+        use crate::controls::{ControlSettings, PaddleControl};
+        let paddle = |app: &App| app.world().resource::<ControlSettings>().paddle;
+        let mut app = launch();
+        press(&mut app, "Settings");
+        assert_eq!(paddle(&app), PaddleControl::Mouse);
+        assert_eq!(focused_label(&mut app), "Paddle control: Mouse");
+
+        tap(&mut app, KeyCode::Enter);
+        assert_eq!(paddle(&app), PaddleControl::Keyboard);
+        assert_eq!(
+            button_labels(&mut app),
+            ["Paddle control: Keyboard", "Back"]
+        );
+        assert_eq!(app_state(&app), AppState::Settings);
+
+        press(&mut app, "Paddle control: Keyboard");
+        assert_eq!(paddle(&app), PaddleControl::Mouse);
+        assert_eq!(button_labels(&mut app), ["Paddle control: Mouse", "Back"]);
+
+        // The choice survives leaving and re-entering Settings.
+        tap(&mut app, KeyCode::Space);
+        tap(&mut app, KeyCode::Escape);
+        press(&mut app, "Settings");
+        assert_eq!(
+            button_labels(&mut app),
+            ["Paddle control: Keyboard", "Back"]
+        );
+    }
+
+    #[test]
+    fn long_button_labels_widen_the_button_instead_of_wrapping() {
+        let mut app = launch();
+        press(&mut app, "Settings");
+        let toggle = button(&mut app, "Paddle control: Mouse");
+        let world = app.world();
+
+        let node = world.get::<Node>(toggle).unwrap();
+        assert_eq!(node.width, Val::Auto, "sized by its label, not fixed");
+        assert_eq!(node.min_width, px(BUTTON_MIN_WIDTH));
+        let label = world.get::<Children>(toggle).unwrap()[0];
+        assert_eq!(
+            world.get::<TextLayout>(label).unwrap().linebreak,
+            bevy::text::LineBreak::NoWrap
+        );
+
+        // Every button in the column stretches to the widest one.
+        let list = world.get::<ChildOf>(toggle).unwrap().parent();
+        assert_eq!(
+            world.get::<Node>(list).unwrap().align_items,
+            AlignItems::Stretch
+        );
     }
 
     #[test]

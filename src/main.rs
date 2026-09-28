@@ -1,3 +1,4 @@
+mod controls;
 mod game_state;
 mod menu;
 mod powerups;
@@ -10,6 +11,7 @@ use avian2d::prelude::*;
 use bevy::asset::AssetMetaCheck;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
+use controls::{ControlSettings, PaddleControl, PaddleTarget};
 use game_state::{AppState, GameOutcome, GameStatePlugin, PlayState};
 
 // Game constants
@@ -186,7 +188,7 @@ fn title_or_default(custom: Option<String>) -> String {
 /// Avian, scripting) that `main` adds. Split out so tests can run the real
 /// game logic on a headless `MinimalPlugins` app.
 fn add_game(app: &mut App) {
-    app.add_plugins((GameStatePlugin, menu::MenuPlugin))
+    app.add_plugins((GameStatePlugin, menu::MenuPlugin, controls::ControlsPlugin))
         .insert_resource(Gravity(Vec2::new(0.0, 0.8)))
         .init_resource::<ButtonInput<MouseButton>>()
         .init_resource::<Score>()
@@ -408,11 +410,18 @@ fn spawn_bricks(commands: &mut Commands) {
     }
 }
 
+/// Arrow keys / A/D push the paddle with a force in both control modes. In
+/// Mouse mode, with no movement key held, the paddle's velocity is driven
+/// toward the cursor target instead (see `controls`); a held key takes over
+/// and clears that target.
 fn paddle_movement(
+    time: Res<Time>,
     keyboard: Res<ButtonInput<KeyCode>>,
-    mut paddle_query: Query<&mut ConstantForce, With<Paddle>>,
+    settings: Res<ControlSettings>,
+    mut target: ResMut<PaddleTarget>,
+    mut paddle_query: Query<(&Transform, &Paddle, &mut ConstantForce, &mut LinearVelocity)>,
 ) {
-    let Ok(mut force) = paddle_query.single_mut() else {
+    let Ok((transform, paddle, mut force, mut velocity)) = paddle_query.single_mut() else {
         return;
     };
 
@@ -424,6 +433,18 @@ fn paddle_movement(
         fx += PADDLE_FORCE;
     }
     force.0 = Vec2::new(fx, 0.0);
+
+    if fx != 0.0 {
+        target.x = None;
+        return;
+    }
+    if settings.paddle == PaddleControl::Mouse {
+        if let Some(target_x) = target.x {
+            let target_x = controls::clamp_paddle_x(target_x, paddle.width);
+            velocity.0.x =
+                controls::follow_velocity(transform.translation.x, target_x, time.delta_secs());
+        }
+    }
 }
 
 /// Avian's `CollisionStart`/`CollisionEnd` are dispatched purely through
@@ -1064,6 +1085,74 @@ mod tests {
         assert!(!is_anchored(&mut app));
     }
 
+    fn paddle_state(app: &mut App) -> (f32, Vec2, Vec2) {
+        let paddle = paddle(app);
+        let entity = app.world().entity(paddle);
+        (
+            entity.get::<Transform>().unwrap().translation.x,
+            entity.get::<LinearVelocity>().unwrap().0,
+            entity.get::<ConstantForce>().unwrap().0,
+        )
+    }
+
+    fn aim_mouse_at(app: &mut App, x: f32) {
+        app.world_mut().resource_mut::<PaddleTarget>().x = Some(x);
+    }
+
+    fn hold(app: &mut App, key: KeyCode) {
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(key);
+        app.update();
+    }
+
+    #[test]
+    fn in_mouse_mode_the_paddle_heads_for_the_cursor() {
+        let mut app = app();
+        aim_mouse_at(&mut app, 200.0);
+        app.update();
+        let (_, v, force) = paddle_state(&mut app);
+        assert!(v.x > 0.0, "moving right toward the cursor, got {v:?}");
+        assert_eq!(force, Vec2::ZERO);
+
+        set_paddle_x(&mut app, 300.0);
+        aim_mouse_at(&mut app, -200.0);
+        app.update();
+        assert!(paddle_state(&mut app).1.x < 0.0);
+    }
+
+    #[test]
+    fn the_mouse_target_is_clamped_to_the_walls() {
+        let mut app = app();
+        let edge = (WINDOW_WIDTH - PADDLE_WIDTH) / 2.0;
+        set_paddle_x(&mut app, edge);
+        aim_mouse_at(&mut app, 10_000.0);
+        app.update();
+        assert_eq!(paddle_state(&mut app).1.x, 0.0, "already at the wall");
+    }
+
+    #[test]
+    fn in_keyboard_mode_the_mouse_does_not_move_the_paddle() {
+        let mut app = app();
+        app.world_mut().resource_mut::<ControlSettings>().paddle = PaddleControl::Keyboard;
+        aim_mouse_at(&mut app, 300.0);
+        app.update();
+        assert_eq!(paddle_state(&mut app).1.x, 0.0);
+
+        hold(&mut app, KeyCode::KeyD);
+        assert_eq!(paddle_state(&mut app).2.x, PADDLE_FORCE);
+    }
+
+    #[test]
+    fn in_mouse_mode_keys_still_move_the_paddle_and_take_over() {
+        let mut app = app();
+        aim_mouse_at(&mut app, 300.0);
+        hold(&mut app, KeyCode::ArrowLeft);
+
+        assert_eq!(paddle_state(&mut app).2.x, -PADDLE_FORCE);
+        assert_eq!(app.world().resource::<PaddleTarget>().x, None);
+    }
+
     fn score(app: &App) -> i32 {
         app.world().resource::<Score>().0
     }
@@ -1208,6 +1297,41 @@ mod tests {
             .map(|c| c.0)
             .collect();
         assert_eq!(values, [theme::INK, theme::INK]);
+    }
+
+    #[test]
+    fn in_mouse_mode_a_paddle_edge_hit_still_spins_the_ball() {
+        let mut app = app();
+        assert_eq!(
+            app.world().resource::<ControlSettings>().paddle,
+            PaddleControl::Mouse
+        );
+        tap(&mut app, KeyCode::Space);
+        aim_mouse_at(&mut app, 0.0);
+        let (ball, paddle) = (ball(&mut app), paddle(&mut app));
+        // Coming down onto the paddle's right edge.
+        {
+            let paddle_at = translation(&app, paddle);
+            let mut transform = app.world_mut().get_mut::<Transform>(ball).unwrap();
+            transform.translation.x = paddle_at.x + PADDLE_WIDTH * 0.45;
+        }
+        app.world_mut().get_mut::<LinearVelocity>(ball).unwrap().0 = Vec2::new(0.0, -BALL_SPEED);
+        app.world_mut().trigger(CollisionStart {
+            collider1: ball,
+            collider2: paddle,
+            body1: Some(ball),
+            body2: Some(paddle),
+        });
+        app.update();
+
+        let v = ball_velocity(&mut app);
+        assert!(v.y > 0.0, "bounced up, got {v:?}");
+        // A centre hit goes straight up; near the edge the ball leaves at a
+        // clearly angled side trajectory (over 25° off vertical).
+        assert!(
+            v.x / v.y > 25f32.to_radians().tan(),
+            "near the edge the ball leaves at a side angle, got {v:?}"
+        );
     }
 
     #[test]
