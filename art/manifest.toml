@@ -1,0 +1,27 @@
+[[asset]]
+id = "bricks-steelbreak"
+issue = "sim-rdl.5.1"
+files = [
+  "assets/sprites/bricks/ceramic_intact.png",
+  "assets/sprites/bricks/ceramic_cracked.png",
+  "assets/sprites/bricks/titanium_intact.png",
+  "assets/sprites/bricks/titanium_cracked.png",
+  "assets/sprites/bricks/tungsten_intact.png",
+  "assets/sprites/bricks/tungsten_cracked.png",
+  "assets/sprites/bricks/reactor_intact.png",
+  "assets/sprites/bricks/reactor_cracked.png",
+]
+source = "r1/v1 (intact base plate), r3/v2 (cracked base plate)"
+model = "google/gemini-2.5-flash-image"
+prompt_file = "art/prompts/sim-rdl.5.1-r1.txt"
+prompt_file_cracked = "art/prompts/sim-rdl.5.1-r3.txt"
+processing = [
+  "process round-1/v1.png -> titanium_intact.png --bg flood --tolerance 40 --trim --size 160x60 --fit stretch",
+  "process round-3/v2.png -> titanium_cracked.png --bg flood --tolerance 40 --trim --size 160x60 --fit stretch",
+  "recolor titanium_intact.png -> ceramic_intact.png --color #ffac90 --strength 1",
+  "recolor titanium_cracked.png -> ceramic_cracked.png --color #ffac90 --strength 1",
+  "recolor titanium_intact.png -> tungsten_intact.png --color #926630 --strength 1",
+  "recolor titanium_cracked.png -> tungsten_cracked.png --color #926630 --strength 1",
+  "recolor titanium_intact.png -> reactor_intact.png --color #9579d7 --strength 1",
+  "recolor titanium_cracked.png -> reactor_cracked.png --color #9579d7 --strength 1",
+]
