@@ -1,0 +1,28 @@
+Sci-fi industrial game art, clean hard-surface rendering: machined steel, bevelled
+metal plates, bolts and seams, crisp specular edges, subtle glossy highlights.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Restrained glow, high readability at small size, strong
+silhouette. Absolutely no text, lettering, numbers, logos, watermarks or UI.
+
+Subject: a thin rectangular BORDER/FRAME graphic — a "behaviour outline" overlay
+that will be drawn around a game brick plate, not the plate itself. It is a
+rounded-rectangle picture frame shape (same rounded-corner rectangle silhouette as
+a Breakout brick, roughly 8:3 wide, but as an outline only): the same even, thin,
+glowing hazard-red (#ff3b3b) energy border as a baseline ring, but this variant
+adds a small plus-sign-shaped (+) accent mark — a simple symmetric cross shape,
+NOT a letter, NOT text — bulging slightly outward from the border at the midpoint
+of each of the four sides (top, bottom, left, right). Four identical plus-shaped
+accents total, one per side, small and simple, clearly a geometric cross icon
+shape rather than any letter or number.
+
+Critical composition requirement: the ENTIRE inside area of the frame (everything
+inside the border ring, where the brick artwork will later be composited in) must
+be the exact same flat solid #00FF00 green as the background outside the frame —
+completely flat, no gradient, no shading, no object — so both the outside and the
+inside read as one continuous flat green field with only the glowing red ring and
+its four plus-mark accents printed on top of it. Do not draw a plate, panel, or any
+object inside the frame.
+
+Single centred graphic, whole frame inside the image, orthographic straight-on
+view, plain flat solid #00FF00 green everywhere except the red ring and its
+accents, no shadow, no scenery, no other objects, no text, no numbers, no logos.
