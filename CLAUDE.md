@@ -53,12 +53,23 @@ not hand-rolled kinematics/AABB checks.
   (`brick_color`) and glow colours (`brick_glow`, used for sparks), particle smoke,
   power-up drops, HUD ink/label, menu buttons and the overlay dim). Damage never changes a
   brick's colour: it shows as particles. Use a `theme::` constant instead of a colour literal;
-  the later sprite swap and palette tweaks touch only this file. The ball is a round
-  `Mesh2d(Circle)` (handles in the `BallLook` resource, made in `setup_level`), and the
-  paddle's end prongs are child sprites kept at its ends by `place_prongs` as Super-Sizer
-  changes its width. The HUD is `SCORE `/`LIVES ` labels with the value in a `TextSpan`
+  the later sprite swap and palette tweaks touch only this file. These colours are also
+  the fallback look when a sprite file is missing (see `src/sprites.rs`): the ball is a
+  round `Mesh2d(Circle)` (handles in the `BallLook` resource, made in `setup_level`), and
+  the paddle is drawn by three children (left prong, stretched `PaddleField`, right prong)
+  laid out by the pure `paddle_pieces(width)` and kept in place by `place_paddle_pieces`
+  as Super-Sizer changes `Paddle.width` (the parent keeps the one full-width collider and
+  has no sprite of its own). The HUD is `SCORE `/`LIVES ` labels with the value in a `TextSpan`
   child (the markers sit on the span). The headless test app adds `AssetPlugin` plus
   `Mesh`/`ColorMaterial` assets for the ball.
+- `src/sprites.rs` — image assets. `SpritesPlugin` (registered from `main()`, not
+  `add_game`, since the headless test app has no image loaders) loads every handle once at
+  `Startup` into the `GameSprites` resource (background, ball, paddle prongs and field,
+  power-up icon) and spawns the global `Background`. `SkinPlugin` (in `add_game`, a no-op
+  without `GameSprites`) swaps an entity's `theme` shape for its sprite once that image is
+  in `Assets<Image>`, marking it `Skinned`. Everything spawns as its shape first, so a
+  missing or broken file just leaves the shape (no panic, nothing invisible). Sprites live
+  at `assets/sprites/<name>.png`; a new one is a `GameSprites` field plus a skin rule.
 - `src/controls.rs` — player controls: the session-only `ControlSettings` resource
   (`PaddleControl::Mouse` by default, or `Keyboard`, toggled on the Settings screen) and
   the mouse side of paddle control. While `Playing` in Mouse mode, `track_cursor` turns

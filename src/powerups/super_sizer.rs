@@ -34,9 +34,10 @@ fn effect(on: On<PowerUpCollected>, mut active: ResMut<ActiveEffects>) {
 
 fn update_paddle_width(
     active: Res<ActiveEffects>,
-    mut paddle_query: Query<(&mut Paddle, &mut Sprite, &mut Collider)>,
+    mut paddle_query: Query<(&mut Paddle, &mut Collider)>,
 ) {
-    let Ok((mut paddle, mut sprite, mut collider)) = paddle_query.single_mut() else {
+    // The paddle's visual pieces follow `Paddle.width` (`place_paddle_pieces`).
+    let Ok((mut paddle, mut collider)) = paddle_query.single_mut() else {
         return;
     };
     let width = if active.is_active(PowerUpKind::SuperSizer) {
@@ -46,7 +47,6 @@ fn update_paddle_width(
     };
     if paddle.width != width {
         paddle.width = width;
-        sprite.custom_size = Some(Vec2::new(width, PADDLE_HEIGHT));
         *collider = Collider::rectangle(width, PADDLE_HEIGHT);
     }
 }
