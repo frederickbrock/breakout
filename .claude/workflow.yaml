@@ -11,6 +11,7 @@ gates:
 max_bounces: 2
 beads:
   sync_commit: pr              # trunk-direct | pr | manual  (master is branch-protected)
+  sync_merge: pm               # pm merges its own chore/beads-sync-* PRs (only .beads/ changed, CI green) via beads-sync-merge
 stacks: [stack-rust-bevy]
 checks:                        # coder must pass all before opening/updating a PR
   - cargo build
