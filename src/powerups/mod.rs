@@ -441,10 +441,7 @@ mod tests {
 
         let entity = app.world().entity(brick);
         assert_eq!(entity.get::<BrickHealth>().unwrap().0, 1);
-        assert_eq!(
-            entity.get::<Sprite>().unwrap().color,
-            theme::cracked(theme::REACTOR)
-        );
+        assert_eq!(entity.get::<Sprite>().unwrap().color, theme::REACTOR);
         assert_eq!(app.world().resource::<crate::Score>().0, 10);
         assert_eq!(count::<With<PowerUp>>(&mut app), 0);
     }

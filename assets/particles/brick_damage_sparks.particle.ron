@@ -1,0 +1,26 @@
+// Occasional sparks from a damaged brick, tinted its class glow colour.
+// `spawn_rate` is overridden at runtime like the smoke's.
+(
+    spawn_rate: 0.9,
+    spawn_amount: 2,
+    emission_shape: Circle(16.0),
+    lifetime: (0.35, 0.3),
+    linear_speed: Some((120.0, 0.5)),
+    linear_acceleration: None,
+    direction: Some(((0.0, 1.0), 1.0)),
+    angular_speed: None,
+    angular_acceleration: None,
+    scale: Some((2.5, 0.3)),
+    color: Some((red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0)),
+    gravity_direction: Some(((0.0, -1.0), 0.0)),
+    gravity_speed: Some((200.0, 0.2)),
+    linear_damp: Some((2.0, 0.2)),
+    angular_damp: None,
+    scale_curve: None,
+    color_curve: Some((points: [
+        ((red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0), 0.0, None),
+        ((red: 1.0, green: 1.0, blue: 1.0, alpha: 0.0), 1.0, None),
+    ])),
+    attractors: None,
+    relative_positioning: None,
+)

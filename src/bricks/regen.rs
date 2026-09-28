@@ -8,7 +8,7 @@
 
 use super::BrickClass;
 use crate::game_state::PlayState;
-use crate::{theme, BrickDamaged, BrickHealth};
+use crate::{BrickDamaged, BrickHealth};
 use bevy::prelude::*;
 
 /// How long a damaged regen brick waits before healing to full.
@@ -42,23 +42,16 @@ fn start_heal_timer(on: On<BrickDamaged>, mut commands: Commands, classes: Query
     }
 }
 
-/// When the timer runs out, the brick is back to full hits and loses its
-/// cracked look.
+/// When the timer runs out, the brick is back to full hits (its damage smoke
+/// stops: `src/particles/` watches its health).
 fn heal_regen_bricks(
     mut commands: Commands,
     time: Res<Time>,
-    mut bricks: Query<(
-        Entity,
-        &mut RegenTimer,
-        &BrickClass,
-        &mut BrickHealth,
-        &mut Sprite,
-    )>,
+    mut bricks: Query<(Entity, &mut RegenTimer, &BrickClass, &mut BrickHealth)>,
 ) {
-    for (entity, mut timer, &class, mut health, mut sprite) in &mut bricks {
+    for (entity, mut timer, &class, mut health) in &mut bricks {
         if timer.0.tick(time.delta()).is_finished() {
             health.0 = class.max_hits();
-            sprite.color = theme::brick_face(class, health.0);
             commands.entity(entity).remove::<RegenTimer>();
         }
     }
@@ -68,6 +61,7 @@ fn heal_regen_bricks(
 mod tests {
     use super::*;
     use crate::test_support::*;
+    use crate::theme;
 
     /// Runs `secs` of play at the test app's 100 ms step.
     fn wait(app: &mut App, secs: f32) {
@@ -90,7 +84,11 @@ mod tests {
         let regen = brick_of(&mut app, BrickClass::Regen);
         hit(&mut app, regen);
         assert_eq!(health(&app, regen), 1);
-        assert_eq!(color(&app, regen), theme::cracked(theme::REGEN));
+        assert_eq!(
+            color(&app, regen),
+            theme::REGEN,
+            "damage doesn't recolour it"
+        );
         wait(&mut app, 2.0);
         hit(&mut app, regen);
         assert!(app.world().get_entity(regen).is_err());
@@ -105,7 +103,7 @@ mod tests {
         assert_eq!(health(&app, regen), 1, "not yet");
         wait(&mut app, 1.0);
         assert_eq!(health(&app, regen), 2);
-        assert_eq!(color(&app, regen), theme::REGEN, "no longer cracked");
+        assert_eq!(color(&app, regen), theme::REGEN);
         assert!(!app.world().entity(regen).contains::<RegenTimer>());
 
         // It needs two hits again.
@@ -123,7 +121,7 @@ mod tests {
         wait(&mut app, 1.0);
         tap(&mut app, KeyCode::KeyP);
         wait(&mut app, 10.0);
-        assert_eq!(health(&app, regen), 1, "paused for 10 s: still cracked");
+        assert_eq!(health(&app, regen), 1, "paused for 10 s: still damaged");
         tap(&mut app, KeyCode::KeyP);
         // About 1.2 s had run before the pause, so ~1.8 s remain.
         wait(&mut app, 1.0);
@@ -139,7 +137,11 @@ mod tests {
         hit(&mut app, regen);
         wait(&mut app, 2.0);
         // Another non-lethal hit (e.g. explosion damage, sim-rdl.7.3).
-        app.world_mut().trigger(BrickDamaged { brick: regen });
+        app.world_mut().trigger(BrickDamaged {
+            brick: regen,
+            position: Vec2::ZERO,
+            class: BrickClass::Regen,
+        });
         app.world_mut().flush();
         wait(&mut app, 2.0);
         assert_eq!(health(&app, regen), 1, "timer restarted: 2 s < 3 s");

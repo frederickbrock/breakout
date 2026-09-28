@@ -120,7 +120,6 @@ type BlastTarget = (
     &'static BrickCell,
     &'static BrickClass,
     &'static mut BrickHealth,
-    &'static mut Sprite,
     &'static Transform,
 );
 
@@ -162,13 +161,13 @@ fn explode(
     };
     let grid: BlastGrid = bricks
         .iter()
-        .map(|(_, cell, class, health, _, _)| (*cell, (*class, health.0)))
+        .map(|(_, cell, class, health, _)| (*cell, (*class, health.0)))
         .collect();
     let blast = resolve_blast(&grid, origin, kind);
 
     let mut positions = BTreeMap::new();
     positions.insert(origin, on.position);
-    for (entity, cell, class, mut health, mut sprite, transform) in &mut bricks {
+    for (entity, cell, class, mut health, transform) in &mut bricks {
         let position = transform.translation.truncate();
         positions.insert(*cell, position);
         let Some(hit) = blast.hits.get(cell) else {
@@ -180,13 +179,17 @@ fn explode(
             commands.trigger(BrickDestroyed {
                 brick: entity,
                 position,
+                class: *class,
                 by_blast: true,
             });
             commands.entity(entity).despawn();
             signals.broke_brick = true;
         } else {
-            sprite.color = theme::brick_face(*class, hit.left);
-            commands.trigger(BrickDamaged { brick: entity });
+            commands.trigger(BrickDamaged {
+                brick: entity,
+                position,
+                class: *class,
+            });
         }
     }
     for cell in &blast.explosions {
@@ -477,7 +480,8 @@ mod tests {
             assert_eq!(app.world().get::<BrickHealth>(tungsten).unwrap().0, 2);
             assert_eq!(
                 app.world().get::<Sprite>(tungsten).unwrap().color,
-                theme::cracked(theme::TUNGSTEN)
+                theme::TUNGSTEN,
+                "damage shows as particles, not a darker colour"
             );
             assert!(!gone(&app, far));
             // 10 for the charge + 10 per ring brick (8).
