@@ -48,3 +48,19 @@ processing = [
   "paddle_prong_right.png = paddle_prong_left.png mirrored horizontally (true mirrored pair, per acceptance criteria)",
   "paddle_field.png = pure core of the glow bar cropped from round-2/v3.png (no background touching this crop) -> resize 93x40 --fit stretch; fully opaque by design (a solid stretchable fill, not a silhouette sprite)",
 ]
+
+[[asset]]
+id = "hangar-background"
+issue = "sim-rdl.5.3"
+files = [
+  "assets/sprites/hangar_bg.png",
+]
+source = "r1/v3"
+model = "google/gemini-2.5-flash-image"
+prompt_file = "art/prompts/sim-rdl.5.3-r1.txt"
+processing = [
+  "crop round-1/v3.png (0,68)-(1024,955) to remove black letterbox bars (native render was 1024x1024 with a letterboxed 1024x887 scene)",
+  "process cropped image -> hangar_bg.png --size 1800x1300 --fit stretch (no bg removal needed; full-scenery render, no key colour)",
+  "saved as RGB (opaque, no alpha) with PNG optimize+max compression to fit the 1500KB budget (1412KB)",
+  "custom local fix: a soft radial darkening (numpy, ellipse falloff centred on the top-left corner, ~1000x550px radius) applied on top, because the picked render's leftmost ceiling lamp sits inside the ~300x120 game-px HUD text corner and was too bright for white HUD text to read against; verified by compositing simulated white HUD text plus the actual ball/brick sprites at 1x scale on top before finalizing",
+]
