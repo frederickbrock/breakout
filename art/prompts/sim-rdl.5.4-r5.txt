@@ -1,0 +1,34 @@
+Sci-fi industrial game art, clean hard-surface rendering: machined steel, bevelled
+metal plates, bolts and seams, crisp specular edges, subtle glossy highlights.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Subject: the CRACKED / damaged state of the reference "regen alloy" brick (attached
+reference image). Keep the exact same plate silhouette, aspect ratio, corner
+bevel, bolt positions, green face gradient, organic vein/lattice etching and
+seam-glow position as the reference — do not redesign the plate. Add damage on top
+of that same plate.
+
+Hard constraint: this plate's face already has thin green vein/lattice etching, so
+the fracture damage must look CLEARLY DIFFERENT from those veins, not just more of
+the same lines. Make the fracture lines noticeably darker and harder-edged than
+the veins (near-black, not green-tinted), thicker and more jagged/angular than the
+thin organic veins, and have them cut hard, straight-ish breaks STRAIGHT ACROSS
+several veins (interrupting and offsetting them, like broken glass over a leaf
+pattern) rather than following or blending into the vein pattern. Add one visibly
+chipped or notched corner where a chunk of material has broken away, exposing a
+darker interior edge, distinct from the smooth vein-covered surface elsewhere. The
+seam glow line stays intact and undamaged.
+
+Use in game: this is the "damaged" look for a brick that has been hit once and
+will break completely on the next hit; from the same silhouette, at small size, a
+player must be able to tell this apart from the intact vein pattern at a glance —
+the cracks must not be mistaken for more veins.
+
+Single isolated object, centred, whole object inside frame, orthographic front
+view, plain flat solid #FF00FF magenta background (this object is green, so the
+key colour must be magenta, not green), no shadow on the background, no scenery,
+no other objects, no text, no numbers, no hit-count pips, no logos.

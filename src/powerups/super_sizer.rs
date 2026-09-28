@@ -7,13 +7,6 @@ const WEIGHT: f32 = 1.0;
 const WIDTH_MULTIPLIER: f32 = 1.25;
 const DURATION: f32 = 7.0;
 
-fn color() -> Color {
-    let green: f32 = rand::random_range(0.0..1.0);
-    let red: f32 = rand::random_range(0.0..1.0);
-    let blue: f32 = rand::random_range(0.0..1.0);
-    Color::srgb(red, green, blue)
-}
-
 pub struct SuperSizerPlugin;
 
 impl Plugin for SuperSizerPlugin {
@@ -21,7 +14,7 @@ impl Plugin for SuperSizerPlugin {
         app.world_mut().resource_mut::<PowerUpSpawner>().register(
             PowerUpKind::SuperSizer,
             WEIGHT,
-            color(),
+            crate::theme::POWER_UP,
         );
 
         app.add_observer(effect).add_systems(
