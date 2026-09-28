@@ -7,7 +7,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Web build (primary/default distribution target): `trunk build` (output in `dist/`, which is
   git-ignored; CI builds its own for GitHub Pages)
 - Web dev server: `trunk serve` then open the shown localhost URL (default http://localhost:8080)
-- Native desktop dev loop (secondary): `cargo run`
+- Native desktop dev loop (secondary): `cargo run` for a human. **Agents** use
+  `scripts/native-run.sh --label <issue-id>` instead: it takes an exclusive lock on the shared
+  X display, gives the window a unique title (`BREAKOUT_WINDOW_TITLE`, native only), prints
+  the window id to drive by, and tears the process group down on exit. See `scripts/README.md`.
 - Native release build: `cargo build --release`
 - One-time setup for the web build: `rustup target add wasm32-unknown-unknown` and `cargo install --locked trunk`
 

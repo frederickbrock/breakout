@@ -1,0 +1,26 @@
+Sci-fi industrial game art, clean hard-surface rendering: machined steel, bevelled
+metal plates, bolts and seams, crisp specular edges, subtle glossy highlights.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Subject: one rectangular sci-fi arcade brick plate — establishing the single shared
+plate shape and bevel profile that four material classes (fired ceramic, titanium
+alloy, tungsten plate, reactor core) will later reuse with different face colours.
+This round renders that shared shape using the titanium-alloy treatment: brushed
+pale metal face, vertical gradient from near-white (#eef6ff) at the top through
+pale blue-grey (#9fb5ca) at the middle to dark blue-grey (#2f3c4a) at the bottom,
+a pale seam line (#d3e9ff) with a faint cool-cyan accent glow (#7fc4ff) along one
+edge, bolted corners, a crisp hard bevel around the whole perimeter.
+
+Use in game: one brick among a 10x6 grid in a Breakout-style arcade game. The plate
+must be strictly rectangular, wider than tall (roughly 8:3 aspect ratio), filling
+its bounding box edge to edge with only a small bevel radius at the corners (no
+large rounded corners, no gaps), so it can tile edge-to-edge with identical bricks.
+Intact state only (no cracks, no damage).
+
+Single isolated object, centred, whole object inside frame, orthographic front
+view, plain flat solid #00FF00 green background, no shadow on the background, no
+scenery, no other objects, no text, no numbers, no hit-count pips, no logos.

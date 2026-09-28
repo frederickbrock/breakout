@@ -1,0 +1,25 @@
+Sci-fi industrial game art, clean hard-surface rendering: machined steel, bevelled
+metal plates, bolts and seams, crisp specular edges, subtle glossy highlights.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Subject: the CRACKED / damaged state of the reference brick plate (attached
+reference image). Keep the exact same plate silhouette, aspect ratio, corner
+bevel, bolt positions, titanium-alloy face colour and seam-glow position as the
+reference — do not redesign the plate. Add damage on top of that same plate:
+dark fracture lines (thin, sharp, branching cracks, not painterly) running
+across the face, and one visibly chipped or notched corner where a chunk of the
+material has broken away, exposing a darker interior edge. The fracture lines
+should look like they interrupt the metal's surface (slightly darker/recessed),
+not like paint or a decal on top. The seam glow line stays intact and undamaged.
+
+Use in game: this is the "damaged" look for a brick that has been hit once and
+will break completely on the next hit; it must read as clearly more damaged than
+the intact version at a glance, from the same silhouette, at small size.
+
+Single isolated object, centred, whole object inside frame, orthographic front
+view, plain flat solid #00FF00 green background, no shadow on the background, no
+scenery, no other objects, no text, no numbers, no hit-count pips, no logos.
