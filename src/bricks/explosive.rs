@@ -124,6 +124,16 @@ type BlastTarget = (
     &'static Transform,
 );
 
+/// Fired once per explosion: the ball-destroyed origin, then every explosive
+/// its chain sets off, in order. Visuals (the placeholder flash here, later
+/// the particles epic) observe this; gameplay effects are already applied.
+#[derive(Event, Debug, Clone, Copy, PartialEq)]
+pub struct BrickExploded {
+    pub cell: BrickCell,
+    pub position: Vec2,
+    pub kind: ExplosiveKind,
+}
+
 /// How long the placeholder burst lasts, and how far it grows.
 const FLASH_SECS: f32 = 0.2;
 const FLASH_GROWTH: f32 = 1.5;
@@ -136,10 +146,12 @@ pub struct ExplosivePlugin;
 
 impl Plugin for ExplosivePlugin {
     fn build(&self, app: &mut App) {
-        app.add_observer(explode).add_systems(
-            Update,
-            fade_blast_flashes.run_if(in_state(PlayState::Playing)),
-        );
+        app.add_observer(explode)
+            .add_observer(flash_on_explosion)
+            .add_systems(
+                Update,
+                fade_blast_flashes.run_if(in_state(PlayState::Playing)),
+            );
     }
 }
 
@@ -189,16 +201,35 @@ fn explode(
             commands.trigger(BrickDamaged { brick: entity });
         }
     }
+    // One event per explosion, the origin first, then each chained one.
     for cell in &blast.explosions {
+        let kind = if *cell == origin {
+            kind
+        } else {
+            match grid.get(cell) {
+                Some((BrickClass::Explosive(kind), _)) => *kind,
+                _ => continue,
+            }
+        };
         if let Some(&position) = positions.get(cell) {
-            commands.spawn((
-                BlastFlash(Timer::from_seconds(FLASH_SECS, TimerMode::Once)),
-                Sprite::from_color(theme::BLAST_FLASH, Vec2::new(BRICK_WIDTH, BRICK_HEIGHT)),
-                Transform::from_translation(position.extend(0.8)),
-                DespawnOnExit(AppState::InGame),
-            ));
+            commands.trigger(BrickExploded {
+                cell: *cell,
+                position,
+                kind,
+            });
         }
     }
+}
+
+/// Placeholder burst for each explosion; the particles epic's explosions
+/// task replaces it by observing [`BrickExploded`] too.
+fn flash_on_explosion(on: On<BrickExploded>, mut commands: Commands) {
+    commands.spawn((
+        BlastFlash(Timer::from_seconds(FLASH_SECS, TimerMode::Once)),
+        Sprite::from_color(theme::BLAST_FLASH, Vec2::new(BRICK_WIDTH, BRICK_HEIGHT)),
+        Transform::from_translation(on.position.extend(0.8)),
+        DespawnOnExit(AppState::InGame),
+    ));
 }
 
 fn fade_blast_flashes(
@@ -556,6 +587,67 @@ mod tests {
                 app.world().get_resource::<GameOutcome>(),
                 Some(&GameOutcome::Won)
             );
+        }
+
+        #[derive(Resource, Default)]
+        struct Exploded(Vec<BrickExploded>);
+
+        #[test]
+        fn each_explosion_fires_brick_exploded_including_chains() {
+            let mut app = app();
+            app.init_resource::<Exploded>().add_observer(
+                |on: On<BrickExploded>, mut seen: ResMut<Exploded>| seen.0.push(*on.event()),
+            );
+            isolate(&mut app, 3, 4);
+            isolate(&mut app, 3, 5);
+            let charge = set(&mut app, 3, 4, BrickClass::Explosive(Charge));
+            set(&mut app, 3, 5, BrickClass::Explosive(Breach));
+            let charge_at = app
+                .world()
+                .get::<Transform>(charge)
+                .unwrap()
+                .translation
+                .truncate();
+            let breach = at(&mut app, 3, 5);
+            let breach_at = app
+                .world()
+                .get::<Transform>(breach)
+                .unwrap()
+                .translation
+                .truncate();
+            detonate(&mut app, charge);
+
+            let seen = &app.world().resource::<Exploded>().0;
+            assert_eq!(
+                seen,
+                &[
+                    BrickExploded {
+                        cell: BrickCell { row: 3, col: 4 },
+                        position: charge_at,
+                        kind: Charge,
+                    },
+                    BrickExploded {
+                        cell: BrickCell { row: 3, col: 5 },
+                        position: breach_at,
+                        kind: Breach,
+                    },
+                ]
+            );
+        }
+
+        #[test]
+        fn a_demolition_fires_one_event_for_itself_only() {
+            let mut app = app();
+            app.init_resource::<Exploded>().add_observer(
+                |on: On<BrickExploded>, mut seen: ResMut<Exploded>| seen.0.push(*on.event()),
+            );
+            isolate(&mut app, 3, 4);
+            let demolition = set(&mut app, 3, 4, BrickClass::Explosive(Demolition));
+            set(&mut app, 3, 5, BrickClass::Explosive(Charge));
+            detonate(&mut app, demolition);
+            let seen = &app.world().resource::<Exploded>().0;
+            assert_eq!(seen.len(), 1);
+            assert_eq!(seen[0].kind, Demolition);
         }
 
         #[test]
