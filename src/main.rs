@@ -1,3 +1,4 @@
+mod bricks;
 mod controls;
 mod game_state;
 mod menu;
@@ -11,6 +12,7 @@ use avian2d::prelude::*;
 use bevy::asset::AssetMetaCheck;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
+use bricks::{BrickCell, BrickClass};
 use controls::{ControlSettings, PaddleControl, PaddleTarget};
 use game_state::{AppState, GameOutcome, GameStatePlugin, PlayState};
 
@@ -46,8 +48,11 @@ const PADDLE_STILL_SPEED: f32 = 1.0;
 const BALL_MIN_VERTICAL_FRACTION: f32 = 0.3;
 const BRICK_WIDTH: f32 = 80.0;
 const BRICK_HEIGHT: f32 = 30.0;
-const BRICK_ROWS: usize = 6;
-const BRICK_COLS: usize = 10;
+// Board size, for tests across modules (the game itself uses `bricks::BOARD_*`).
+#[cfg(test)]
+const BRICK_ROWS: usize = bricks::BOARD_ROWS;
+#[cfg(test)]
+const BRICK_COLS: usize = bricks::BOARD_COLS;
 /// Lives at the start of every run, including the first.
 const STARTING_LIVES: i32 = 3;
 
@@ -58,6 +63,13 @@ struct Paddle {
 
 #[derive(Component)]
 struct Ball;
+
+/// The ball's velocity at the start of the current physics step, recorded
+/// by [`record_ball_approach`]. Avian triggers `CollisionStart` after its
+/// solver, when `LinearVelocity` has usually already been reflected, so
+/// direction-dependent rules (shield glass) read this instead.
+#[derive(Component, Default)]
+struct BallApproach(Vec2);
 
 /// The ball is resting on the paddle waiting to be served (start of a run and
 /// after every lost life). While anchored it's out of the simulation — see
@@ -72,8 +84,8 @@ type AnchoredBall = (With<Ball>, With<Anchored>);
 #[derive(Component)]
 struct Brick;
 
-/// Hits a brick still takes before it breaks. Every brick spawns with 1;
-/// other subsystems (power-up bricks) raise it at the start of a run.
+/// Hits a brick still takes before it breaks; it spawns at its class's
+/// `max_hits()`.
 #[derive(Component)]
 struct BrickHealth(u8);
 
@@ -215,6 +227,7 @@ fn add_game(app: &mut App) {
         menu::MenuPlugin,
         controls::ControlsPlugin,
         sprites::SkinPlugin,
+        bricks::BricksPlugin,
     ))
     .insert_resource(Gravity(Vec2::new(0.0, 0.8)))
     .init_resource::<ButtonInput<MouseButton>>()
@@ -225,6 +238,10 @@ fn add_game(app: &mut App) {
     .add_plugins(powerups::PowerUpsPlugin)
     .add_systems(Startup, setup_level)
     .add_systems(OnEnter(AppState::InGame), start_run)
+    .add_systems(
+        FixedPostUpdate,
+        record_ball_approach.in_set(PhysicsSystems::First),
+    )
     .add_systems(
         Update,
         (
@@ -298,6 +315,7 @@ fn spawn_run_entities(commands: &mut Commands, ball_look: &BallLook) {
         Friction::ZERO,
         CollisionEventsEnabled,
         Ball,
+        BallApproach::default(),
         DespawnOnExit(AppState::InGame),
     ));
 
@@ -428,29 +446,45 @@ fn place_paddle_pieces(
     }
 }
 
+/// A fresh random board of brick classes (see [`bricks::generate_board`]),
+/// each brick at its class's colour and hit count.
 fn spawn_bricks(commands: &mut Commands) {
-    let colors = theme::BRICK_ROWS;
-
-    for row in 0..BRICK_ROWS {
-        for col in 0..BRICK_COLS {
-            let x =
-                col as f32 * (BRICK_WIDTH + 5.0) + 40.0 + BRICK_WIDTH / 2.0 - WINDOW_WIDTH / 2.0;
-            let y = WINDOW_HEIGHT / 2.0
-                - (row as f32 * (BRICK_HEIGHT + 5.0) + 50.0 + BRICK_HEIGHT / 2.0);
-
+    let board = bricks::generate_board(&mut rand::rng());
+    for (row, classes) in board.iter().enumerate() {
+        for (col, &class) in classes.iter().enumerate() {
+            let cell = BrickCell { row, col };
             commands.spawn((
                 Sprite::from_color(
-                    colors[row % colors.len()],
+                    theme::brick_color(class),
                     Vec2::new(BRICK_WIDTH, BRICK_HEIGHT),
                 ),
-                Transform::from_xyz(x, y, 0.0),
+                Transform::from_translation(brick_translation(cell)),
                 RigidBody::Static,
                 Collider::rectangle(BRICK_WIDTH, BRICK_HEIGHT),
                 Brick,
-                BrickHealth(1),
+                class,
+                cell,
+                BrickHealth(class.max_hits()),
                 DespawnOnExit(AppState::InGame),
             ));
         }
+    }
+}
+
+/// Where the brick in `cell` sits: columns from the left wall, rows down
+/// from a 50 px top margin, 5 px gaps.
+fn brick_translation(cell: BrickCell) -> Vec3 {
+    let x = cell.col as f32 * (BRICK_WIDTH + 5.0) + 40.0 + BRICK_WIDTH / 2.0 - WINDOW_WIDTH / 2.0;
+    let y =
+        WINDOW_HEIGHT / 2.0 - (cell.row as f32 * (BRICK_HEIGHT + 5.0) + 50.0 + BRICK_HEIGHT / 2.0);
+    Vec3::new(x, y, 0.0)
+}
+
+/// Copies the ball's velocity into [`BallApproach`] at the start of every
+/// physics step, before the solver bounces it.
+fn record_ball_approach(mut balls: Query<(&LinearVelocity, &mut BallApproach), With<Ball>>) {
+    for (velocity, mut approach) in &mut balls {
+        approach.0 = velocity.0;
     }
 }
 
@@ -500,19 +534,39 @@ fn paddle_movement(
 /// `on.collider1` is always the ball here. No state check is needed: the
 /// physics clock only runs while `InGame/Playing`, so no collisions fire
 /// outside it.
+///
+/// Each hit on a brick scores 10 and removes one hit point; the last one
+/// despawns it (after triggering [`BrickDestroyed`]). Shield glass is the
+/// exception: it only takes damage from a ball that was moving downward, read
+/// from [`BallApproach`]; any other contact just flashes it.
 fn on_ball_collision(
     on: On<CollisionStart>,
     mut commands: Commands,
     mut score: ResMut<Score>,
     mut signals: ResMut<BallCollisionSignals>,
-    mut brick_query: Query<(&Transform, &mut BrickHealth, &mut Sprite), With<Brick>>,
+    mut brick_query: Query<(&Transform, &BrickClass, &mut BrickHealth, &mut Sprite), With<Brick>>,
     paddle_query: Query<&Transform, With<Paddle>>,
+    ball_query: Query<&BallApproach, With<Ball>>,
 ) {
     let other = on.collider2;
-    if let Ok((transform, mut health, mut sprite)) = brick_query.get_mut(other) {
+    if let Ok((transform, &class, mut health, mut sprite)) = brick_query.get_mut(other) {
         // Already broken by an earlier contact; its despawn is still queued.
         if health.0 == 0 {
             return;
+        }
+        // Shield glass only breaks from above: a ball moving downward at
+        // contact. Anything else bounces (Avian already did) and flashes.
+        if class == BrickClass::Shield {
+            let from_above = ball_query
+                .get(on.collider1)
+                .is_ok_and(|approach| approach.0.y < 0.0);
+            if !from_above {
+                sprite.color = theme::SHIELD_FLASH;
+                commands
+                    .entity(other)
+                    .insert(bricks::ShieldFlash::default());
+                return;
+            }
         }
         score.0 += 10;
         health.0 -= 1;
@@ -525,7 +579,7 @@ fn on_ball_collision(
             commands.entity(other).despawn();
             signals.broke_brick = true;
         } else {
-            sprite.color = theme::cracked(sprite.color);
+            sprite.color = theme::brick_face(class, health.0);
         }
     } else if let Ok(paddle_transform) = paddle_query.get(other) {
         signals.paddle_hit_x = Some(paddle_transform.translation.x);
@@ -817,6 +871,29 @@ pub(crate) mod test_support {
             body2: Some(brick),
         });
         app.world_mut().flush();
+    }
+
+    /// Like [`hit`], with the ball moving at `velocity` when it makes contact.
+    pub(crate) fn hit_moving(app: &mut App, brick: Entity, velocity: Vec2) {
+        let ball = app
+            .world_mut()
+            .query_filtered::<Entity, With<Ball>>()
+            .single(app.world())
+            .expect("a run has exactly one ball");
+        app.world_mut()
+            .entity_mut(ball)
+            .insert((LinearVelocity(velocity), BallApproach(velocity)));
+        hit(app, brick);
+    }
+
+    /// The first brick of `class` (every board has at least one of each).
+    pub(crate) fn brick_of(app: &mut App, class: BrickClass) -> Entity {
+        app.world_mut()
+            .query_filtered::<(Entity, &BrickClass), With<Brick>>()
+            .iter(app.world())
+            .find(|(_, c)| **c == class)
+            .map(|(e, _)| e)
+            .unwrap_or_else(|| panic!("the board has no {class:?} brick"))
     }
 }
 
@@ -1201,53 +1278,68 @@ mod tests {
         app.world().resource::<Score>().0
     }
 
-    #[test]
-    fn a_normal_brick_breaks_in_one_hit() {
-        let mut app = app();
-        let brick = bricks(&mut app)[0];
-        app.world_mut().get_mut::<BrickHealth>(brick).unwrap().0 = 1;
-
-        hit(&mut app, brick);
-        assert!(app.world().get_entity(brick).is_err());
-        assert_eq!(score(&app), 10);
-        assert_eq!(bricks(&mut app).len(), BRICK_ROWS * BRICK_COLS - 1);
+    fn classes() -> [BrickClass; 9] {
+        use bricks::ExplosiveKind::*;
+        [
+            BrickClass::Ceramic,
+            BrickClass::Titanium,
+            BrickClass::Tungsten,
+            BrickClass::Reactor,
+            BrickClass::Regen,
+            BrickClass::Shield,
+            BrickClass::Explosive(Charge),
+            BrickClass::Explosive(Breach),
+            BrickClass::Explosive(Demolition),
+        ]
     }
 
+    /// A ball moving down onto a brick (the only way shield glass breaks).
+    const FROM_ABOVE: Vec2 = Vec2::new(60.0, -BALL_SPEED);
+
     #[test]
-    fn a_two_hit_brick_cracks_then_breaks() {
-        let mut app = app();
-        let brick = bricks(&mut app)[0];
-        app.world_mut().get_mut::<BrickHealth>(brick).unwrap().0 = 2;
-        let intact = app.world().get::<Sprite>(brick).unwrap().color;
-
-        hit(&mut app, brick);
-        assert_eq!(app.world().get::<BrickHealth>(brick).unwrap().0, 1);
-        assert_ne!(app.world().get::<Sprite>(brick).unwrap().color, intact);
-        assert_eq!(score(&app), 10);
-        assert!(!app.world().resource::<BallCollisionSignals>().broke_brick);
-
-        // One contact is one hit: nothing more happens on later frames.
-        for _ in 0..3 {
-            app.update();
+    fn each_class_breaks_after_its_hit_count() {
+        for class in classes() {
+            let mut app = app();
+            let brick = brick_of(&mut app, class);
+            let max = class.max_hits();
+            for i in 1..max {
+                hit_moving(&mut app, brick, FROM_ABOVE);
+                assert_eq!(
+                    app.world().get::<BrickHealth>(brick).unwrap().0,
+                    max - i,
+                    "{class:?}"
+                );
+                assert_eq!(
+                    app.world().get::<Sprite>(brick).unwrap().color,
+                    theme::cracked(theme::brick_color(class)),
+                    "{class:?} shows its cracked look"
+                );
+                assert_eq!(score(&app), 10 * i as i32);
+                assert!(!app.world().resource::<BallCollisionSignals>().broke_brick);
+                // One contact is one hit: nothing more happens on later frames.
+                for _ in 0..3 {
+                    app.update();
+                }
+                assert_eq!(app.world().get::<BrickHealth>(brick).unwrap().0, max - i);
+            }
+            hit_moving(&mut app, brick, FROM_ABOVE);
+            assert!(app.world().get_entity(brick).is_err(), "{class:?} broke");
+            assert_eq!(score(&app), 10 * max as i32, "{class:?}");
+            assert_eq!(bricks(&mut app).len(), BRICK_ROWS * BRICK_COLS - 1);
         }
-        assert_eq!(app.world().get::<BrickHealth>(brick).unwrap().0, 1);
-
-        hit(&mut app, brick);
-        assert!(app.world().get_entity(brick).is_err());
-        assert_eq!(score(&app), 20);
     }
 
     #[test]
-    fn clearing_every_brick_including_two_hit_ones_wins() {
+    fn clearing_every_brick_including_multi_hit_ones_wins() {
         let mut app = app();
         tap(&mut app, KeyCode::Space);
-        let all = bricks(&mut app);
-        for brick in &all[2..] {
-            app.world_mut().despawn(*brick);
+        let a = brick_of(&mut app, BrickClass::Ceramic);
+        let b = brick_of(&mut app, BrickClass::Titanium);
+        for brick in bricks(&mut app) {
+            if brick != a && brick != b {
+                app.world_mut().despawn(brick);
+            }
         }
-        let (a, b) = (all[0], all[1]);
-        app.world_mut().get_mut::<BrickHealth>(a).unwrap().0 = 1;
-        app.world_mut().get_mut::<BrickHealth>(b).unwrap().0 = 2;
 
         hit(&mut app, a);
         app.update();
@@ -1260,6 +1352,175 @@ mod tests {
         assert_eq!(app_state(&app), AppState::InGame, "a cracked brick is left");
 
         hit(&mut app, b);
+        app.update();
+        app.update();
+        assert_eq!(app_state(&app), AppState::GameOver);
+        assert_eq!(
+            app.world().get_resource::<GameOutcome>(),
+            Some(&GameOutcome::Won)
+        );
+    }
+
+    #[test]
+    fn every_brick_gets_its_class_look_health_and_cell() {
+        let mut app = app();
+        assert_eq!(BRICK_ROWS * BRICK_COLS, 70);
+        let world = app.world_mut();
+        let mut cells = std::collections::HashSet::new();
+        for (class, health, sprite, transform, cell) in world
+            .query_filtered::<(&BrickClass, &BrickHealth, &Sprite, &Transform, &BrickCell), With<Brick>>()
+            .iter(world)
+        {
+            assert_eq!(health.0, class.max_hits());
+            assert_eq!(sprite.color, theme::brick_color(*class));
+            assert_eq!(transform.translation, brick_translation(*cell));
+            assert!(cell.row < 7 && cell.col < 10);
+            assert!(cells.insert(*cell), "duplicate cell {cell:?}");
+        }
+        assert_eq!(cells.len(), 70);
+    }
+
+    fn layout(app: &mut App) -> Vec<(usize, usize, BrickClass)> {
+        let mut layout: Vec<(usize, usize, BrickClass)> = app
+            .world_mut()
+            .query::<(&BrickCell, &BrickClass)>()
+            .iter(app.world())
+            .map(|(cell, class)| (cell.row, cell.col, *class))
+            .collect();
+        layout.sort_by_key(|(row, col, _)| (*row, *col));
+        layout
+    }
+
+    #[test]
+    fn the_board_layout_changes_between_runs() {
+        let mut app = app();
+        let first = layout(&mut app);
+        tap(&mut app, KeyCode::Space);
+        app.world_mut().resource_mut::<Lives>().0 = 1;
+        move_ball_below_screen(&mut app);
+        app.update();
+        app.update();
+        assert_eq!(app_state(&app), AppState::GameOver);
+        tap(&mut app, KeyCode::KeyR);
+        let second = layout(&mut app);
+        assert_eq!(second.len(), 70);
+        assert_ne!(first, second);
+    }
+
+    #[test]
+    fn seven_rows_leave_room_above_the_paddle() {
+        let mut app = app();
+        let world = app.world_mut();
+        let lowest = world
+            .query_filtered::<&Transform, With<Brick>>()
+            .iter(world)
+            .map(|t| t.translation.y)
+            .fold(f32::INFINITY, f32::min);
+        let rows = world.query::<&BrickCell>().iter(world).map(|c| c.row).max();
+        assert_eq!(rows, Some(6));
+        let paddle_top = world
+            .query_filtered::<&Transform, With<Paddle>>()
+            .single(world)
+            .unwrap()
+            .translation
+            .y
+            + PADDLE_HEIGHT / 2.0;
+        assert!(lowest - BRICK_HEIGHT / 2.0 - paddle_top >= 250.0);
+    }
+
+    #[test]
+    fn shield_glass_hit_from_below_or_the_side_only_flashes() {
+        let mut app = app();
+        let shield = brick_of(&mut app, BrickClass::Shield);
+        let color = |app: &App| app.world().get::<Sprite>(shield).unwrap().color;
+
+        hit_moving(&mut app, shield, Vec2::new(0.0, BALL_SPEED));
+        assert_eq!(app.world().get::<BrickHealth>(shield).unwrap().0, 1);
+        assert_eq!(score(&app), 0);
+        assert!(!app.world().resource::<BallCollisionSignals>().broke_brick);
+        assert_eq!(color(&app), theme::SHIELD_FLASH);
+        assert!(app.world().entity(shield).contains::<bricks::ShieldFlash>());
+        app.update(); // 0.1 s
+        assert_eq!(color(&app), theme::SHIELD_FLASH);
+        app.update(); // 0.2 s
+        assert_eq!(color(&app), theme::SHIELD);
+        assert!(!app.world().entity(shield).contains::<bricks::ShieldFlash>());
+
+        // A flat side hit: no damage either.
+        hit_moving(&mut app, shield, Vec2::new(BALL_SPEED, 0.0));
+        assert!(app.world().get_entity(shield).is_ok());
+        assert_eq!(score(&app), 0);
+        assert_eq!(color(&app), theme::SHIELD_FLASH);
+    }
+
+    #[test]
+    fn shield_glass_hit_by_a_ball_moving_down_breaks() {
+        let mut app = app();
+        let shield = brick_of(&mut app, BrickClass::Shield);
+        hit_moving(&mut app, shield, FROM_ABOVE);
+        assert!(app.world().get_entity(shield).is_err());
+        assert_eq!(score(&app), 10);
+        assert!(app.world().resource::<BallCollisionSignals>().broke_brick);
+    }
+
+    #[test]
+    fn a_shield_flash_holds_while_paused() {
+        let mut app = app();
+        let shield = brick_of(&mut app, BrickClass::Shield);
+        hit_moving(&mut app, shield, Vec2::new(0.0, BALL_SPEED));
+        tap(&mut app, KeyCode::KeyP);
+        for _ in 0..5 {
+            app.update();
+        }
+        assert_eq!(
+            app.world().get::<Sprite>(shield).unwrap().color,
+            theme::SHIELD_FLASH
+        );
+        tap(&mut app, KeyCode::KeyP);
+        app.update();
+        app.update();
+        assert_eq!(
+            app.world().get::<Sprite>(shield).unwrap().color,
+            theme::SHIELD
+        );
+    }
+
+    #[test]
+    fn the_ball_approach_is_recorded_before_each_physics_step() {
+        let mut app = app();
+        tap(&mut app, KeyCode::Space);
+        let ball = ball(&mut app);
+        app.world_mut().get_mut::<LinearVelocity>(ball).unwrap().0 = Vec2::new(100.0, -280.0);
+        app.update();
+        let approach = app.world().get::<BallApproach>(ball).unwrap().0;
+        assert!(
+            approach.y < 0.0,
+            "recorded the downward velocity, got {approach:?}"
+        );
+    }
+
+    #[test]
+    fn the_run_is_won_only_once_the_last_shield_breaks_from_above() {
+        let mut app = app();
+        tap(&mut app, KeyCode::Space);
+        let ceramic = brick_of(&mut app, BrickClass::Ceramic);
+        let shield = brick_of(&mut app, BrickClass::Shield);
+        for brick in bricks(&mut app) {
+            if brick != ceramic && brick != shield {
+                app.world_mut().despawn(brick);
+            }
+        }
+        hit(&mut app, ceramic);
+        app.update();
+        app.update();
+        assert_eq!(app_state(&app), AppState::InGame);
+
+        hit_moving(&mut app, shield, Vec2::new(0.0, BALL_SPEED));
+        app.update();
+        app.update();
+        assert_eq!(app_state(&app), AppState::InGame, "the shield survived");
+
+        hit_moving(&mut app, shield, FROM_ABOVE);
         app.update();
         app.update();
         assert_eq!(app_state(&app), AppState::GameOver);

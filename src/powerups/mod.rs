@@ -1,20 +1,12 @@
 mod super_sizer;
 
+use crate::bricks::BrickClass;
 use crate::game_state::{AppState, PlayState};
 use crate::spawner::Spawner;
-use crate::{
-    Brick, BrickDestroyed, BrickHealth, Paddle, RestartGame, PADDLE_HEIGHT, WINDOW_HEIGHT,
-};
+use crate::{Brick, BrickDestroyed, Paddle, RestartGame, PADDLE_HEIGHT, WINDOW_HEIGHT};
 use bevy::prelude::*;
-use rand::seq::IteratorRandom;
 
 const POWER_UP_SIZE: f32 = 24.0;
-/// How many bricks carry a power-up each run.
-const POWER_UP_BRICKS: usize = 6;
-/// Hits a power-up brick takes to break.
-const POWER_UP_BRICK_HITS: u8 = 2;
-/// Violet "reactor core" look of a power-up brick.
-const POWER_UP_BRICK_COLOR: Color = crate::theme::REACTOR;
 const BASE_GRAVITY: f32 = 140.0;
 const GRAVITY_STEP: f32 = 20.0;
 const MAX_GRAVITY: f32 = 420.0;
@@ -36,8 +28,9 @@ pub struct PowerUp {
     gravity: f32,
 }
 
-/// A brick carrying a power-up: chosen at the start of a run by
-/// [`assign_power_up_bricks`], dropped by [`drop_power_up`] when it breaks.
+/// A brick carrying a power-up: attached to each reactor-class brick at the
+/// start of a run by [`attach_reactor_power_ups`], dropped by
+/// [`drop_power_up`] when it breaks.
 #[derive(Component)]
 pub struct PowerUpBrick {
     kind: PowerUpKind,
@@ -105,7 +98,7 @@ impl Plugin for PowerUpsPlugin {
             .init_resource::<PowerUpDrops>()
             .init_resource::<ActiveEffects>()
             .add_observer(reset_on_restart)
-            .add_observer(assign_power_up_bricks)
+            .add_observer(attach_reactor_power_ups)
             .add_observer(drop_power_up)
             // Everything that moves power-ups or counts down their timers
             // runs only while playing, so pausing or ending the run freezes
@@ -127,29 +120,24 @@ impl Plugin for PowerUpsPlugin {
     }
 }
 
-/// At the start of every run, turns [`POWER_UP_BRICKS`] random bricks into
-/// violet 2-hit power-up bricks, each with a weighted-random kind from
-/// [`PowerUpSpawner`]. Runs on [`RestartGame`], which `start_run` triggers
-/// after queuing the brick spawns, so the new run's bricks already exist.
-fn assign_power_up_bricks(
+/// At the start of every run, gives each reactor-class brick (the board
+/// generator places exactly `bricks::REACTOR_BRICKS`) a weighted-random
+/// power-up from [`PowerUpSpawner`]. Runs on [`RestartGame`], which
+/// `start_run` triggers after queuing the brick spawns, so the new run's
+/// bricks already exist. Health and colour come from the class.
+fn attach_reactor_power_ups(
     _restart: On<RestartGame>,
     mut commands: Commands,
     spawner: Res<PowerUpSpawner>,
-    mut bricks: Query<(Entity, &mut BrickHealth, &mut Sprite), With<Brick>>,
+    bricks: Query<(Entity, &BrickClass), With<Brick>>,
 ) {
-    let chosen = bricks
-        .iter()
-        .map(|(entity, _, _)| entity)
-        .sample(&mut rand::rng(), POWER_UP_BRICKS);
-    for entity in chosen {
+    for (entity, class) in &bricks {
+        if *class != BrickClass::Reactor {
+            continue;
+        }
         let Some(pick) = spawner.pick() else {
             return;
         };
-        let Ok((_, mut health, mut sprite)) = bricks.get_mut(entity) else {
-            continue;
-        };
-        health.0 = POWER_UP_BRICK_HITS;
-        sprite.color = POWER_UP_BRICK_COLOR;
         commands.entity(entity).insert(PowerUpBrick {
             kind: pick.kind,
             color: pick.color,
@@ -269,7 +257,9 @@ pub(crate) fn test_spawn_power_up(app: &mut App) -> Entity {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::bricks::REACTOR_BRICKS;
     use crate::test_support::*;
+    use crate::{theme, BrickHealth};
 
     fn spawn_falling_power_up(app: &mut App) -> Entity {
         app.world_mut()
@@ -403,9 +393,9 @@ mod tests {
     }
 
     #[test]
-    fn each_run_has_exactly_six_violet_power_up_bricks() {
+    fn every_reactor_brick_and_only_those_carry_a_power_up() {
         let mut app = app();
-        assert_eq!(power_up_bricks(&mut app).len(), POWER_UP_BRICKS);
+        assert_eq!(power_up_bricks(&mut app).len(), REACTOR_BRICKS);
         assert_eq!(
             bricks(&mut app).len(),
             crate::BRICK_ROWS * crate::BRICK_COLS
@@ -414,13 +404,18 @@ mod tests {
         for brick in bricks(&mut app) {
             let entity = app.world().entity(brick);
             let health = entity.get::<BrickHealth>().unwrap().0;
+            let class = *entity.get::<BrickClass>().unwrap();
             match entity.get::<PowerUpBrick>() {
                 Some(power_up_brick) => {
-                    assert_eq!(health, POWER_UP_BRICK_HITS);
-                    assert_eq!(entity.get::<Sprite>().unwrap().color, POWER_UP_BRICK_COLOR);
+                    assert_eq!(class, BrickClass::Reactor);
+                    assert_eq!(health, 2);
+                    assert_eq!(entity.get::<Sprite>().unwrap().color, theme::REACTOR);
                     assert!(power_up_brick.kind == PowerUpKind::SuperSizer);
                 }
-                None => assert_eq!(health, 1),
+                None => {
+                    assert_ne!(class, BrickClass::Reactor);
+                    assert_eq!(health, class.max_hits());
+                }
             }
         }
     }
@@ -448,8 +443,8 @@ mod tests {
         tap(&mut app, KeyCode::KeyR);
 
         let second = power_up_brick_positions(&mut app);
-        assert_eq!(second.len(), POWER_UP_BRICKS);
-        // Same six by chance: 1 in C(60, 6) ≈ 5e7.
+        assert_eq!(second.len(), REACTOR_BRICKS);
+        // Same six by chance: 1 in C(70, 6) ≈ 1.3e8.
         assert_ne!(first, second);
     }
 
@@ -466,7 +461,7 @@ mod tests {
         assert_eq!(entity.get::<BrickHealth>().unwrap().0, 1);
         assert_eq!(
             entity.get::<Sprite>().unwrap().color,
-            crate::theme::cracked(POWER_UP_BRICK_COLOR)
+            theme::cracked(theme::REACTOR)
         );
         assert_eq!(app.world().resource::<crate::Score>().0, 10);
         assert_eq!(count::<With<PowerUp>>(&mut app), 0);
@@ -494,14 +489,10 @@ mod tests {
         let gravities: Vec<f32> = falling(&mut app).iter().map(|f| f.3).collect();
         assert!(gravities.contains(&(BASE_GRAVITY + GRAVITY_STEP)));
 
-        // A normal brick drops nothing.
-        let normal = app
-            .world_mut()
-            .query_filtered::<Entity, (With<Brick>, Without<PowerUpBrick>)>()
-            .iter(app.world())
-            .next()
-            .unwrap();
+        // A normal (ceramic, one-hit) brick drops nothing.
+        let normal = brick_of(&mut app, BrickClass::Ceramic);
         hit(&mut app, normal);
+        assert!(app.world().get_entity(normal).is_err());
         assert_eq!(count::<With<PowerUp>>(&mut app), 2);
     }
 

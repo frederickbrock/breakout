@@ -1,0 +1,26 @@
+Sci-fi industrial game art, clean hard-surface rendering: machined steel, bevelled
+metal plates, bolts and seams, crisp specular edges, subtle glossy highlights.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Restrained glow, high readability at small size, strong
+silhouette. Absolutely no text, lettering, numbers, logos, watermarks or UI.
+
+Subject: a thin rectangular BORDER/FRAME graphic — a "behaviour outline" overlay
+that will be drawn around a game brick plate, not the plate itself. It is a
+rounded-rectangle picture frame shape (same rounded-corner rectangle silhouette as
+a Breakout brick, roughly 8:3 wide, but as an outline only): a HEAVY DOUBLE border
+in hazard red (#ff3b3b) — two concentric glowing rings (an outer thick ring and a
+slightly thinner inner ring) with a small visible gap of flat background colour
+between them, both rings noticeably thicker and more intense/bright than a normal
+single border, giving a heavier, more dangerous, "primed to blow" look than a
+simple single-line border.
+
+Critical composition requirement: the background outside both rings, the gap
+between the two rings, AND the entire area inside the inner ring (where the brick
+artwork will later be composited) must all be the exact same flat solid #00FF00
+green — completely flat, no gradient, no shading, no object anywhere except the
+two red rings themselves. Do not draw a plate, panel, or any object inside the
+frame.
+
+Single centred graphic, whole frame inside the image, orthographic straight-on
+view, plain flat solid #00FF00 green everywhere except the two red rings, no
+shadow, no scenery, no other objects, no text, no numbers, no logos.
