@@ -6,6 +6,8 @@
 //! (rng in, class grid out), so its guarantees are unit-testable with a
 //! seeded rng.
 
+mod regen;
+
 use crate::game_state::PlayState;
 use crate::{theme, BrickHealth};
 use bevy::prelude::*;
@@ -155,7 +157,7 @@ pub struct BricksPlugin;
 
 impl Plugin for BricksPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
+        app.add_plugins(regen::RegenPlugin).add_systems(
             Update,
             end_shield_flashes.run_if(in_state(PlayState::Playing)),
         );
