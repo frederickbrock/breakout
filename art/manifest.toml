@@ -64,3 +64,27 @@ processing = [
   "saved as RGB (opaque, no alpha) with PNG optimize+max compression to fit the 1500KB budget (1412KB)",
   "custom local fix: a soft radial darkening (numpy, ellipse falloff centred on the top-left corner, ~1000x550px radius) applied on top, because the picked render's leftmost ceiling lamp sits inside the ~300x120 game-px HUD text corner and was too bright for white HUD text to read against; verified by compositing simulated white HUD text plus the actual ball/brick sprites at 1x scale on top before finalizing",
 ]
+
+[[asset]]
+id = "brick-outlines"
+issue = "sim-rdl.7.5"
+files = [
+  "assets/sprites/bricks/outline_charge.png",
+  "assets/sprites/bricks/outline_breach.png",
+  "assets/sprites/bricks/outline_demolition.png",
+  "assets/sprites/bricks/outline_regen.png",
+  "assets/sprites/bricks/outline_shield.png",
+]
+source = "charge r1/v2, breach r2/v2, demolition r3/v2, regen r4/v2, shield r5/v2 (reactor outline dropped from scope by the user; keeps the sim-rdl.7.4 coded placeholder)"
+model = "google/gemini-2.5-flash-image"
+prompt_file = "art/prompts/sim-rdl.7.5-r1.txt"
+prompt_file_r2 = "art/prompts/sim-rdl.7.5-r2.txt"
+prompt_file_r3 = "art/prompts/sim-rdl.7.5-r3.txt"
+prompt_file_r4 = "art/prompts/sim-rdl.7.5-r4.txt"
+prompt_file_r5 = "art/prompts/sim-rdl.7.5-r5.txt"
+processing = [
+  "these are frame/border overlays with a fully enclosed transparent centre (not a solid silhouette like the bricks), so background removal used --bg key (per-pixel colour distance), never --bg flood — flood-fill from the canvas corners can't cross the solid ring to reach the enclosed interior, which would leave it opaque",
+  "charge/breach/demolition/shield: process --bg key --key-color <sampled> --tolerance 75 --trim --size 168x68 --fit stretch (green #00FF00 key)",
+  "regen: same but --key-color #c71682 --tolerance 100 (magenta #FF00FF key, per the brief's exception) — needed a much higher tolerance than the others because the vine/lattice pattern's thin anti-aliased strokes had magenta spill baked into them throughout (not just at the outer silhouette), which a colour-decontamination pass (pushing opaque RGB outward before resize) could not fix since there was no nearby fully-opaque pixel to source clean colour from inside such thin strokes",
+  "tolerance for all 5 tuned up from an initial 40 after finding real, visible background-colour fringe on resize (checked by compositing each on the actual #0a0e15 game background and zooming in) — a naive per-pixel green/magenta detector flagged some of shield's own cyan/teal glow colour as false-positive \"green fringe\"; that one was left alone after visual confirmation it reads clean",
+]

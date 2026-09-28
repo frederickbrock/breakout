@@ -1,0 +1,25 @@
+Sci-fi industrial game art, clean hard-surface rendering: machined steel, bevelled
+metal plates, bolts and seams, crisp specular edges, subtle glossy highlights.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Restrained glow, high readability at small size, strong
+silhouette. Absolutely no text, lettering, numbers, logos, watermarks or UI.
+
+Subject: a thin rectangular BORDER/FRAME graphic — a "behaviour outline" overlay
+that will be drawn around a game brick plate, not the plate itself. It is a
+rounded-rectangle picture frame shape (same rounded-corner rectangle silhouette as
+a Breakout brick, roughly 8:3 wide, but as an outline only): a glowing cyan
+(#4fd8ff) border that is clearly ASYMMETRIC in strength — thick, bright and bold
+along the TOP edge only, then tapering down to a much thinner, dimmer line along
+the left and right edges, and thinnest/dimmest along the bottom edge. The overall
+impression is a shield or ward that is strongest facing "up" (toward the ball
+coming from above), like light being deflected off the top of an energy dome.
+
+Critical composition requirement: the ENTIRE inside area of the frame (everything
+inside the border, where the brick artwork will later be composited in) must be
+the exact same flat solid #00FF00 green as the background outside the frame —
+completely flat, no gradient, no shading, no object. Do not draw a plate, panel,
+or any object inside the frame.
+
+Single centred graphic, whole frame inside the image, orthographic straight-on
+view, plain flat solid #00FF00 green everywhere except the cyan border itself, no
+shadow, no scenery, no other objects, no text, no numbers, no logos.
