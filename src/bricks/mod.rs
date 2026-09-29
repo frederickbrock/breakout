@@ -6,6 +6,9 @@
 //! (rng in, class grid out), so its guarantees are unit-testable with a
 //! seeded rng.
 
+mod explosive;
+mod regen;
+
 use crate::game_state::PlayState;
 use crate::{theme, BrickHealth};
 use bevy::prelude::*;
@@ -57,7 +60,7 @@ impl BrickClass {
 }
 
 /// A brick's slot on the board; row 0 is the top row.
-#[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct BrickCell {
     pub row: usize,
     pub col: usize,
@@ -155,10 +158,11 @@ pub struct BricksPlugin;
 
 impl Plugin for BricksPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            Update,
-            end_shield_flashes.run_if(in_state(PlayState::Playing)),
-        );
+        app.add_plugins((regen::RegenPlugin, explosive::ExplosivePlugin))
+            .add_systems(
+                Update,
+                end_shield_flashes.run_if(in_state(PlayState::Playing)),
+            );
     }
 }
 

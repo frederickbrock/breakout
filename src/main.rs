@@ -152,6 +152,18 @@ struct RestartGame;
 struct BrickDestroyed {
     brick: Entity,
     position: Vec2,
+    /// Destroyed by an explosive's blast rather than the ball. The blast's
+    /// whole chain is resolved at once, so this doesn't set off another one.
+    by_blast: bool,
+}
+
+/// Fired when a brick takes damage but survives (it has hits left).
+/// Brick behaviours that react to being hurt (regen's heal timer) observe
+/// this instead of being special-cased in [`on_ball_collision`]. Explosions
+/// (sim-rdl.7.3) fire it too.
+#[derive(Event)]
+struct BrickDamaged {
+    brick: Entity,
 }
 
 /// Lets other systems (e.g. a power-up that changes paddle width) declare
@@ -575,11 +587,13 @@ fn on_ball_collision(
             commands.trigger(BrickDestroyed {
                 brick: other,
                 position: transform.translation.truncate(),
+                by_blast: false,
             });
             commands.entity(other).despawn();
             signals.broke_brick = true;
         } else {
             sprite.color = theme::brick_face(class, health.0);
+            commands.trigger(BrickDamaged { brick: other });
         }
     } else if let Ok(paddle_transform) = paddle_query.get(other) {
         signals.paddle_hit_x = Some(paddle_transform.translation.x);
@@ -1324,8 +1338,11 @@ mod tests {
             }
             hit_moving(&mut app, brick, FROM_ABOVE);
             assert!(app.world().get_entity(brick).is_err(), "{class:?} broke");
-            assert_eq!(score(&app), 10 * max as i32, "{class:?}");
-            assert_eq!(bricks(&mut app).len(), BRICK_ROWS * BRICK_COLS - 1);
+            // An explosive also blasts its neighbours (bricks::explosive tests).
+            if !matches!(class, BrickClass::Explosive(_)) {
+                assert_eq!(score(&app), 10 * max as i32, "{class:?}");
+                assert_eq!(bricks(&mut app).len(), BRICK_ROWS * BRICK_COLS - 1);
+            }
         }
     }
 
