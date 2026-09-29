@@ -514,7 +514,11 @@ mod tests {
             (phase(app, outline) - a).rem_euclid(1.0)
         };
         let breathing = step(&mut app);
-        app.world_mut().trigger(BrickDamaged { brick: regen });
+        app.world_mut().trigger(BrickDamaged {
+            brick: regen,
+            position: Vec2::ZERO,
+            class: BrickClass::Regen,
+        });
         app.world_mut().flush();
         let early = step(&mut app);
         for _ in 0..20 {

@@ -6,11 +6,12 @@
 //! (rng in, class grid out), so its guarantees are unit-testable with a
 //! seeded rng.
 
+mod explosive;
 mod outline;
 mod regen;
 
 use crate::game_state::PlayState;
-use crate::{theme, BrickHealth};
+use crate::theme;
 use bevy::prelude::*;
 use rand::seq::SliceRandom;
 use rand::{Rng, RngExt};
@@ -60,7 +61,7 @@ impl BrickClass {
 }
 
 /// A brick's slot on the board; row 0 is the top row.
-#[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct BrickCell {
     pub row: usize,
     pub col: usize,
@@ -158,28 +159,26 @@ pub struct BricksPlugin;
 
 impl Plugin for BricksPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((regen::RegenPlugin, outline::OutlinePlugin))
-            .add_systems(
-                Update,
-                end_shield_flashes.run_if(in_state(PlayState::Playing)),
-            );
+        app.add_plugins((
+            regen::RegenPlugin,
+            explosive::ExplosivePlugin,
+            outline::OutlinePlugin,
+        ))
+        .add_systems(
+            Update,
+            end_shield_flashes.run_if(in_state(PlayState::Playing)),
+        );
     }
 }
 
 fn end_shield_flashes(
     mut commands: Commands,
     time: Res<Time>,
-    mut flashes: Query<(
-        Entity,
-        &mut ShieldFlash,
-        &BrickClass,
-        &BrickHealth,
-        &mut Sprite,
-    )>,
+    mut flashes: Query<(Entity, &mut ShieldFlash, &BrickClass, &mut Sprite)>,
 ) {
-    for (entity, mut flash, &class, health, mut sprite) in &mut flashes {
+    for (entity, mut flash, &class, mut sprite) in &mut flashes {
         if flash.0.tick(time.delta()).is_finished() {
-            sprite.color = theme::brick_face(class, health.0);
+            sprite.color = theme::brick_color(class);
             commands.entity(entity).remove::<ShieldFlash>();
         }
     }
