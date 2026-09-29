@@ -152,6 +152,9 @@ struct RestartGame;
 struct BrickDestroyed {
     brick: Entity,
     position: Vec2,
+    /// Destroyed by an explosive's blast rather than the ball. The blast's
+    /// whole chain is resolved at once, so this doesn't set off another one.
+    by_blast: bool,
 }
 
 /// Fired when a brick takes damage but survives (it has hits left).
@@ -584,6 +587,7 @@ fn on_ball_collision(
             commands.trigger(BrickDestroyed {
                 brick: other,
                 position: transform.translation.truncate(),
+                by_blast: false,
             });
             commands.entity(other).despawn();
             signals.broke_brick = true;
@@ -1334,8 +1338,11 @@ mod tests {
             }
             hit_moving(&mut app, brick, FROM_ABOVE);
             assert!(app.world().get_entity(brick).is_err(), "{class:?} broke");
-            assert_eq!(score(&app), 10 * max as i32, "{class:?}");
-            assert_eq!(bricks(&mut app).len(), BRICK_ROWS * BRICK_COLS - 1);
+            // An explosive also blasts its neighbours (bricks::explosive tests).
+            if !matches!(class, BrickClass::Explosive(_)) {
+                assert_eq!(score(&app), 10 * max as i32, "{class:?}");
+                assert_eq!(bricks(&mut app).len(), BRICK_ROWS * BRICK_COLS - 1);
+            }
         }
     }
 
