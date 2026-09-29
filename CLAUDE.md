@@ -88,7 +88,13 @@ not hand-rolled kinematics/AABB checks.
   variant. Tested with a seeded rng. Per-class behaviours are submodules composed into
   `BricksPlugin`: `regen.rs` (a regen brick that survives a hit gets a 3 s `RegenTimer`,
   restarted by each further non-lethal hit; when it runs out the brick heals to full and
-  loses its cracked look; ticks only while `Playing`). `BricksPlugin` also runs the
+  loses its cracked look; ticks only while `Playing`) and `outline.rs` (behaviour outlines:
+  each special brick gets a `BrickOutline` child of thin `OutlineStrip` sprites laid out by
+  the pure `strips(style, size)` — red charge/breach/demolition, green regen, cyan shield,
+  violet reactor; plain classes get none. `animate_outlines` pulses them only while
+  `Playing`, and a regen brick with a running `RegenTimer` blinks faster as healing nears.
+  Colours and rates live in `theme.rs`; the final art replaces only the strip children).
+  `BricksPlugin` also runs the
   shield-glass flash timer
   (`ShieldFlash`, frozen while paused). Colours come from `theme::brick_color(class)` and
   `theme::brick_face(class, health)` (cracked below full health).
