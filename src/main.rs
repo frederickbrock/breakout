@@ -154,6 +154,15 @@ struct BrickDestroyed {
     position: Vec2,
 }
 
+/// Fired when a brick takes damage but survives (it has hits left).
+/// Brick behaviours that react to being hurt (regen's heal timer) observe
+/// this instead of being special-cased in [`on_ball_collision`]. Explosions
+/// (sim-rdl.7.3) fire it too.
+#[derive(Event)]
+struct BrickDamaged {
+    brick: Entity,
+}
+
 /// Lets other systems (e.g. a power-up that changes paddle width) declare
 /// they must run before paddle movement each frame, without `main.rs` having
 /// to manually interleave their systems into its own `Update` chain.
@@ -580,6 +589,7 @@ fn on_ball_collision(
             signals.broke_brick = true;
         } else {
             sprite.color = theme::brick_face(class, health.0);
+            commands.trigger(BrickDamaged { brick: other });
         }
     } else if let Ok(paddle_transform) = paddle_query.get(other) {
         signals.paddle_hit_x = Some(paddle_transform.translation.x);
