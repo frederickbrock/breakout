@@ -15,15 +15,12 @@
 //!
 //! Bricks follow the same rule: each spawns as its class's flat colour and
 //! is skinned with its class's intact sprite ([`BrickSprite::of`]) once that
-//! image is loaded. A skinned brick's damage and shield flash are then shown
-//! as a tint over the sprite ([`theme::brick_sprite_tint`]).
+//! image is loaded. A skinned brick's shield flash is then shown as a tint over
+//! the sprite ([`theme::brick_sprite_tint`]); damage is shown by particles.
 
 use crate::bricks::{BrickClass, ShieldFlash};
 use crate::powerups::PowerUp;
-use crate::{
-    theme, Ball, Brick, BrickHealth, PaddleField, PaddleProng, BALL_SIZE, WINDOW_HEIGHT,
-    WINDOW_WIDTH,
-};
+use crate::{theme, Ball, Brick, PaddleField, PaddleProng, BALL_SIZE, WINDOW_HEIGHT, WINDOW_WIDTH};
 use bevy::prelude::*;
 
 /// Paths relative to `assets/`.
@@ -257,21 +254,17 @@ fn skin_bricks(
     }
 }
 
-/// What decides a brick's tint, plus the sprite it's applied to.
-type BrickLook = (
-    &'static BrickClass,
-    &'static BrickHealth,
-    Has<ShieldFlash>,
-    &'static mut Sprite,
-);
+/// Whether a brick flashes, plus the sprite its tint goes on.
+type BrickLook = (Has<ShieldFlash>, &'static mut Sprite);
+type SkinnedBrick = (With<Brick>, With<Skinned>);
 
-/// Keeps a skinned brick's tint in step with its health and shield flash.
-/// Runs after gameplay has written the flat-colour look for the frame and
-/// replaces it, so the code that changes a brick's look (hits, flashes,
-/// healing) needs nothing sprite-specific.
-fn tint_skinned_bricks(mut bricks: Query<BrickLook, (With<Brick>, With<Skinned>)>) {
-    for (&class, health, flashing, mut sprite) in &mut bricks {
-        let tint = theme::brick_sprite_tint(class, health.0, flashing);
+/// Keeps a skinned brick's tint in step with its shield flash. Runs after
+/// gameplay has written the flat-colour look for the frame and replaces it,
+/// so the code that changes a brick's look (flashes) needs nothing
+/// sprite-specific.
+fn tint_skinned_bricks(mut bricks: Query<BrickLook, SkinnedBrick>) {
+    for (flashing, mut sprite) in &mut bricks {
+        let tint = theme::brick_sprite_tint(flashing);
         // Reading through `Mut` doesn't mark the sprite changed.
         if sprite.color != tint {
             sprite.color = tint;
@@ -498,24 +491,19 @@ mod tests {
     }
 
     #[test]
-    fn a_damaged_brick_keeps_its_sprite_tinted_darker_until_healed() {
+    fn a_damaged_brick_keeps_its_intact_sprite_untinted() {
         let mut app = app_with_sprites(&[]);
         let titanium = brick_of(&mut app, BrickClass::Titanium);
         let image = brick_sprite(&app, titanium).image;
         hit(&mut app, titanium);
         app.update();
+        assert_eq!(
+            app.world().get::<crate::BrickHealth>(titanium).unwrap().0,
+            1
+        );
         let sprite = brick_sprite(&app, titanium);
         assert_eq!(sprite.image, image, "no cracked sprite");
-        assert_eq!(
-            sprite.color,
-            theme::brick_sprite_tint(BrickClass::Titanium, 1, false)
-        );
-        assert_ne!(sprite.color, theme::UNTINTED);
-
-        // Healing back to full (as regen does) clears the tint.
-        app.world_mut().get_mut::<BrickHealth>(titanium).unwrap().0 = 2;
-        app.update();
-        assert_eq!(brick_sprite(&app, titanium).color, theme::UNTINTED);
+        assert_eq!(sprite.color, theme::UNTINTED, "damage shows as particles");
     }
 
     #[test]

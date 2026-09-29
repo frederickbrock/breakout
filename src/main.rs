@@ -2,6 +2,7 @@ mod bricks;
 mod controls;
 mod game_state;
 mod menu;
+mod particles;
 mod powerups;
 mod script_manager;
 mod spawner;
@@ -152,6 +153,7 @@ struct RestartGame;
 struct BrickDestroyed {
     brick: Entity,
     position: Vec2,
+    class: BrickClass,
     /// Destroyed by an explosive's blast rather than the ball. The blast's
     /// whole chain is resolved at once, so this doesn't set off another one.
     by_blast: bool,
@@ -164,6 +166,10 @@ struct BrickDestroyed {
 #[derive(Event)]
 struct BrickDamaged {
     brick: Entity,
+    /// Where the hit landed: the ball's position for a ball hit, the brick's
+    /// centre for blast damage.
+    position: Vec2,
+    class: BrickClass,
 }
 
 /// Lets other systems (e.g. a power-up that changes paddle width) declare
@@ -205,6 +211,7 @@ fn main() {
     .add_plugins(PhysicsPlugins::default())
     .add_plugins(script_manager::ScriptPlugin)
     .add_plugins(sprites::SpritesPlugin)
+    .add_plugins(particles::ParticlesPlugin)
     .insert_resource(ClearColor(theme::VOID));
     add_game(&mut app);
     app.run();
@@ -240,6 +247,7 @@ fn add_game(app: &mut App) {
         controls::ControlsPlugin,
         sprites::SkinPlugin,
         bricks::BricksPlugin,
+        particles::VfxPlugin,
     ))
     .insert_resource(Gravity(Vec2::new(0.0, 0.8)))
     .init_resource::<ButtonInput<MouseButton>>()
@@ -558,7 +566,7 @@ fn on_ball_collision(
     mut signals: ResMut<BallCollisionSignals>,
     mut brick_query: Query<(&Transform, &BrickClass, &mut BrickHealth, &mut Sprite), With<Brick>>,
     paddle_query: Query<&Transform, With<Paddle>>,
-    ball_query: Query<&BallApproach, With<Ball>>,
+    ball_query: Query<(&BallApproach, &Transform), With<Ball>>,
 ) {
     let other = on.collider2;
     if let Ok((transform, &class, mut health, mut sprite)) = brick_query.get_mut(other) {
@@ -571,7 +579,7 @@ fn on_ball_collision(
         if class == BrickClass::Shield {
             let from_above = ball_query
                 .get(on.collider1)
-                .is_ok_and(|approach| approach.0.y < 0.0);
+                .is_ok_and(|(approach, _)| approach.0.y < 0.0);
             if !from_above {
                 sprite.color = theme::SHIELD_FLASH;
                 commands
@@ -587,13 +595,20 @@ fn on_ball_collision(
             commands.trigger(BrickDestroyed {
                 brick: other,
                 position: transform.translation.truncate(),
+                class,
                 by_blast: false,
             });
             commands.entity(other).despawn();
             signals.broke_brick = true;
         } else {
-            sprite.color = theme::brick_face(class, health.0);
-            commands.trigger(BrickDamaged { brick: other });
+            let contact = ball_query
+                .get(on.collider1)
+                .map_or(transform.translation, |(_, ball)| ball.translation);
+            commands.trigger(BrickDamaged {
+                brick: other,
+                position: contact.truncate(),
+                class,
+            });
         }
     } else if let Ok(paddle_transform) = paddle_query.get(other) {
         signals.paddle_hit_x = Some(paddle_transform.translation.x);
@@ -662,7 +677,7 @@ fn ball_movement(
     // `on_ball_collision`'s despawn is already applied by now (Avian
     // triggers collisions from an exclusive system in FixedPostUpdate, whose
     // commands flush before Update), so the run is won only once no brick is
-    // left at all, cracked multi-hit bricks included.
+    // left at all, damaged multi-hit bricks included.
     if broke_brick && brick_query.is_empty() {
         end_run(&mut commands, &mut next_state, GameOutcome::Won);
         return;
@@ -1325,8 +1340,8 @@ mod tests {
                 );
                 assert_eq!(
                     app.world().get::<Sprite>(brick).unwrap().color,
-                    theme::cracked(theme::brick_color(class)),
-                    "{class:?} shows its cracked look"
+                    theme::brick_color(class),
+                    "{class:?} keeps its colour (damage shows as particles)"
                 );
                 assert_eq!(score(&app), 10 * i as i32);
                 assert!(!app.world().resource::<BallCollisionSignals>().broke_brick);
@@ -1366,7 +1381,7 @@ mod tests {
         hit(&mut app, b);
         app.update();
         app.update();
-        assert_eq!(app_state(&app), AppState::InGame, "a cracked brick is left");
+        assert_eq!(app_state(&app), AppState::InGame, "a damaged brick is left");
 
         hit(&mut app, b);
         app.update();
@@ -1732,6 +1747,40 @@ mod tests {
         assert_eq!(
             paddle_look(&mut app),
             (vec![-46.5, 46.5], 66.0, PADDLE_WIDTH)
+        );
+    }
+
+    #[derive(Resource, Default)]
+    struct Seen {
+        damaged: Vec<(Entity, Vec2, BrickClass)>,
+        destroyed: Vec<(Entity, Vec2, BrickClass, bool)>,
+    }
+
+    #[test]
+    fn brick_damage_and_break_events_carry_class_and_position() {
+        let mut app = app();
+        app.init_resource::<Seen>()
+            .add_observer(|on: On<BrickDamaged>, mut seen: ResMut<Seen>| {
+                seen.damaged.push((on.brick, on.position, on.class));
+            })
+            .add_observer(|on: On<BrickDestroyed>, mut seen: ResMut<Seen>| {
+                seen.destroyed
+                    .push((on.brick, on.position, on.class, on.by_blast));
+            });
+        let titanium = brick_of(&mut app, BrickClass::Titanium);
+        let centre = translation(&app, titanium).truncate();
+        let ball = ball(&mut app);
+        let ball_at = translation(&app, ball).truncate();
+
+        hit(&mut app, titanium);
+        hit(&mut app, titanium);
+        let seen = app.world().resource::<Seen>();
+        // The surviving hit: at the contact point (the ball), with its class.
+        assert_eq!(seen.damaged, [(titanium, ball_at, BrickClass::Titanium)]);
+        // The break: at the brick's centre, by the ball.
+        assert_eq!(
+            seen.destroyed,
+            [(titanium, centre, BrickClass::Titanium, false)]
         );
     }
 }
