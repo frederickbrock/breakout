@@ -128,7 +128,7 @@ not hand-rolled kinematics/AABB checks.
   two child emitters on the brick (`brick_damage_smoke` in smoke grey + `brick_damage_sparks`
   in glow), emitting more often the more damage taken; back to max (regen) → removed;
   `BrickDestroyed` → `brick_break` shatter burst in the face colour, falling with gravity.
-  Effect files are white; colour comes from each spawner's `ColorParticle2dMaterial`
+  Effect files are white and in world units (sizes/speeds already ×`GAME_SCALE`); colour comes from each spawner's `ColorParticle2dMaterial`
   (`ParticleMaterials`, one per class and role). A live-particle budget
   (`DAMAGE_PARTICLE_BUDGET`, via the pure `damage_emitter_interval`) stretches the damage
   emitters' spawn interval when many bricks are damaged (not `max_particles`: bevy_enoki
