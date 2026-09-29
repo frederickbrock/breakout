@@ -1681,40 +1681,6 @@ mod tests {
         );
     }
 
-    #[derive(Resource, Default)]
-    struct Seen {
-        damaged: Vec<(Entity, Vec2, BrickClass)>,
-        destroyed: Vec<(Entity, Vec2, BrickClass, bool)>,
-    }
-
-    #[test]
-    fn brick_damage_and_break_events_carry_class_and_position() {
-        let mut app = app();
-        app.init_resource::<Seen>()
-            .add_observer(|on: On<BrickDamaged>, mut seen: ResMut<Seen>| {
-                seen.damaged.push((on.brick, on.position, on.class));
-            })
-            .add_observer(|on: On<BrickDestroyed>, mut seen: ResMut<Seen>| {
-                seen.destroyed
-                    .push((on.brick, on.position, on.class, on.by_blast));
-            });
-        let titanium = brick_of(&mut app, BrickClass::Titanium);
-        let centre = translation(&app, titanium).truncate();
-        let ball = ball(&mut app);
-        let ball_at = translation(&app, ball).truncate();
-
-        hit(&mut app, titanium);
-        hit(&mut app, titanium);
-        let seen = app.world().resource::<Seen>();
-        // The surviving hit: at the contact point (the ball), with its class.
-        assert_eq!(seen.damaged, [(titanium, ball_at, BrickClass::Titanium)]);
-        // The break: at the brick's centre, by the ball.
-        assert_eq!(
-            seen.destroyed,
-            [(titanium, centre, BrickClass::Titanium, false)]
-        );
-    }
-
     #[test]
     fn paddle_pieces_fit_seamlessly_at_normal_and_super_sized_widths() {
         for (width, offset, field) in [(120.0, 46.5, 66.0), (150.0, 61.5, 96.0)] {
@@ -1781,6 +1747,40 @@ mod tests {
         assert_eq!(
             paddle_look(&mut app),
             (vec![-46.5, 46.5], 66.0, PADDLE_WIDTH)
+        );
+    }
+
+    #[derive(Resource, Default)]
+    struct Seen {
+        damaged: Vec<(Entity, Vec2, BrickClass)>,
+        destroyed: Vec<(Entity, Vec2, BrickClass, bool)>,
+    }
+
+    #[test]
+    fn brick_damage_and_break_events_carry_class_and_position() {
+        let mut app = app();
+        app.init_resource::<Seen>()
+            .add_observer(|on: On<BrickDamaged>, mut seen: ResMut<Seen>| {
+                seen.damaged.push((on.brick, on.position, on.class));
+            })
+            .add_observer(|on: On<BrickDestroyed>, mut seen: ResMut<Seen>| {
+                seen.destroyed
+                    .push((on.brick, on.position, on.class, on.by_blast));
+            });
+        let titanium = brick_of(&mut app, BrickClass::Titanium);
+        let centre = translation(&app, titanium).truncate();
+        let ball = ball(&mut app);
+        let ball_at = translation(&app, ball).truncate();
+
+        hit(&mut app, titanium);
+        hit(&mut app, titanium);
+        let seen = app.world().resource::<Seen>();
+        // The surviving hit: at the contact point (the ball), with its class.
+        assert_eq!(seen.damaged, [(titanium, ball_at, BrickClass::Titanium)]);
+        // The break: at the brick's centre, by the ball.
+        assert_eq!(
+            seen.destroyed,
+            [(titanium, centre, BrickClass::Titanium, false)]
         );
     }
 }
