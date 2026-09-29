@@ -55,6 +55,24 @@ pub const BUTTON_PRESSED: Color = hex(0x1d4a5c);
 pub const BORDER_NORMAL: Color = hex(0x2c3a48);
 pub const BORDER_FOCUSED: Color = EMITTER;
 
+/// Behaviour outlines (coded placeholders until the sim-rdl.7.5 art): the
+/// border drawn over a special brick so its behaviour reads at a glance.
+pub const OUTLINE_EXPLOSIVE: Color = hex(0xff3b3b);
+pub const OUTLINE_REGEN: Color = hex(0x3dff7a);
+pub const OUTLINE_SHIELD: Color = hex(0x4fd8ff);
+pub const OUTLINE_REACTOR: Color = hex(0xb58cff);
+
+/// Outline pulse rates, in pulses per second.
+pub const CHARGE_PULSE_HZ: f32 = 1.0;
+pub const BREACH_PULSE_HZ: f32 = 1.0;
+pub const DEMOLITION_PULSE_HZ: f32 = 2.0;
+/// A healthy regen brick's slow breathing.
+pub const REGEN_BREATHE_HZ: f32 = 0.3;
+/// A damaged regen brick's blink: from this rate just after the hit...
+pub const REGEN_BLINK_START_HZ: f32 = 1.0;
+/// ...up to this one just before it heals.
+pub const REGEN_BLINK_END_HZ: f32 = 6.0;
+
 /// How much darker a damaged brick is than its class colour.
 const CRACK_DARKEN: f32 = 0.3;
 

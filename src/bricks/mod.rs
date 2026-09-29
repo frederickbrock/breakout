@@ -6,6 +6,7 @@
 //! (rng in, class grid out), so its guarantees are unit-testable with a
 //! seeded rng.
 
+mod outline;
 mod regen;
 
 use crate::game_state::PlayState;
@@ -157,10 +158,11 @@ pub struct BricksPlugin;
 
 impl Plugin for BricksPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(regen::RegenPlugin).add_systems(
-            Update,
-            end_shield_flashes.run_if(in_state(PlayState::Playing)),
-        );
+        app.add_plugins((regen::RegenPlugin, outline::OutlinePlugin))
+            .add_systems(
+                Update,
+                end_shield_flashes.run_if(in_state(PlayState::Playing)),
+            );
     }
 }
 
