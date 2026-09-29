@@ -57,16 +57,33 @@ pub const BUTTON_PRESSED: Color = hex(0x1d4a5c);
 pub const BORDER_NORMAL: Color = hex(0x2c3a48);
 pub const BORDER_FOCUSED: Color = EMITTER;
 
-/// How much darker a damaged brick is than its class colour.
-const CRACK_DARKEN: f32 = 0.3;
+/// Brick class glow colours (the seam/glow column of the style guide):
+/// hit sparks and damage sparks.
+pub const CERAMIC_GLOW: Color = hex(0xff6a4d);
+pub const TITANIUM_GLOW: Color = hex(0x7fc4ff);
+pub const TUNGSTEN_GLOW: Color = hex(0xffab4d);
+pub const REACTOR_GLOW: Color = hex(0xb58cff);
+pub const EXPLOSIVE_GLOW: Color = hex(0xff3b3b);
+pub const REGEN_GLOW: Color = hex(0x3dff7a);
+pub const SHIELD_GLOW: Color = hex(0x4fd8ff);
+/// Light smoke rising from a damaged brick.
+pub const SMOKE: Color = hex(0x8a9aab);
 
-/// The cracked look of a brick that survived a hit (a power-up brick's
-/// violet becomes a darker violet).
-pub fn cracked(color: Color) -> Color {
-    color.darker(CRACK_DARKEN)
+/// A brick class's glow colour (its sparks).
+pub fn brick_glow(class: BrickClass) -> Color {
+    match class {
+        BrickClass::Ceramic => CERAMIC_GLOW,
+        BrickClass::Titanium => TITANIUM_GLOW,
+        BrickClass::Tungsten => TUNGSTEN_GLOW,
+        BrickClass::Reactor => REACTOR_GLOW,
+        BrickClass::Explosive(_) => EXPLOSIVE_GLOW,
+        BrickClass::Regen => REGEN_GLOW,
+        BrickClass::Shield => SHIELD_GLOW,
+    }
 }
 
-/// A full-health brick's colour.
+/// A brick's colour. Damage doesn't change it: it shows as particles
+/// (`src/particles/`).
 pub fn brick_color(class: BrickClass) -> Color {
     match class {
         BrickClass::Ceramic => CERAMIC,
@@ -76,17 +93,6 @@ pub fn brick_color(class: BrickClass) -> Color {
         BrickClass::Explosive(_) => EXPLOSIVE,
         BrickClass::Regen => REGEN,
         BrickClass::Shield => SHIELD,
-    }
-}
-
-/// How a brick of `class` with `health` hits left looks: its class colour,
-/// cracked (darker) below full health.
-pub fn brick_face(class: BrickClass, health: u8) -> Color {
-    let color = brick_color(class);
-    if health < class.max_hits() {
-        cracked(color)
-    } else {
-        color
     }
 }
 
@@ -138,19 +144,5 @@ mod tests {
                 assert_ne!(a, b);
             }
         }
-    }
-
-    #[test]
-    fn brick_face_cracks_only_below_full_health() {
-        assert_eq!(brick_face(BrickClass::Tungsten, 3), TUNGSTEN);
-        assert_eq!(brick_face(BrickClass::Tungsten, 2), cracked(TUNGSTEN));
-        assert_eq!(brick_face(BrickClass::Tungsten, 1), cracked(TUNGSTEN));
-        assert_eq!(brick_face(BrickClass::Ceramic, 1), CERAMIC);
-    }
-
-    #[test]
-    fn a_cracked_brick_is_darker() {
-        let lum = |c: Color| c.luminance();
-        assert!(lum(cracked(REACTOR)) < lum(REACTOR));
     }
 }

@@ -49,9 +49,10 @@ not hand-rolled kinematics/AABB checks.
   "YOU WIN!", final score, Play again / Main menu). Pause and game-over roots use
   `OVERLAY_DIM` as background so the game shows through.
 - `src/theme.rs` — the Steelbreak palette: every colour the game draws with (void clear
-  colour, steel ball, cyan emitter paddle and its prongs, ceramic/titanium/tungsten brick
-  rows, reactor-violet power-up bricks and `cracked()`, power-up drops, HUD ink/label,
-  menu buttons and the overlay dim). Use a `theme::` constant instead of a colour literal;
+  colour, steel ball, cyan emitter paddle and its prongs, the brick class face colours
+  (`brick_color`) and glow colours (`brick_glow`, used for sparks), particle smoke,
+  power-up drops, HUD ink/label, menu buttons and the overlay dim). Damage never changes a
+  brick's colour: it shows as particles. Use a `theme::` constant instead of a colour literal;
   the later sprite swap and palette tweaks touch only this file. These colours are also
   the fallback look when a sprite file is missing (see `src/sprites.rs`): the ball is a
   round `Mesh2d(Circle)` (handles in the `BallLook` resource, made in `setup_level`), and
@@ -88,7 +89,7 @@ not hand-rolled kinematics/AABB checks.
   variant. Tested with a seeded rng. Per-class behaviours are submodules composed into
   `BricksPlugin`: `regen.rs` (a regen brick that survives a hit gets a 3 s `RegenTimer`,
   restarted by each further non-lethal hit; when it runs out the brick heals to full and
-  loses its cracked look; ticks only while `Playing`) and `explosive.rs` (a ball-destroyed
+  stops smoking; ticks only while `Playing`) and `explosive.rs` (a ball-destroyed
   explosive sets off a blast: charge = 1 hit to the 8 around, breach = destroys the 4
   orthogonal, demolition = destroys the 8 around; charge/breach chain into explosives they
   destroy, demolition doesn't; blasts ignore shield glass's direction rule). The chain is
@@ -100,7 +101,27 @@ not hand-rolled kinematics/AABB checks.
   observer (the particles epic replaces it). `BricksPlugin` also runs the
   shield-glass flash timer
   (`ShieldFlash`, frozen while paused). Colours come from `theme::brick_color(class)` and
-  `theme::brick_face(class, health)` (cracked below full health).
+  `theme::brick_color(class)` whatever its health (damage is shown by particles).
+- `src/particles/` — the VFX layer on bevy_enoki. **Gameplay fires events, particles
+  observe**: gameplay only triggers `BrickDamaged { brick, position, class }` (a hit a brick
+  survives; `position` is the contact point) / `BrickDestroyed` and changes `BrickHealth`,
+  and `VfxPlugin` (in `add_game`) reacts. Event → effect (`assets/particles/*.particle.ron`):
+  `BrickDamaged` → `brick_hit` spark burst in the class glow colour; `BrickHealth` below max →
+  two child emitters on the brick (`brick_damage_smoke` in smoke grey + `brick_damage_sparks`
+  in glow), emitting more often the more damage taken; back to max (regen) → removed;
+  `BrickDestroyed` → `brick_break` shatter burst in the face colour, falling with gravity.
+  Effect files are white; colour comes from each spawner's `ColorParticle2dMaterial`
+  (`ParticleMaterials`, one per class and role). A live-particle budget
+  (`DAMAGE_PARTICLE_BUDGET`, via the pure `damage_emitter_interval`) stretches the damage
+  emitters' spawn interval when many bricks are damaged (not `max_particles`: bevy_enoki
+  stops *moving* a spawner's particles once it's at that cap). `ParticlesPlugin` (from
+  `main()`, needs the renderer) adds `EnokiPlugin`, loads effects/materials and **freezes
+  particles while paused by pausing `Time<Virtual>`** (bevy_enoki ticks on it) from
+  `OnEnter(PlayState::Paused)` to `OnExit` — gameplay gates on `PlayState::Playing` and
+  physics has its own clock, so nothing else depends on virtual time then. Every spawner is
+  run-scoped (a brick child or `DespawnOnExit(AppState::InGame)`). Effect files hot-reload
+  natively; headless tests insert placeholder `ParticleEffects`/`ParticleMaterials` and
+  count spawner entities.
 - `src/spawner.rs` — `Spawner<T>`, a generic weighted registry of spawnable kinds
   (`register(kind, weight, color)` + `pick()`, no timer). Reusable across any future domain (obstacles, brick respawns, etc.) because
   Bevy resources are keyed by concrete type: `Spawner<PowerUpKind>` and a hypothetical
@@ -136,7 +157,7 @@ not hand-rolled kinematics/AABB checks.
   `collider1`, which is why `on_ball_collision` can assume `on.collider1` is the ball
   without checking.
 - **Bricks have a `BrickClass` and `BrickHealth`** (spawned at the class's `max_hits()`).
-  `on_ball_collision` scores 10 per hit and shows a surviving brick's cracked face; on the last hit it triggers
+  `on_ball_collision` scores 10 per hit; on the last hit it triggers
   `BrickDestroyed { brick, position }` *before* despawning, so observers can still read
   the brick; a hit it survives triggers `BrickDamaged { brick }` instead (regen reacts to
   that; blasts fire it too). `BrickDestroyed.by_blast` marks blast kills, which don't set

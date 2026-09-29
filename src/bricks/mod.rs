@@ -10,7 +10,7 @@ mod explosive;
 mod regen;
 
 use crate::game_state::PlayState;
-use crate::{theme, BrickHealth};
+use crate::theme;
 use bevy::prelude::*;
 use rand::seq::SliceRandom;
 use rand::{Rng, RngExt};
@@ -169,17 +169,11 @@ impl Plugin for BricksPlugin {
 fn end_shield_flashes(
     mut commands: Commands,
     time: Res<Time>,
-    mut flashes: Query<(
-        Entity,
-        &mut ShieldFlash,
-        &BrickClass,
-        &BrickHealth,
-        &mut Sprite,
-    )>,
+    mut flashes: Query<(Entity, &mut ShieldFlash, &BrickClass, &mut Sprite)>,
 ) {
-    for (entity, mut flash, &class, health, mut sprite) in &mut flashes {
+    for (entity, mut flash, &class, mut sprite) in &mut flashes {
         if flash.0.tick(time.delta()).is_finished() {
-            sprite.color = theme::brick_face(class, health.0);
+            sprite.color = theme::brick_color(class);
             commands.entity(entity).remove::<ShieldFlash>();
         }
     }
