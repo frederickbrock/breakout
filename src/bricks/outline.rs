@@ -16,8 +16,9 @@ use crate::{theme, BRICK_HEIGHT, BRICK_WIDTH};
 use bevy::prelude::*;
 use std::f32::consts::TAU;
 
-/// Draws above the brick's face (and its sprite, once skinned).
-const OUTLINE_Z: f32 = 0.5;
+/// Draws above the brick's face (and its sprite, once skinned), below falling
+/// power-up drops (z 0.5) and particles (z 0.6).
+const OUTLINE_Z: f32 = 0.25;
 /// Border thickness.
 const THICK: f32 = 2.0;
 /// Breach's bright side-midpoint marks: length along the edge, thickness.
