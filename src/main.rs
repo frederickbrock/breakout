@@ -81,6 +81,13 @@ const BRICK_ROWS: usize = bricks::BOARD_ROWS;
 const BRICK_COLS: usize = bricks::BOARD_COLS;
 /// Lives at the start of every run, including the first.
 const STARTING_LIVES: i32 = 3;
+const HUD_FONT_SIZE: f32 = 24.0 * GAME_SCALE;
+/// Inset of the HUD from the world's left and top edges.
+const HUD_MARGIN: f32 = 30.0;
+/// Vertical distance between the tops of the SCORE and LIVES blocks.
+const HUD_BLOCK_SPACING: f32 = 120.0;
+/// Left edge of the HUD text, in the left side panel.
+const HUD_X: f32 = -WORLD_WIDTH / 2.0 + HUD_MARGIN;
 
 #[derive(Component)]
 struct Paddle {
@@ -368,16 +375,16 @@ fn spawn_run_entities(commands: &mut Commands, ball_look: &BallLook) {
 
     spawn_hud_line(
         commands,
-        "SCORE ",
+        "SCORE\n",
         "0",
-        PLAYFIELD_HEIGHT / 2.0 - 10.0,
+        PLAYFIELD_HEIGHT / 2.0 - HUD_MARGIN,
         ScoreText,
     );
     spawn_hud_line(
         commands,
-        "LIVES ",
+        "LIVES\n",
         &STARTING_LIVES.to_string(),
-        PLAYFIELD_HEIGHT / 2.0 - 40.0,
+        PLAYFIELD_HEIGHT / 2.0 - HUD_MARGIN - HUD_BLOCK_SPACING,
         LivesText,
     );
 }
@@ -422,8 +429,9 @@ fn wall_specs() -> [(Vec2, Vec2); 3] {
     ]
 }
 
-/// A HUD line: an uppercase label in the label colour followed by a value
-/// span in ink. `marker` goes on the value span, which [`update_hud`] writes.
+/// A HUD block in the left side panel: an uppercase label line in the label
+/// colour with the value span in ink on the line below. Top-left anchored at
+/// [`HUD_X`], `y`. `marker` goes on the value span, which [`update_hud`] writes.
 fn spawn_hud_line(
     commands: &mut Commands,
     label: &str,
@@ -432,7 +440,7 @@ fn spawn_hud_line(
     marker: impl Component,
 ) {
     let font = TextFont {
-        font_size: FontSize::Px(24.0),
+        font_size: FontSize::Px(HUD_FONT_SIZE),
         ..default()
     };
     commands.spawn((
@@ -441,7 +449,7 @@ fn spawn_hud_line(
         font.clone(),
         TextColor(theme::LABEL),
         Anchor::TOP_LEFT,
-        Transform::from_xyz(-WORLD_WIDTH / 2.0 + 20.0, y, 1.0),
+        Transform::from_xyz(HUD_X, y, 1.0),
         children![(TextSpan::new(value), font, TextColor(theme::INK), marker)],
     ));
 }
@@ -1759,8 +1767,8 @@ mod tests {
         assert_eq!(
             labels,
             [
-                ("LIVES ".to_string(), theme::LABEL),
-                ("SCORE ".to_string(), theme::LABEL)
+                ("LIVES\n".to_string(), theme::LABEL),
+                ("SCORE\n".to_string(), theme::LABEL)
             ]
         );
         let values: Vec<Color> = world
@@ -1769,6 +1777,35 @@ mod tests {
             .map(|c| c.0)
             .collect();
         assert_eq!(values, [theme::INK, theme::INK]);
+    }
+
+    #[test]
+    fn the_hud_sits_in_the_left_side_panel() {
+        let mut app = app();
+        let world = app.world_mut();
+        let mut blocks: Vec<(f32, f32, Anchor, f32)> = world
+            .query_filtered::<(&Transform, &TextFont, &Anchor), With<Text2d>>()
+            .iter(world)
+            .map(|(t, f, a)| {
+                let FontSize::Px(size) = f.font_size else {
+                    panic!("HUD font size in px");
+                };
+                (t.translation.x, t.translation.y, *a, size)
+            })
+            .collect();
+        assert_eq!(blocks.len(), 2);
+        // Widest line is 6 glyphs ("SCORE", a value); monospace ~0.6 em each.
+        let widest = 6.0 * 0.6 * HUD_FONT_SIZE;
+        for &(x, _, anchor, size) in &blocks {
+            assert_eq!(anchor, Anchor::TOP_LEFT);
+            assert_eq!(size, HUD_FONT_SIZE);
+            assert!(x >= -WORLD_WIDTH / 2.0);
+            assert!(x + widest <= -PLAYFIELD_WIDTH / 2.0);
+        }
+        // Each two-line block (~1.2 em line height) ends before the next.
+        blocks.sort_by(|a, b| b.1.total_cmp(&a.1));
+        assert!(blocks[0].1 <= WORLD_HEIGHT / 2.0);
+        assert!(blocks[0].1 - blocks[1].1 >= 2.0 * 1.2 * HUD_FONT_SIZE);
     }
 
     #[test]
