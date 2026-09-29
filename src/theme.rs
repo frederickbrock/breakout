@@ -88,9 +88,38 @@ pub fn brick_face(class: BrickClass, health: u8) -> Color {
     }
 }
 
+/// Shield glass's flash over its sprite: brightens the glass (a tint above
+/// 1 scales the image up; the flat-colour fallback uses [`SHIELD_FLASH`]).
+pub const SHIELD_FLASH_TINT: Color = Color::LinearRgba(LinearRgba::rgb(2.5, 2.5, 2.5));
+
+/// The tint over a brick drawn with its sprite: none at full health, darker
+/// once damaged (interim, until damage particles replace it), bright while
+/// shield glass flashes.
+pub fn brick_sprite_tint(class: BrickClass, health: u8, flashing: bool) -> Color {
+    if flashing {
+        SHIELD_FLASH_TINT
+    } else if health < class.max_hits() {
+        cracked(UNTINTED)
+    } else {
+        UNTINTED
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_brick_sprite_is_untinted_at_full_health_and_darker_when_damaged() {
+        let lum = |c: Color| c.to_linear().luminance();
+        assert_eq!(brick_sprite_tint(BrickClass::Tungsten, 3, false), UNTINTED);
+        let damaged = brick_sprite_tint(BrickClass::Tungsten, 2, false);
+        assert!(lum(damaged) < lum(UNTINTED));
+        assert_eq!(brick_sprite_tint(BrickClass::Tungsten, 1, false), damaged);
+        assert_eq!(brick_sprite_tint(BrickClass::Regen, 2, false), UNTINTED);
+        let flash = brick_sprite_tint(BrickClass::Shield, 1, true);
+        assert!(lum(flash) > lum(UNTINTED));
+    }
 
     #[test]
     fn hex_decodes_the_spec_values() {
