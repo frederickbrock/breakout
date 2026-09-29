@@ -8,6 +8,7 @@ mod script_manager;
 mod spawner;
 mod sprites;
 mod theme;
+mod view;
 
 use avian2d::prelude::*;
 use bevy::asset::AssetMetaCheck;
@@ -229,6 +230,10 @@ fn main() {
                 primary_window: Some(Window {
                     title: window_title(),
                     resolution: (WINDOW_START_WIDTH, WINDOW_START_HEIGHT).into(),
+                    resizable: true,
+                    // Web only: the canvas follows its parent (the page body,
+                    // sized to the viewport by index.html).
+                    fit_canvas_to_parent: true,
                     ..default()
                 }),
                 ..default()
@@ -280,6 +285,7 @@ fn add_game(app: &mut App) {
         sprites::SkinPlugin,
         bricks::BricksPlugin,
         particles::VfxPlugin,
+        view::ViewPlugin,
     ))
     .insert_resource(Gravity(Vec2::new(0.0, 0.8 * GAME_SCALE)))
     .init_resource::<ButtonInput<MouseButton>>()
@@ -394,7 +400,6 @@ fn setup_level(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    commands.spawn(Camera2d);
     commands.insert_resource(BallLook {
         mesh: meshes.add(Circle::new(BALL_SIZE / 2.0)),
         material: materials.add(theme::STEEL),
