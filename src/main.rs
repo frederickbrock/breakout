@@ -1,3 +1,4 @@
+mod ball;
 mod bricks;
 mod controls;
 mod game_state;
@@ -15,6 +16,10 @@ mod view;
 mod world;
 
 use avian2d::prelude::*;
+use ball::{
+    anchor_position, anchored, ball_movement, follow_paddle, launch_ball, record_ball_approach,
+    Ball, BallApproach, BallLook, BALL_SIZE,
+};
 use bevy::asset::AssetMetaCheck;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
@@ -30,23 +35,6 @@ use world::{setup_level, GAME_SCALE, PLAYFIELD_HEIGHT, WORLD_WIDTH};
 /// The native window's opening size; it is resizable and the world scales.
 const WINDOW_START_WIDTH: u32 = 1280;
 const WINDOW_START_HEIGHT: u32 = 720;
-const BALL_SIZE: f32 = 15.0 * GAME_SCALE;
-const BALL_SPEED: f32 = 300.0 * GAME_SCALE;
-/// Gap between the anchored ball and the paddle, so the launch doesn't start
-/// in contact with the paddle (which would trigger the paddle-hit spin rule
-/// and override the 45° serve).
-const BALL_ANCHOR_GAP: f32 = 2.0 * GAME_SCALE;
-/// Below this horizontal paddle speed the paddle counts as still, and the
-/// serve goes right.
-const PADDLE_STILL_SPEED: f32 = 1.0 * GAME_SCALE;
-// Guards against a real failure mode observed in testing: a wall bounce only
-// inverts the velocity component perpendicular to the wall, so a ball that
-// ends up moving near-perfectly horizontally between the side walls (below
-// the bricks, above the paddle) can get permanently stuck bouncing
-// side-to-side forever, since nothing left in that lane can ever touch its Y
-// velocity again. Keeping a minimum vertical fraction guarantees the ball
-// always keeps drifting toward the bricks or the paddle.
-const BALL_MIN_VERTICAL_FRACTION: f32 = 0.3;
 /// Lives at the start of every run, including the first.
 const STARTING_LIVES: i32 = 3;
 const HUD_FONT_SIZE: f32 = 24.0 * GAME_SCALE;
@@ -58,37 +46,10 @@ const HUD_BLOCK_SPACING: f32 = 120.0;
 const HUD_X: f32 = -WORLD_WIDTH / 2.0 + HUD_MARGIN;
 
 #[derive(Component)]
-struct Ball;
-
-/// The ball's velocity at the start of the current physics step, recorded
-/// by [`record_ball_approach`]. Avian triggers `CollisionStart` after its
-/// solver, when `LinearVelocity` has usually already been reflected, so
-/// direction-dependent rules (shield glass) read this instead.
-#[derive(Component, Default)]
-struct BallApproach(Vec2);
-
-/// The ball is resting on the paddle waiting to be served (start of a run and
-/// after every lost life). While anchored it's out of the simulation — see
-/// [`anchored`] — and [`follow_paddle`] carries it along; Space or a left click
-/// launches it ([`launch_ball`]).
-#[derive(Component)]
-struct Anchored;
-
-type FlyingBall = (With<Ball>, Without<Anchored>);
-type AnchoredBall = (With<Ball>, With<Anchored>);
-
-#[derive(Component)]
 struct ScoreText;
 
 #[derive(Component)]
 struct LivesText;
-
-/// Mesh and material for the round ball, made once at startup.
-#[derive(Resource)]
-struct BallLook {
-    mesh: Handle<Mesh>,
-    material: Handle<ColorMaterial>,
-}
 
 #[derive(Resource, Default)]
 struct Score(i32);
@@ -340,14 +301,6 @@ fn spawn_hud_line(
     ));
 }
 
-/// Copies the ball's velocity into [`BallApproach`] at the start of every
-/// physics step, before the solver bounces it.
-fn record_ball_approach(mut balls: Query<(&LinearVelocity, &mut BallApproach), With<Ball>>) {
-    for (velocity, mut approach) in &mut balls {
-        approach.0 = velocity.0;
-    }
-}
-
 /// Avian's `CollisionStart`/`CollisionEnd` are dispatched purely through
 /// `World::trigger` (an observer notification), never written to a message
 /// queue — so despite `CollisionStart` deriving `Message`, a
@@ -426,143 +379,6 @@ struct BallCollisionSignals {
     paddle_hit_x: Option<f32>,
 }
 
-/// Avian resolves the actual collision physics (detection + bounce angle);
-/// this reacts to what [`on_ball_collision`] recorded (score, the paddle-hit
-/// "spin" feel) and keeps the ball's speed at a controlled, designed
-/// magnitude rather than letting raw momentum transfer drift it. Ends the
-/// run (switches to [`AppState::GameOver`]) on a win or on losing the last
-/// life; the physics clock stops with it, so nothing needs zeroing here.
-fn ball_movement(
-    mut commands: Commands,
-    mut next_state: ResMut<NextState<AppState>>,
-    mut lives: ResMut<Lives>,
-    mut signals: ResMut<BallCollisionSignals>,
-    paddle_query: Query<(&Transform, &Paddle), Without<Ball>>,
-    brick_query: Query<(), With<Brick>>,
-    mut ball_query: Query<(Entity, &mut Transform, &mut LinearVelocity), FlyingBall>,
-) {
-    let broke_brick = signals.broke_brick;
-    let paddle_hit_x = signals.paddle_hit_x;
-    *signals = BallCollisionSignals::default();
-
-    // An anchored ball isn't moving, can't have hit anything and can't fall.
-    let Ok((ball, mut ball_transform, mut ball_velocity)) = ball_query.single_mut() else {
-        return;
-    };
-
-    // Reapply the arcade "spin based on where it hit the paddle" feel —
-    // Avian's own contact response doesn't know about this custom rule.
-    if let Some(paddle_x) = paddle_hit_x {
-        if let Ok((_, paddle)) = paddle_query.single() {
-            let paddle_left = paddle_x - paddle.width / 2.0;
-            let hit_pos = (ball_transform.translation.x - paddle_left) / paddle.width;
-            ball_velocity.0.x = (hit_pos - 0.5) * BALL_SPEED * 2.0;
-            ball_velocity.0.y = ball_velocity.0.y.abs();
-        }
-    }
-
-    // Keep the ball's speed at a controlled magnitude instead of whatever
-    // Avian's momentum transfer produced, and enforce a minimum vertical
-    // component so it can't get stuck in a purely horizontal bounce loop.
-    if ball_velocity.0 != Vec2::ZERO {
-        let mut v = ball_velocity.0.normalize() * BALL_SPEED;
-        let min_y = BALL_SPEED * BALL_MIN_VERTICAL_FRACTION;
-        if v.y.abs() < min_y {
-            let y_sign = if v.y < 0.0 { -1.0 } else { 1.0 };
-            let x_sign = if v.x < 0.0 { -1.0 } else { 1.0 };
-            v.y = min_y * y_sign;
-            let remaining_x = (BALL_SPEED * BALL_SPEED - v.y * v.y).max(0.0).sqrt();
-            v.x = remaining_x * x_sign;
-        }
-        ball_velocity.0 = v;
-    }
-
-    // `on_ball_collision`'s despawn is already applied by now (Avian
-    // triggers collisions from an exclusive system in FixedPostUpdate, whose
-    // commands flush before Update), so the run is won only once no brick is
-    // left at all, damaged multi-hit bricks included.
-    if broke_brick && brick_query.is_empty() {
-        end_run(&mut commands, &mut next_state, GameOutcome::Won);
-        return;
-    }
-
-    // Ball fell off the bottom (no physical wall there, so this stays a
-    // plain position check rather than a collision).
-    if ball_transform.translation.y < -PLAYFIELD_HEIGHT / 2.0 {
-        lives.0 -= 1;
-        if lives.0 <= 0 {
-            end_run(&mut commands, &mut next_state, GameOutcome::Lost);
-        } else {
-            // Back on the paddle for the next serve.
-            ball_velocity.0 = Vec2::ZERO;
-            if let Ok((paddle_transform, _)) = paddle_query.single() {
-                ball_transform.translation = anchor_position(paddle_transform.translation);
-            }
-            commands.entity(ball).insert(anchored());
-        }
-    }
-}
-
-/// Components that take the ball out of the simulation while it waits on the
-/// paddle: no velocity integration, no contact response and no collision
-/// events. Removed together by [`launch_ball`].
-fn anchored() -> (Anchored, RigidBodyDisabled, ColliderDisabled) {
-    (Anchored, RigidBodyDisabled, ColliderDisabled)
-}
-
-/// Where an anchored ball sits: centred on top of a paddle at `paddle`.
-fn anchor_position(paddle: Vec3) -> Vec3 {
-    Vec3::new(
-        paddle.x,
-        paddle.y + PADDLE_HEIGHT / 2.0 + BALL_ANCHOR_GAP + BALL_SIZE / 2.0,
-        0.0,
-    )
-}
-
-/// Keeps an anchored ball on top of the paddle as it moves. Centred, so a
-/// paddle-width change (Super-Sizer) doesn't move it.
-fn follow_paddle(
-    paddle: Query<&Transform, (With<Paddle>, Without<Ball>)>,
-    mut ball: Query<&mut Transform, AnchoredBall>,
-) {
-    let (Ok(paddle), Ok(mut ball)) = (paddle.single(), ball.single_mut()) else {
-        return;
-    };
-    let target = anchor_position(paddle.translation);
-    if ball.translation != target {
-        ball.translation = target;
-    }
-}
-
-/// Space or a left click serves an anchored ball: upward at [`BALL_SPEED`],
-/// 45° toward the side the paddle is moving (right if it's still). Does
-/// nothing once the ball is in flight; gated to `Playing` like all gameplay
-/// input, so it's ignored while paused.
-fn launch_ball(
-    mut commands: Commands,
-    keyboard: Res<ButtonInput<KeyCode>>,
-    mouse: Res<ButtonInput<MouseButton>>,
-    paddle: Query<&LinearVelocity, (With<Paddle>, Without<Ball>)>,
-    mut ball: Query<(Entity, &mut LinearVelocity), AnchoredBall>,
-) {
-    if !keyboard.just_pressed(KeyCode::Space) && !mouse.just_pressed(MouseButton::Left) {
-        return;
-    }
-    let Ok((entity, mut velocity)) = ball.single_mut() else {
-        return;
-    };
-    let paddle_vx = paddle.single().map_or(0.0, |v| v.0.x);
-    let side = if paddle_vx < -PADDLE_STILL_SPEED {
-        -1.0
-    } else {
-        1.0
-    };
-    velocity.0 = Vec2::new(side, 1.0).normalize() * BALL_SPEED;
-    commands
-        .entity(entity)
-        .remove::<(Anchored, RigidBodyDisabled, ColliderDisabled)>();
-}
-
 fn end_run(commands: &mut Commands, next_state: &mut NextState<AppState>, outcome: GameOutcome) {
     commands.insert_resource(outcome);
     next_state.set(AppState::GameOver);
@@ -598,8 +414,8 @@ fn update_hud(
 mod tests {
     use super::test_support::*;
     use super::*;
+    use crate::ball::*;
     use crate::bricks::grid::*;
-    use crate::controls::*;
     use crate::paddle::*;
     use crate::world::*;
 
@@ -723,152 +539,6 @@ mod tests {
         tap(&mut app, KeyCode::KeyR);
         assert_eq!(app_state(&app), AppState::InGame);
         assert_eq!(count::<With<Brick>>(&mut app), BRICK_ROWS * BRICK_COLS);
-    }
-
-    fn is_anchored(app: &mut App) -> bool {
-        let ball = ball(app);
-        let entity = app.world().entity(ball);
-        let anchored = entity.contains::<Anchored>();
-        // The marker and the physics opt-outs always travel together.
-        assert_eq!(entity.contains::<RigidBodyDisabled>(), anchored);
-        assert_eq!(entity.contains::<ColliderDisabled>(), anchored);
-        anchored
-    }
-
-    fn ball_velocity(app: &mut App) -> Vec2 {
-        let ball = ball(app);
-        app.world().get::<LinearVelocity>(ball).unwrap().0
-    }
-
-    fn set_paddle_vx(app: &mut App, vx: f32) {
-        let paddle = paddle(app);
-        app.world_mut()
-            .entity_mut(paddle)
-            .insert(LinearVelocity(Vec2::new(vx, 0.0)));
-    }
-
-    fn assert_resting_on_paddle(app: &mut App) {
-        let (ball, paddle) = (ball(app), paddle(app));
-        let (b, p) = (translation(app, ball), translation(app, paddle));
-        assert_eq!(b.x, p.x);
-        assert_eq!(
-            b.y,
-            p.y + PADDLE_HEIGHT / 2.0 + BALL_ANCHOR_GAP + BALL_SIZE / 2.0
-        );
-        assert_eq!(ball_velocity(app), Vec2::ZERO);
-    }
-
-    #[test]
-    fn a_new_run_starts_with_the_ball_anchored_on_the_paddle() {
-        let mut app = app();
-        app.update();
-
-        assert!(is_anchored(&mut app));
-        assert_resting_on_paddle(&mut app);
-    }
-
-    #[test]
-    fn the_anchored_ball_follows_the_paddle() {
-        let mut app = app();
-        set_paddle_x(&mut app, -150.0);
-        app.update();
-        assert_resting_on_paddle(&mut app);
-        let ball = ball(&mut app);
-        assert_eq!(translation(&app, ball).x, -150.0);
-
-        // A wider paddle (Super-Sizer) keeps the ball centred.
-        let paddle = paddle(&mut app);
-        app.world_mut().get_mut::<Paddle>(paddle).unwrap().width = PADDLE_WIDTH * 1.5;
-        set_paddle_x(&mut app, 90.0);
-        app.update();
-        assert_resting_on_paddle(&mut app);
-    }
-
-    #[test]
-    fn space_launches_the_ball_up_and_right_from_a_still_paddle() {
-        let mut app = app();
-        tap(&mut app, KeyCode::Space);
-
-        assert!(!is_anchored(&mut app));
-        let v = ball_velocity(&mut app);
-        assert!((v.length() - BALL_SPEED).abs() < 1e-3);
-        assert!(v.y > 0.0);
-        assert!((v.x - v.y).abs() < 1e-3, "45° to the right, got {v:?}");
-    }
-
-    #[test]
-    fn left_click_launches_toward_the_way_the_paddle_is_moving() {
-        let mut app = app();
-        set_paddle_vx(&mut app, -200.0);
-        click(&mut app);
-
-        assert!(!is_anchored(&mut app));
-        let v = ball_velocity(&mut app);
-        assert!(v.y > 0.0);
-        assert!((v.x + v.y).abs() < 1e-3, "45° to the left, got {v:?}");
-    }
-
-    #[test]
-    fn launch_input_does_nothing_while_the_ball_is_in_flight() {
-        let mut app = app();
-        tap(&mut app, KeyCode::Space);
-        let in_flight = Vec2::new(-120.0, 250.0);
-        let ball = ball(&mut app);
-        app.world_mut().get_mut::<LinearVelocity>(ball).unwrap().0 = in_flight;
-
-        set_paddle_vx(&mut app, 300.0);
-        tap(&mut app, KeyCode::Space);
-        click(&mut app);
-
-        assert!(!is_anchored(&mut app));
-        let v = ball_velocity(&mut app);
-        assert!(
-            (v.normalize() - in_flight.normalize()).length() < 1e-3,
-            "direction unchanged, got {v:?}"
-        );
-    }
-
-    #[test]
-    fn launch_is_ignored_while_paused_and_the_ball_stays_anchored() {
-        let mut app = app();
-        tap(&mut app, KeyCode::KeyP);
-        assert_eq!(play_state(&app), Some(PlayState::Paused));
-
-        // A click that isn't on a pause-menu button does nothing.
-        click(&mut app);
-        assert_eq!(play_state(&app), Some(PlayState::Paused));
-        assert!(is_anchored(&mut app));
-
-        // Space on the pause menu activates the focused Resume button: the
-        // game resumes, but that same press doesn't also serve the ball.
-        tap(&mut app, KeyCode::Space);
-        assert_eq!(play_state(&app), Some(PlayState::Playing));
-        assert!(is_anchored(&mut app));
-        assert_resting_on_paddle(&mut app);
-
-        // The next press serves.
-        tap(&mut app, KeyCode::Space);
-        assert!(!is_anchored(&mut app));
-    }
-
-    #[test]
-    fn losing_a_life_re_anchors_the_ball_on_the_paddle() {
-        let mut app = app();
-        tap(&mut app, KeyCode::Space);
-        set_paddle_x(&mut app, 200.0);
-        move_ball_below_screen(&mut app);
-        app.update();
-        app.update();
-
-        assert_eq!(app.world().resource::<Lives>().0, STARTING_LIVES - 1);
-        assert!(is_anchored(&mut app));
-        assert_resting_on_paddle(&mut app);
-        let ball = ball(&mut app);
-        assert_eq!(translation(&app, ball).x, 200.0);
-
-        // Served again from there.
-        tap(&mut app, KeyCode::Space);
-        assert!(!is_anchored(&mut app));
     }
 
     fn score(app: &App) -> i32 {
@@ -1045,20 +715,6 @@ mod tests {
     }
 
     #[test]
-    fn the_ball_approach_is_recorded_before_each_physics_step() {
-        let mut app = app();
-        tap(&mut app, KeyCode::Space);
-        let ball = ball(&mut app);
-        app.world_mut().get_mut::<LinearVelocity>(ball).unwrap().0 = Vec2::new(100.0, -280.0);
-        app.update();
-        let approach = app.world().get::<BallApproach>(ball).unwrap().0;
-        assert!(
-            approach.y < 0.0,
-            "recorded the downward velocity, got {approach:?}"
-        );
-    }
-
-    #[test]
     fn the_run_is_won_only_once_the_last_shield_breaks_from_above() {
         let mut app = app();
         tap(&mut app, KeyCode::Space);
@@ -1087,27 +743,6 @@ mod tests {
             app.world().get_resource::<GameOutcome>(),
             Some(&GameOutcome::Won)
         );
-    }
-
-    #[test]
-    fn the_ball_is_a_round_steel_mesh() {
-        let mut app = app();
-        let ball = ball(&mut app);
-        let entity = app.world().entity(ball);
-        assert!(entity.contains::<Mesh2d>());
-        assert!(!entity.contains::<Sprite>());
-        let material = entity
-            .get::<MeshMaterial2d<ColorMaterial>>()
-            .unwrap()
-            .0
-            .clone();
-        let color = app
-            .world()
-            .resource::<Assets<ColorMaterial>>()
-            .get(&material)
-            .unwrap()
-            .color;
-        assert_eq!(color, theme::STEEL);
     }
 
     #[test]
@@ -1162,41 +797,6 @@ mod tests {
         blocks.sort_by(|a, b| b.1.total_cmp(&a.1));
         assert!(blocks[0].1 <= WORLD_HEIGHT / 2.0);
         assert!(blocks[0].1 - blocks[1].1 >= 2.0 * 1.2 * HUD_FONT_SIZE);
-    }
-
-    #[test]
-    fn in_mouse_mode_a_paddle_edge_hit_still_spins_the_ball() {
-        let mut app = app();
-        assert_eq!(
-            app.world().resource::<ControlSettings>().paddle,
-            PaddleControl::Mouse
-        );
-        tap(&mut app, KeyCode::Space);
-        aim_mouse_at(&mut app, 0.0);
-        let (ball, paddle) = (ball(&mut app), paddle(&mut app));
-        // Coming down onto the paddle's right edge.
-        {
-            let paddle_at = translation(&app, paddle);
-            let mut transform = app.world_mut().get_mut::<Transform>(ball).unwrap();
-            transform.translation.x = paddle_at.x + PADDLE_WIDTH * 0.45;
-        }
-        app.world_mut().get_mut::<LinearVelocity>(ball).unwrap().0 = Vec2::new(0.0, -BALL_SPEED);
-        app.world_mut().trigger(CollisionStart {
-            collider1: ball,
-            collider2: paddle,
-            body1: Some(ball),
-            body2: Some(paddle),
-        });
-        app.update();
-
-        let v = ball_velocity(&mut app);
-        assert!(v.y > 0.0, "bounced up, got {v:?}");
-        // A centre hit goes straight up; near the edge the ball leaves at a
-        // clearly angled side trajectory (over 25° off vertical).
-        assert!(
-            v.x / v.y > 25f32.to_radians().tan(),
-            "near the edge the ball leaves at a side angle, got {v:?}"
-        );
     }
 
     #[test]

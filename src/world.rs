@@ -1,8 +1,8 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
+use crate::ball::{BallLook, BALL_SIZE};
 use crate::theme;
-use crate::{BallLook, BALL_SIZE};
 
 // Game constants
 /// Every gameplay size and speed is its old 900x650-window design value times

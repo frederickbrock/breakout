@@ -1,11 +1,11 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
+use crate::ball::BALL_SIZE;
 use crate::bricks::{self, BrickCell};
 use crate::game_state::AppState;
 use crate::theme;
 use crate::world::{GAME_SCALE, PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH};
-use crate::BALL_SIZE;
 
 /// Minimum clear gap between the outermost brick and each wall, in ball
 /// widths. Raising it narrows the (derived) bricks; nothing else changes.

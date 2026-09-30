@@ -340,7 +340,7 @@ mod tests {
         app.world_mut().resource_mut::<crate::Lives>().0 = 1;
         let mut ball = app
             .world_mut()
-            .query_filtered::<&mut Transform, With<crate::Ball>>()
+            .query_filtered::<&mut Transform, With<crate::ball::Ball>>()
             .single_mut(app.world_mut())
             .unwrap();
         ball.translation.y = -PLAYFIELD_HEIGHT;
@@ -430,7 +430,7 @@ mod tests {
         app.world_mut().resource_mut::<crate::Lives>().0 = 1;
         let ball = app
             .world_mut()
-            .query_filtered::<Entity, With<crate::Ball>>()
+            .query_filtered::<Entity, With<crate::ball::Ball>>()
             .single(app.world())
             .unwrap();
         app.world_mut()

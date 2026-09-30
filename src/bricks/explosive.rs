@@ -440,12 +440,12 @@ mod tests {
 
     mod in_game {
         use super::super::*;
+        use crate::ball::{Ball, BallApproach};
         use crate::bricks::regen::RegenTimer;
         use crate::bricks::ExplosiveKind::*;
         use crate::game_state::GameOutcome;
         use crate::powerups::{PowerUp, PowerUpBrick};
         use crate::test_support::*;
-        use crate::BallApproach;
 
         const FROM_ABOVE: Vec2 = Vec2::new(60.0, -300.0);
 
@@ -527,7 +527,7 @@ mod tests {
             // irrelevant to the blast.
             let ball = app
                 .world_mut()
-                .query_filtered::<Entity, With<crate::Ball>>()
+                .query_filtered::<Entity, With<Ball>>()
                 .single(app.world())
                 .unwrap();
             app.world_mut()

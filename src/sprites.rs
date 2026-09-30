@@ -18,12 +18,13 @@
 //! image is loaded. A skinned brick's shield flash is then shown as a tint over
 //! the sprite ([`theme::brick_sprite_tint`]); damage is shown by particles.
 
+use crate::ball::{Ball, BALL_SIZE};
 use crate::bricks::grid::Brick;
 use crate::bricks::{BrickClass, ShieldFlash};
 use crate::paddle::{PaddleField, PaddleProng};
 use crate::powerups::PowerUp;
+use crate::theme;
 use crate::world::{PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH};
-use crate::{theme, Ball, BALL_SIZE};
 use bevy::prelude::*;
 
 /// Paths relative to `assets/`.
@@ -318,9 +319,9 @@ mod tests {
         assert_eq!(transform.translation.z, BACKGROUND_Z);
     }
 
+    use crate::ball::{BALL_SIZE, BALL_SPEED};
     use crate::bricks::grid::{BrickHealth, BRICK_HEIGHT, BRICK_WIDTH};
     use crate::test_support::*;
-    use crate::BALL_SIZE;
 
     /// A run with `GameSprites` whose images are loaded unless listed in
     /// `missing` (a reserved-but-never-filled handle, like a failed load).
@@ -511,7 +512,7 @@ mod tests {
     fn skinned_shield_glass_still_flashes() {
         let mut app = app_with_sprites(&[]);
         let shield = brick_of(&mut app, BrickClass::Shield);
-        hit_moving(&mut app, shield, Vec2::new(0.0, crate::BALL_SPEED));
+        hit_moving(&mut app, shield, Vec2::new(0.0, BALL_SPEED));
         app.update();
         assert_eq!(brick_sprite(&app, shield).color, theme::SHIELD_FLASH_TINT);
         app.update();

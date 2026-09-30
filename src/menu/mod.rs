@@ -336,10 +336,11 @@ pub(crate) mod test_helpers {
 mod tests {
     use super::test_helpers::*;
     use super::*;
+    use crate::ball::Ball;
     use crate::bricks::grid::Brick;
     use crate::game_state::{AppState, PlayState};
     use crate::test_support::*;
-    use crate::{Ball, Lives, Score, STARTING_LIVES};
+    use crate::{Lives, Score, STARTING_LIVES};
 
     #[test]
     fn launch_shows_the_main_menu_with_no_run_behind_it() {
