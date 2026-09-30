@@ -110,3 +110,6 @@ pub struct Campaign {
 /// [`LevelDef::fallback`].
 #[derive(Resource, Clone, Debug, PartialEq)]
 pub(crate) struct CurrentLevel(pub(crate) LevelDef);
+
+#[cfg(test)]
+mod tests;
