@@ -52,6 +52,8 @@ fn app_with_sprites(missing: &[&str]) -> App {
         paddle_field: image("paddle_field"),
         power_up: image("power_up"),
         bricks: BrickSprite::ALL.map(|b| image(b.path())),
+        frame_left: image("frame_left"),
+        frame_right: image("frame_right"),
     };
     app.world_mut().insert_resource(sprites);
     app.update();
@@ -227,4 +229,57 @@ fn skinned_shield_glass_still_flashes() {
     app.update();
     assert!(!app.world().entity(shield).contains::<ShieldFlash>());
     assert_eq!(brick_sprite(&app, shield).color, theme::UNTINTED);
+}
+
+fn frame_panel(app: &mut App, side: f32) -> (Entity, Sprite, bool) {
+    let world = app.world_mut();
+    world
+        .query::<(Entity, &FramePanel, &Sprite, Has<Skinned>)>()
+        .iter(world)
+        .find(|(_, panel, _, _)| panel.side == side)
+        .map(|(entity, _, sprite, skinned)| (entity, sprite.clone(), skinned))
+        .unwrap()
+}
+
+fn hidden_frame_pieces(app: &mut App, panel: Entity) -> (usize, usize) {
+    let world = app.world_mut();
+    let pieces: Vec<_> = world
+        .query_filtered::<(&ChildOf, &Visibility), With<FramePiece>>()
+        .iter(world)
+        .filter(|(child_of, _)| child_of.parent() == panel)
+        .map(|(_, visibility)| *visibility == Visibility::Hidden)
+        .collect();
+    (
+        pieces.iter().filter(|&&hidden| hidden).count(),
+        pieces.len(),
+    )
+}
+
+#[test]
+fn loaded_frame_art_replaces_the_coded_frame_at_panel_size() {
+    let mut app = app_with_sprites(&[]);
+    let sprites = app.world().resource::<GameSprites>();
+    let (left_img, right_img) = (sprites.frame_left.clone(), sprites.frame_right.clone());
+    for (side, image) in [(-1.0, left_img), (1.0, right_img)] {
+        let (panel, sprite, skinned) = frame_panel(&mut app, side);
+        assert!(skinned);
+        assert_eq!(sprite.image, image);
+        assert_eq!(sprite.color, theme::UNTINTED);
+        assert_eq!(sprite.custom_size, Some(crate::frame::panel_size()));
+        let (hidden, total) = hidden_frame_pieces(&mut app, panel);
+        assert!(total > 0);
+        assert_eq!(hidden, total, "coded pieces hidden under the art");
+    }
+}
+
+#[test]
+fn a_missing_frame_image_keeps_that_panels_coded_frame() {
+    let mut app = app_with_sprites(&["frame_left"]);
+    let (left, sprite, skinned) = frame_panel(&mut app, -1.0);
+    assert!(!skinned);
+    assert_eq!(sprite.color, theme::FRAME_PANEL);
+    assert_eq!(hidden_frame_pieces(&mut app, left).0, 0);
+    // The right one still skins.
+    let (_, _, right_skinned) = frame_panel(&mut app, 1.0);
+    assert!(right_skinned);
 }
