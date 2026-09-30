@@ -37,14 +37,15 @@ One line per file; each module's details live in its own `//!` doc comment.
 - `src/game_state.rs` — `AppState` / `PlayState` state machine, `GameOutcome` and the physics clock.
 - `src/run.rs` — starting and ending a run, `Score` / `Lives`, `RestartGame` and the HUD.
 - `src/paddle.rs` — the paddle, its movement and its prong/field pieces; `PaddleMovementSet`.
-- `src/ball.rs` — ball movement rules, the serve from the paddle and `BallApproach`.
+- `src/ball.rs` — ball movement rules, the serve, `BallApproach`, `BallSpeed` and `BALL_SPEED_SCALE`.
 - `src/collision.rs` — `on_ball_collision`, scoring, `BrickDamaged` / `BrickDestroyed`.
 - `src/controls.rs` — `ControlSettings` (Mouse/Keyboard) and the mouse side of paddle control.
-- `src/bricks/mod.rs` — `BrickClass`, `BrickCell`, `generate_board` and `BricksPlugin`.
-- `src/bricks/grid.rs` — the `Brick` / `BrickHealth` entities, grid layout and `spawn_bricks`.
+- `src/bricks/mod.rs` — `BrickClass`, `BrickCell`, `PlacedBrick`, `random_classes` and `BricksPlugin`.
+- `src/bricks/grid.rs` — the `Brick` / `BrickHealth` / `BrickMaxHits` entities, grid layout and `spawn_bricks`.
 - `src/bricks/regen.rs` — regen alloy: damaged bricks heal after a timer.
 - `src/bricks/explosive.rs` — explosive bricks and their chained blasts.
 - `src/bricks/outline.rs` — behaviour outlines drawn over special bricks.
+- `src/levels/mod.rs` — `LevelDef` and the `.level` text-grid format, `build_board`, the level/campaign asset loaders (`LevelsPlugin`, main-only) and `CurrentLevel`; format in `docs/levels.md`.
 - `src/menu/mod.rs` — `MenuPlugin` and the reusable menu widget kit.
 - `src/menu/main_menu.rs` — title screen: Start, Settings, Quit (native only).
 - `src/menu/settings.rs` — Settings screen: the paddle-control toggle.
@@ -68,7 +69,7 @@ One line per file; each module's details live in its own `//!` doc comment.
   ball has `CollisionEventsEnabled`; Avian guarantees the enabled side always ends up as
   `collider1`, which is why `on_ball_collision` can assume `on.collider1` is the ball
   without checking.
-- **Bricks have a `BrickClass` and `BrickHealth`** (spawned at the class's `max_hits()`).
+- **Bricks have a `BrickClass` and `BrickHealth`** (spawned at the brick's `BrickMaxHits`: the class's `max_hits()` or a level's `hits=`).
   `on_ball_collision` scores 10 per hit; on the last hit it triggers
   `BrickDestroyed { brick, position }` *before* despawning, so observers can still read
   the brick; a hit it survives triggers `BrickDamaged { brick }` instead (regen reacts to
@@ -86,7 +87,7 @@ One line per file; each module's details live in its own `//!` doc comment.
   contact); otherwise it only flashes (no damage, no score).
 - **Ball speed is deliberately kept at a controlled, constant magnitude**, not left to
   Avian's real momentum transfer — `ball_movement` (`ball.rs`) renormalizes `LinearVelocity` back to
-  `BALL_SPEED` after every frame's bounce (with a minimum-vertical-component clamp to
+  the run's `BallSpeed` (a resource set from the level each run) after every frame's bounce (with a minimum-vertical-component clamp to
   prevent a real observed failure mode: a ball moving near-perfectly horizontally between
   the side walls, below the bricks and above the paddle, can otherwise get stuck bouncing
   side-to-side forever, since nothing left in that lane can ever touch its Y velocity
@@ -95,7 +96,7 @@ One line per file; each module's details live in its own `//!` doc comment.
   the ball carries `Anchored` plus Avian's `RigidBodyDisabled` and `ColliderDisabled`
   (always together, via `anchored()`), so it has no velocity and nothing collides with it;
   `follow_paddle` keeps it centred on top of the paddle, and `launch_ball` (Space or left
-  click, only while `Playing`) removes all three and sends it off at `BALL_SPEED`, 45°
+  click, only while `Playing`) removes all three and sends it off at `BallSpeed`, 45°
   toward the side the paddle is moving (right if still). `ball_movement` ignores an anchored
   ball. It sits `BALL_ANCHOR_GAP` above the paddle so the serve doesn't start in contact and
   trigger the paddle-hit spin rule. Tests serve with `tap(&mut app, KeyCode::Space)` (or
@@ -122,7 +123,7 @@ One line per file; each module's details live in its own `//!` doc comment.
   resets what it directly owns (score, lives = `STARTING_LIVES`, ball/paddle/bricks/HUD) and
   fires `commands.trigger(RestartGame)`; each subsystem with its own state to reset
   (currently just power-ups: `reset_on_restart` clears drops and effects, and
-  `attach_reactor_power_ups` equips the run's reactor bricks, which already exist then
+  `attach_reactor_power_ups` equips the run's reactor and level-flagged bricks, which already exist then
   because `start_run` queues their spawns before the trigger) owns its own observer on
   that event. Adding a new stateful subsystem later means giving it its own
   `RestartGame` observer, not editing `start_run`.
