@@ -71,12 +71,12 @@ fn the_shipped_campaign_starts_with_the_random_level() {
 
 #[test]
 fn the_default_ball_speed_is_the_ball_speed_constant() {
-    assert_eq!(DEFAULT_BALL_SPEED * BALL_SPEED_SCALE, BALL_SPEED);
     assert_eq!(
-        BallSpeed::from_design(DEFAULT_BALL_SPEED),
+        BallSpeed::from_factor(BALL_SPEED_SCALE),
         BallSpeed::default()
     );
-    assert_eq!(BallSpeed::from_design(450.0).0, 450.0 * BALL_SPEED_SCALE);
+    assert_eq!(BallSpeed::default().0, 540.0);
+    assert_eq!(BallSpeed::from_factor(2.0).0, 600.0);
 }
 
 #[test]
@@ -159,9 +159,9 @@ fn a_powerup_flagged_ceramic_drops_a_power_up() {
 }
 
 #[test]
-fn a_level_ball_speed_sets_the_serve_speed() {
-    let mut app = app_with_level(level("ball_speed: 450\ngrid:\nC"));
-    let speed = 450.0 * BALL_SPEED_SCALE;
+fn a_level_speed_factor_sets_the_serve_speed() {
+    let mut app = app_with_level(level("speed_factor: 2.0\ngrid:\nC"));
+    let speed = 600.0;
     assert_eq!(app.world().resource::<BallSpeed>().0, speed);
     tap(&mut app, KeyCode::Space);
     let ball = ball(&mut app);
@@ -184,20 +184,14 @@ fn without_a_level_the_run_uses_the_fallback() {
 
 #[test]
 fn a_changed_level_applies_at_the_next_run_not_mid_board() {
-    let mut app = app_with_level(level("ball_speed: 200\ngrid:\nCC"));
-    app.insert_resource(CurrentLevel(level("ball_speed: 400\ngrid:\nCCC")));
+    let mut app = app_with_level(level("speed_factor: 1.0\ngrid:\nCC"));
+    app.insert_resource(CurrentLevel(level("speed_factor: 2.0\ngrid:\nCCC")));
     app.update();
     assert_eq!(count::<With<Brick>>(&mut app), 2, "not mid-board");
-    assert_eq!(
-        app.world().resource::<BallSpeed>().0,
-        200.0 * BALL_SPEED_SCALE
-    );
+    assert_eq!(app.world().resource::<BallSpeed>().0, 300.0);
     restart(&mut app);
     assert_eq!(count::<With<Brick>>(&mut app), 3);
-    assert_eq!(
-        app.world().resource::<BallSpeed>().0,
-        400.0 * BALL_SPEED_SCALE
-    );
+    assert_eq!(app.world().resource::<BallSpeed>().0, 600.0);
 }
 
 #[test]

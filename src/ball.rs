@@ -53,8 +53,9 @@ pub(crate) const BALL_MIN_VERTICAL_FRACTION: f32 = 0.3;
 pub(crate) struct Ball;
 
 /// The ball's constant speed this run (world units/s). `start_run` sets it
-/// from the level's `ball_speed` (design units x [`BALL_SPEED_SCALE`]); the
-/// default is [`BALL_SPEED`].
+/// from the level's optional `speed_factor` ([`BallSpeed::from_factor`]:
+/// 300 x factor); without one the factor is [`BALL_SPEED_SCALE`], giving
+/// [`BALL_SPEED`].
 #[derive(Resource, Clone, Copy, Debug, PartialEq)]
 pub(crate) struct BallSpeed(pub(crate) f32);
 
@@ -65,9 +66,13 @@ impl Default for BallSpeed {
 }
 
 impl BallSpeed {
-    /// From a level's design-unit speed (300 = the default).
-    pub(crate) fn from_design(units: f32) -> Self {
-        Self(units * BALL_SPEED_SCALE)
+    /// World units/s per unit of speed factor.
+    pub(crate) const PER_FACTOR: f32 = 300.0;
+
+    /// From a level's speed factor: 300 x factor (the default factor
+    /// [`BALL_SPEED_SCALE`] gives [`BALL_SPEED`]).
+    pub(crate) fn from_factor(factor: f32) -> Self {
+        Self(Self::PER_FACTOR * factor)
     }
 }
 

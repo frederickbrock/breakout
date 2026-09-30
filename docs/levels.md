@@ -24,7 +24,7 @@ On the web, trunk copies the whole `assets/` folder into `dist/`
 ```
 # comments start with #
 name: Rainbow Bands
-ball_speed: 300        # optional; default 300
+speed_factor: 1.5      # optional; ball speed = 300 x factor; default 1.8 (540)
 powerups: 6            # optional; N extra random bricks get a power-up; default 0
 legend:                # optional; add or override symbols for this file
   k = titanium hits=4
@@ -42,7 +42,7 @@ Keys come before `grid:`, one `key: value` per line.
 | Key | Default | Meaning |
 |---|---|---|
 | `name` | the file name without extension | The level's name (shown in the log for now). |
-| `ball_speed` | `300` | The ball's speed in design units. Must be a number greater than 0. The game multiplies it by `BALL_SPEED_SCALE` (1.8, in `src/ball.rs`) to get world units per second, so `300` is the default speed and `450` is 1.5 times faster. There is no upper limit, but very high speeds can make the ball pass through bricks. |
+| `speed_factor` | `1.8` (`BALL_SPEED_SCALE` in `src/ball.rs`) | The ball's speed factor: the ball moves at 300 × factor world units per second, so the default 1.8 is 540 and `2.0` is 600. Must be a number greater than 0. It is independent of `GAME_SCALE`. There is no upper limit, but very high speeds can make the ball pass through bricks. |
 | `powerups` | `0` | How many extra bricks drop a power-up (see below). A whole number, 0 or more. |
 
 Any other key is an error.
@@ -126,7 +126,7 @@ Failed to load asset 'levels/01-random.level' with asset loader '...LevelLoader'
 | More than 10 rows | `too many rows (max 10)` |
 | A row wider than 10 | `row is 11 wide (max 10)` |
 | Bad legend entry (symbol, class, `hits=`, unknown attribute) | `bad legend entry: unknown class 'glass'` |
-| Bad `ball_speed` / `powerups` value | `bad value 'fast' for ball_speed` |
+| Bad `speed_factor` / `powerups` value | `bad value 'fast' for speed_factor` |
 | Unknown key | `unknown key 'speed'` |
 | No `grid:` or no rows after it | `no grid: section with at least one row` |
 | Only `.` cells | `the grid has no bricks` |

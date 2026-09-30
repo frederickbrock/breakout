@@ -20,7 +20,9 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
 
-use crate::ball::{anchor_position, anchored, Ball, BallApproach, BallLook, BallSpeed, BALL_SIZE};
+use crate::ball::{
+    anchor_position, anchored, Ball, BallApproach, BallLook, BallSpeed, BALL_SIZE, BALL_SPEED_SCALE,
+};
 use crate::bricks::grid::spawn_bricks;
 use crate::bricks::PlacedBrick;
 use crate::collision::BallCollisionSignals;
@@ -88,7 +90,7 @@ pub(crate) fn start_run(
             &fallback
         }
     };
-    *ball_speed = BallSpeed::from_design(def.ball_speed);
+    *ball_speed = BallSpeed::from_factor(def.speed_factor.unwrap_or(BALL_SPEED_SCALE));
     let board = build_board(def, &mut rand::rng());
     spawn_run_entities(&mut commands, &ball_look, &board, def.cols());
     commands.trigger(RestartGame);

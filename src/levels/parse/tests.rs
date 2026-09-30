@@ -27,7 +27,7 @@ fn ok(text: &str) -> LevelDef {
 const EXAMPLE: &str = "\
 # comments start with #
 name: Rainbow Bands
-ball_speed: 300        # optional; default 300 (today's speed)
+speed_factor: 1.5      # optional; ball speed = 300 x factor; default 1.8 (today's 540)
 powerups: 6            # optional; N extra random bricks get a power-up; default 0
 legend:                # optional; add or override symbols for this file
   k = titanium hits=4
@@ -42,7 +42,7 @@ CCCCCCCCCC
 fn parses_the_format_example() {
     let def = ok(EXAMPLE);
     assert_eq!(def.name, "Rainbow Bands");
-    assert_eq!(def.ball_speed, 300.0);
+    assert_eq!(def.speed_factor, Some(1.5));
     assert_eq!(def.extra_powerups, 6);
     assert_eq!(def.grid.len(), 3);
     assert_eq!(def.cols(), 10);
@@ -59,17 +59,21 @@ fn parses_the_format_example() {
 #[test]
 fn optional_keys_default() {
     let def = ok("grid:\nC");
-    assert_eq!(def.ball_speed, DEFAULT_BALL_SPEED);
-    assert_eq!(def.ball_speed, 300.0);
+    assert_eq!(def.speed_factor, None);
     assert_eq!(def.extra_powerups, 0);
     assert_eq!(def.name, "");
     assert_eq!(def.grid, vec![vec![fixed(BrickClass::Ceramic)]]);
 }
 
 #[test]
-fn ball_speed_450_is_read() {
-    assert_eq!(ok("ball_speed: 450\ngrid:\nC").ball_speed, 450.0);
-    assert_eq!(ok("ball_speed:450.5\ngrid:\nC").ball_speed, 450.5);
+fn speed_factor_is_read() {
+    assert_eq!(ok("speed_factor: 2.0\ngrid:\nC").speed_factor, Some(2.0));
+    assert_eq!(ok("speed_factor:1.25\ngrid:\nC").speed_factor, Some(1.25));
+}
+
+#[test]
+fn the_old_ball_speed_key_is_unknown() {
+    assert!(parse_level("ball_speed: 300\ngrid:\nC").is_err());
 }
 
 #[test]
@@ -285,10 +289,10 @@ fn bad_legend_entries_are_rejected() {
 #[test]
 fn bad_header_values_are_rejected() {
     for (line, key, value) in [
-        ("ball_speed: fast", "ball_speed", "fast"),
-        ("ball_speed: 0", "ball_speed", "0"),
-        ("ball_speed: -5", "ball_speed", "-5"),
-        ("ball_speed: inf", "ball_speed", "inf"),
+        ("speed_factor: fast", "speed_factor", "fast"),
+        ("speed_factor: 0", "speed_factor", "0"),
+        ("speed_factor: -5", "speed_factor", "-5"),
+        ("speed_factor: inf", "speed_factor", "inf"),
         ("powerups: -1", "powerups", "-1"),
         ("powerups: x", "powerups", "x"),
     ] {

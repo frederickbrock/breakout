@@ -7,7 +7,7 @@
 use std::collections::HashMap;
 use std::fmt;
 
-use super::{Campaign, CellDef, ClassSpec, LevelDef, DEFAULT_BALL_SPEED, MAX_COLS, MAX_ROWS};
+use super::{Campaign, CellDef, ClassSpec, LevelDef, MAX_COLS, MAX_ROWS};
 use crate::bricks::{BrickClass, ExplosiveKind};
 
 /// Why a level file was rejected, and where.
@@ -71,7 +71,7 @@ pub fn parse_level(text: &str) -> Result<LevelDef, LevelError> {
     let text = text.strip_prefix('\u{feff}').unwrap_or(text);
     let mut def = LevelDef {
         name: String::new(),
-        ball_speed: DEFAULT_BALL_SPEED,
+        speed_factor: None,
         extra_powerups: 0,
         grid: Vec::new(),
     };
@@ -172,7 +172,7 @@ impl Line<'_> {
     }
 }
 
-/// `name: ...`, `ball_speed: ...` or `powerups: ...`.
+/// `name: ...`, `speed_factor: ...` or `powerups: ...`.
 fn header_value(def: &mut LevelDef, key: &str, value: &str, at: Line) -> Result<(), LevelError> {
     let key = key.trim();
     let value = value.trim();
@@ -188,12 +188,12 @@ fn header_value(def: &mut LevelDef, key: &str, value: &str, at: Line) -> Result<
     };
     match key {
         "name" => def.name = value.into(),
-        "ball_speed" => {
-            let speed: f32 = value.parse().map_err(|_| bad())?;
-            if !speed.is_finite() || speed <= 0.0 {
+        "speed_factor" => {
+            let factor: f32 = value.parse().map_err(|_| bad())?;
+            if !factor.is_finite() || factor <= 0.0 {
                 return Err(bad());
             }
-            def.ball_speed = speed;
+            def.speed_factor = Some(factor);
         }
         "powerups" => def.extra_powerups = value.parse().map_err(|_| bad())?,
         _ => return Err(at.error(key, 0, LevelErrorKind::UnknownKey(key.into()))),
