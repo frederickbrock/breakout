@@ -1,0 +1,26 @@
+Sci-fi industrial game art, clean hard-surface rendering: machined steel, bevelled
+metal plates, bolts and seams, crisp specular edges, subtle glossy highlights.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Restrained glow, high readability at small size, strong
+silhouette. Absolutely no text, lettering, numbers, logos, watermarks, borders or
+UI, no letter-like marks.
+
+Subject: the HEAVY damage ("broken", about to fail completely) state of the
+reference "titanium alloy" brick plate (attached reference image). Keep the exact
+same overall plate silhouette, aspect ratio and seam-glow position as the
+reference — do not change the plate's outer size. Show much heavier damage than
+light dents: deep, dramatic dents that visibly deform the metal's surface (clearly
+pressed inward, not just shallow dimples), one of the corner bolts has visibly
+popped/sheared loose and is sticking out at an angle with a dark empty bolt-hole
+exposed, and one corner of the plate is visibly bent/warped out of its original
+flat plane. Still clearly the same titanium material and colour, just badly
+deformed rather than shattered (titanium bends, it doesn't crumble).
+
+Use in game: this is the final "heavily damaged" look, one step past the light
+"cracked" (dented/scored) state; it must read as dramatically more damaged than
+light dents at a glance, from the same silhouette, at small size.
+
+Single isolated object, centred, whole object inside frame, orthographic front
+view, plain flat solid #00FF00 green background, no shadow on the background, no
+scenery, no other objects, no text, no numbers, no hit-count pips, no logos.
+

@@ -1,0 +1,26 @@
+This is a GREYSCALE PARTICLE-EFFECT SPRITE SHEET, not a coloured game object.
+Render everything in the image in pure grayscale only — white, light gray, mid
+gray, dark gray, black — with absolutely no color or hue anywhere (this artwork
+will be colour-tinted later by the game engine). Style: clean sci-fi hard-surface
+particle FX, crisp readable shapes, no painterly brushwork.
+
+Format: a single horizontal sprite sheet strip, exactly 4 equal square frames
+arranged left to right in one row (wide 4:1 aspect ratio, like a film strip).
+Each frame's content is centred within its own square cell. No dividing lines,
+no border, no frame numbers or labels, frames touching edge to edge with no gaps
+or padding between them. Flat solid #00FF00 green background filling every
+frame equally — no scenery, no ground plane, no shadow, no text.
+
+Subject: a small wisp/tendril of escaping energy, the "hit/break" particle
+effect for a reactor-core brick. Animate across the 4 frames, reading left to
+right as a short one-shot burst:
+Frame 1: a tight, bright, softly-glowing coiled wisp of energy at the frame
+centre, compact, the instant containment is breached.
+Frame 2: the wisp has begun to unwind and stretch outward into a loose curling
+tendril shape, still bright.
+Frame 3: the tendril has unwound further into thin wispy strands drifting
+outward, glow softening (mid-gray, less bright).
+Frame 4: only faint, thin, barely-visible wisps remain, smallest and faintest,
+as the energy fully disperses.
+Keep the shape soft, wispy and flowing (energy, not solid debris) — smooth soft-
+edged glow rather than hard particle specks.

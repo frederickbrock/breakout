@@ -1,0 +1,28 @@
+Sci-fi industrial game art, clean hard-surface rendering: machined steel, bevelled
+metal plates, bolts and seams, crisp specular edges, subtle glossy highlights.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Restrained glow, high readability at small size, strong
+silhouette. Absolutely no text, lettering, numbers, logos, watermarks, borders or
+UI, no letter-like marks.
+
+Subject: the HEAVY damage ("broken", about to fail completely) state of the
+reference "reactor core" brick plate (attached reference image). Keep the exact
+same overall plate silhouette, aspect ratio and bolt positions as the reference —
+do not change the plate's outer size. Show much heavier damage than thin glowing
+hairline cracks: the containment has failed further — violet energy (#b58cff,
+#dcc9ff highlights) is now visibly LEAKING OUT through wide broken gaps in the
+plate (not just glowing behind thin cracks, but actual bright violet energy
+escaping and spilling slightly past the plate's edges/silhouette at the crack
+sites), and the seam-glow line itself should look unstable — draw it as a
+flickering, uneven, broken-up glow rather than the smooth even line on the intact
+plate, as if it is failing.
+
+Use in game: this is the final "heavily damaged" look, one step past the light
+"cracked" (hairline-crack) state; it must read as dramatically more damaged and
+more dangerous than thin cracks at a glance, from the same silhouette, at small
+size.
+
+Single isolated object, centred, whole object inside frame, orthographic front
+view, plain flat solid #00FF00 green background, no shadow on the background, no
+scenery, no other objects, no text, no numbers, no hit-count pips, no logos.
+

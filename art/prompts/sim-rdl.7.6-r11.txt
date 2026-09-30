@@ -1,0 +1,29 @@
+Sci-fi industrial game art, clean hard-surface rendering: machined steel, bevelled
+metal plates, bolts and seams, crisp specular edges, subtle glossy highlights.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Restrained glow, high readability at small size, strong
+silhouette. Absolutely no text, lettering, numbers, logos, watermarks, borders or
+UI, no letter-like marks.
+
+Subject: the HEAVY damage ("broken", about to fail completely) state of the
+reference "regen alloy" brick plate (attached reference image, already showing its
+LIGHT cracked state — a few fine fracture lines across the green lattice/vein
+etching). Keep the exact same overall plate silhouette, aspect ratio, bolt
+positions and lattice/vein motif as the reference — do not change the plate's
+outer size. Escalate the damage significantly further: many more, denser fracture
+lines spreading across nearly the whole face, breaking across and disrupting the
+vein-lattice pattern rather than following it neatly; one or more larger sections
+of the green alloy face visibly cracked open with material missing, exposing a
+duller, darker alloy underneath in those gaps; the vein-glow lines (#9dffbe /
+#3dff7a) look uneven and dimmer right around the damaged areas, as if the
+regenerative energy is struggling to keep up with the damage. Still clearly the
+same green regen-alloy material and colour elsewhere on the plate.
+
+Use in game: this is the final "heavily damaged" look, one step past the existing
+lightly-cracked state; it must read as dramatically more damaged than the
+reference at a glance, from the same silhouette, at small size.
+
+Single isolated object, centred, whole object inside frame, orthographic front
+view, plain flat solid #FF00FF magenta background (this object is green, so use
+magenta as the key colour, not green), no shadow on the background, no scenery,
+no other objects, no text, no numbers, no hit-count pips, no logos.

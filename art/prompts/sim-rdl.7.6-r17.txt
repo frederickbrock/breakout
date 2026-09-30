@@ -1,0 +1,26 @@
+This is a GREYSCALE PARTICLE-EFFECT SPRITE SHEET, not a coloured game object.
+Render everything in the image in pure grayscale only — white, light gray, mid
+gray, dark gray, black — with absolutely no color or hue anywhere (this artwork
+will be colour-tinted later by the game engine). Style: clean sci-fi hard-surface
+particle FX, crisp readable shapes, no painterly brushwork.
+
+Format: a single horizontal sprite sheet strip, exactly 4 equal square frames
+arranged left to right in one row (wide 4:1 aspect ratio, like a film strip).
+Each frame's content is centred within its own square cell. No dividing lines,
+no border, no frame numbers or labels, frames touching edge to edge with no gaps
+or padding between them. Flat solid #00FF00 green background filling every
+frame equally — no scenery, no ground plane, no shadow, no text.
+
+Subject: a small cluster of soft organic regen-alloy "spore" motes, the
+"hit/break" particle effect for a regen alloy brick. Animate across the 4
+frames, reading left to right as a short one-shot burst:
+Frame 1: a few small, soft, gently-glowing round spore motes tightly grouped at
+the frame centre, the instant the alloy releases them.
+Frame 2: the motes have drifted slightly further apart, still soft and glowing,
+a gentle bloom around each.
+Frame 3: the motes are more spread out, softer and dimmer (mid-gray), starting
+to shrink.
+Frame 4: only a few faint, tiny, barely-visible motes remain, drifted furthest
+apart, as they fully dissolve.
+Keep the motes soft, round and organic (gentle glow, not hard sparks or sharp
+debris).
