@@ -5,8 +5,8 @@ use crate::bricks::grid::Brick;
 use crate::collision::BallCollisionSignals;
 use crate::game_state::{AppState, GameOutcome};
 use crate::paddle::{Paddle, PADDLE_HEIGHT};
+use crate::run::{end_run, Lives};
 use crate::world::{GAME_SCALE, PLAYFIELD_HEIGHT};
-use crate::{end_run, Lives};
 
 pub(crate) const BALL_SIZE: f32 = 15.0 * GAME_SCALE;
 pub(crate) const BALL_SPEED: f32 = 300.0 * GAME_SCALE;

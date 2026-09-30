@@ -2,8 +2,8 @@ use super::*;
 use crate::bricks::BrickClass;
 use crate::game_state::AppState;
 use crate::paddle::{Paddle, PADDLE_HEIGHT};
+use crate::run::Lives;
 use crate::test_support::*;
-use crate::Lives;
 
 fn layout(app: &mut App) -> Vec<(usize, usize, BrickClass)> {
     let mut layout: Vec<(usize, usize, BrickClass)> = app

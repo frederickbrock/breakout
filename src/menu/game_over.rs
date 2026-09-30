@@ -4,7 +4,7 @@
 
 use super::{go_to, heading, menu_button, menu_list, menu_screen, OVERLAY_DIM};
 use crate::game_state::{AppState, GameOutcome};
-use crate::Score;
+use crate::run::Score;
 use bevy::prelude::*;
 
 pub struct GameOverPlugin;
@@ -44,9 +44,9 @@ mod tests {
     use crate::bricks::grid::{Brick, BRICK_COLS, BRICK_ROWS};
     use crate::collision::BallCollisionSignals;
     use crate::game_state::{AppState, PlayState};
+    use crate::run::{Lives, Score, STARTING_LIVES};
     use crate::test_support::*;
     use crate::world::PLAYFIELD_HEIGHT;
-    use crate::{Lives, Score, STARTING_LIVES};
     use bevy::prelude::*;
 
     fn lose(app: &mut App, score: i32) {

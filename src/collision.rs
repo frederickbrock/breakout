@@ -5,8 +5,8 @@ use crate::ball::{Ball, BallApproach};
 use crate::bricks::grid::{Brick, BrickHealth};
 use crate::bricks::{self, BrickClass};
 use crate::paddle::Paddle;
+use crate::run::Score;
 use crate::theme;
-use crate::Score;
 
 /// Fired by [`on_ball_collision`] when a brick takes its last hit, *before*
 /// the brick is despawned, so observers can still read its other components.

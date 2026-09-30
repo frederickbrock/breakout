@@ -19,7 +19,8 @@ use super::grid::{Brick, BrickHealth, BRICK_HEIGHT, BRICK_WIDTH};
 use super::{BrickCell, BrickClass, ExplosiveKind};
 use crate::collision::{BallCollisionSignals, BrickDamaged, BrickDestroyed};
 use crate::game_state::{AppState, PlayState};
-use crate::{theme, Score};
+use crate::run::Score;
+use crate::theme;
 use bevy::prelude::*;
 use std::collections::{BTreeMap, VecDeque};
 

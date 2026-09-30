@@ -5,9 +5,9 @@ use crate::bricks::BrickClass;
 use crate::collision::BrickDestroyed;
 use crate::game_state::{AppState, PlayState};
 use crate::paddle::{Paddle, PADDLE_HEIGHT};
+use crate::run::RestartGame;
 use crate::spawner::Spawner;
 use crate::world::{GAME_SCALE, PLAYFIELD_HEIGHT};
-use crate::RestartGame;
 use bevy::prelude::*;
 
 const POWER_UP_SIZE: f32 = 24.0 * GAME_SCALE;
@@ -338,7 +338,7 @@ mod tests {
         app.world_mut()
             .resource_mut::<ActiveEffects>()
             .refresh_or_insert(PowerUpKind::SuperSizer, 5.0);
-        app.world_mut().resource_mut::<crate::Lives>().0 = 1;
+        app.world_mut().resource_mut::<crate::run::Lives>().0 = 1;
         let mut ball = app
             .world_mut()
             .query_filtered::<&mut Transform, With<crate::ball::Ball>>()
@@ -428,7 +428,7 @@ mod tests {
         let first = power_up_brick_positions(&mut app);
 
         tap(&mut app, KeyCode::Space);
-        app.world_mut().resource_mut::<crate::Lives>().0 = 1;
+        app.world_mut().resource_mut::<crate::run::Lives>().0 = 1;
         let ball = app
             .world_mut()
             .query_filtered::<Entity, With<crate::ball::Ball>>()
@@ -462,7 +462,7 @@ mod tests {
         let entity = app.world().entity(brick);
         assert_eq!(entity.get::<BrickHealth>().unwrap().0, 1);
         assert_eq!(entity.get::<Sprite>().unwrap().color, theme::REACTOR);
-        assert_eq!(app.world().resource::<crate::Score>().0, 10);
+        assert_eq!(app.world().resource::<crate::run::Score>().0, 10);
         assert_eq!(count::<With<PowerUp>>(&mut app), 0);
     }
 
@@ -475,7 +475,7 @@ mod tests {
         let at = position(&app, first);
 
         break_brick(&mut app, first);
-        assert_eq!(app.world().resource::<crate::Score>().0, 20);
+        assert_eq!(app.world().resource::<crate::run::Score>().0, 20);
         let dropped = falling(&mut app);
         assert_eq!(dropped.len(), 1);
         let (_, pos, kind, gravity) = dropped[0];

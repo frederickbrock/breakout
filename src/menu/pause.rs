@@ -36,8 +36,8 @@ mod tests {
     use crate::ball::Ball;
     use crate::bricks::grid::{Brick, BRICK_COLS, BRICK_ROWS};
     use crate::game_state::{AppState, PlayState};
+    use crate::run::{Lives, Score, STARTING_LIVES};
     use crate::test_support::*;
-    use crate::{Lives, Score, STARTING_LIVES};
     use bevy::prelude::*;
 
     fn ball_position(app: &mut App) -> Vec3 {

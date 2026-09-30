@@ -2,9 +2,9 @@ use super::*;
 use crate::controls::{ControlSettings, PaddleControl};
 use crate::game_state::PlayState;
 use crate::paddle::PADDLE_WIDTH;
+use crate::run::{Lives, STARTING_LIVES};
 use crate::test_support::*;
 use crate::theme;
-use crate::{Lives, STARTING_LIVES};
 
 fn is_anchored(app: &mut App) -> bool {
     let ball = ball(app);
