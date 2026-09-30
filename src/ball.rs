@@ -26,7 +26,12 @@ use crate::run::{end_run, Lives};
 use crate::world::{GAME_SCALE, PLAYFIELD_HEIGHT};
 
 pub(crate) const BALL_SIZE: f32 = 15.0 * GAME_SCALE;
-pub(crate) const BALL_SPEED: f32 = 300.0 * GAME_SCALE;
+/// Tunable: the ball's speed factor over its old design value, separate from
+/// `GAME_SCALE` so the ball can be faster without resizing anything.
+pub(crate) const BALL_SPEED_SCALE: f32 = 1.8;
+/// The ball's speed (world units/s): its 300 design value times
+/// [`BALL_SPEED_SCALE`] (the one gameplay speed not scaled by `GAME_SCALE`).
+pub(crate) const BALL_SPEED: f32 = 300.0 * BALL_SPEED_SCALE;
 /// Gap between the anchored ball and the paddle, so the launch doesn't start
 /// in contact with the paddle (which would trigger the paddle-hit spin rule
 /// and override the 45° serve).
