@@ -97,7 +97,7 @@ impl Plugin for ControlsPlugin {
             .add_systems(
                 Update,
                 track_cursor
-                    .before(crate::PaddleMovementSet)
+                    .before(crate::paddle::PaddleMovementSet)
                     .run_if(in_state(PlayState::Playing)),
             );
     }
@@ -137,7 +137,7 @@ fn clear_target_on_restart(_restart: On<RestartGame>, mut target: ResMut<PaddleT
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::PADDLE_WIDTH;
+    use crate::paddle::PADDLE_WIDTH;
 
     #[test]
     fn clamp_keeps_the_paddle_between_the_walls() {

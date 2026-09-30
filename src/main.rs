@@ -2,6 +2,7 @@ mod bricks;
 mod controls;
 mod game_state;
 mod menu;
+mod paddle;
 mod particles;
 mod powerups;
 mod script_manager;
@@ -18,21 +19,16 @@ use bevy::asset::AssetMetaCheck;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
 use bricks::{BrickCell, BrickClass};
-use controls::{ControlSettings, PaddleControl, PaddleTarget};
 use game_state::{AppState, GameOutcome, GameStatePlugin, PlayState};
+use paddle::{
+    paddle_field, paddle_movement, place_paddle_pieces, prong, Paddle, PaddleMovementSet,
+    PADDLE_HEIGHT, PADDLE_LINEAR_DAMPING, PADDLE_MARGIN_BOTTOM, PADDLE_MASS, PADDLE_WIDTH,
+};
 use world::{setup_level, GAME_SCALE, PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH, WORLD_WIDTH};
 
 /// The native window's opening size; it is resizable and the world scales.
 const WINDOW_START_WIDTH: u32 = 1280;
 const WINDOW_START_HEIGHT: u32 = 720;
-const PADDLE_WIDTH: f32 = 120.0 * GAME_SCALE;
-const PADDLE_HEIGHT: f32 = 20.0 * GAME_SCALE;
-const PADDLE_MASS: f32 = 3.0;
-const PADDLE_FORCE: f32 = 7000.0 * GAME_SCALE;
-const PADDLE_LINEAR_DAMPING: f32 = 4.0;
-const PADDLE_MARGIN_BOTTOM: f32 = 10.0 * GAME_SCALE;
-/// Width of each paddle end prong (the sprite is 54 px at 2x).
-const PRONG_WIDTH: f32 = 27.0 * GAME_SCALE;
 const BALL_SIZE: f32 = 15.0 * GAME_SCALE;
 const BALL_SPEED: f32 = 300.0 * GAME_SCALE;
 /// Gap between the anchored ball and the paddle, so the launch doesn't start
@@ -79,11 +75,6 @@ const HUD_BLOCK_SPACING: f32 = 120.0;
 const HUD_X: f32 = -WORLD_WIDTH / 2.0 + HUD_MARGIN;
 
 #[derive(Component)]
-struct Paddle {
-    width: f32,
-}
-
-#[derive(Component)]
 struct Ball;
 
 /// The ball's velocity at the start of the current physics step, recorded
@@ -116,34 +107,6 @@ struct ScoreText;
 
 #[derive(Component)]
 struct LivesText;
-
-/// The paddle's end prongs, kept at its ends by [`place_paddle_pieces`] as its
-/// width changes (Super-Sizer). `side` is -1 (left) or 1 (right).
-#[derive(Component)]
-struct PaddleProng {
-    side: f32,
-}
-
-/// The paddle's glowing field between the prongs, stretched by
-/// [`place_paddle_pieces`] to fill the gap.
-#[derive(Component)]
-struct PaddleField;
-
-/// Where the paddle's visual pieces go for a paddle `width` wide: each prong
-/// is centred `prong_offset` either side of the middle, and the field fills
-/// the `field_width` between them.
-#[derive(Debug, PartialEq)]
-struct PaddlePieces {
-    prong_offset: f32,
-    field_width: f32,
-}
-
-fn paddle_pieces(width: f32) -> PaddlePieces {
-    PaddlePieces {
-        prong_offset: (width - PRONG_WIDTH) / 2.0,
-        field_width: (width - 2.0 * PRONG_WIDTH).max(0.0),
-    }
-}
 
 /// Mesh and material for the round ball, made once at startup.
 #[derive(Resource)]
@@ -192,12 +155,6 @@ struct BrickDamaged {
     position: Vec2,
     class: BrickClass,
 }
-
-/// Lets other systems (e.g. a power-up that changes paddle width) declare
-/// they must run before paddle movement each frame, without `main.rs` having
-/// to manually interleave their systems into its own `Update` chain.
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-struct PaddleMovementSet;
 
 fn main() {
     // WSLg's Wayland compositor combined with the llvmpipe software Vulkan
@@ -408,45 +365,6 @@ fn spawn_hud_line(
     ));
 }
 
-/// One of the paddle's end prongs; positioned by [`place_paddle_pieces`].
-fn prong(side: f32) -> impl Bundle {
-    let pieces = paddle_pieces(PADDLE_WIDTH);
-    (
-        PaddleProng { side },
-        Sprite::from_color(theme::EMITTER_PRONG, Vec2::new(PRONG_WIDTH, PADDLE_HEIGHT)),
-        Transform::from_xyz(side * pieces.prong_offset, 0.0, 0.1),
-    )
-}
-
-/// The paddle's middle field; sized by [`place_paddle_pieces`].
-fn paddle_field() -> impl Bundle {
-    let pieces = paddle_pieces(PADDLE_WIDTH);
-    (
-        PaddleField,
-        Sprite::from_color(theme::EMITTER, Vec2::new(pieces.field_width, PADDLE_HEIGHT)),
-        Transform::default(),
-    )
-}
-
-/// Keeps the prongs at the paddle's ends when its width changes.
-fn place_paddle_pieces(
-    paddles: Query<(&Paddle, &Children), Changed<Paddle>>,
-    mut prongs: Query<(&PaddleProng, &mut Transform)>,
-    mut fields: Query<&mut Sprite, With<PaddleField>>,
-) {
-    for (paddle, children) in &paddles {
-        let pieces = paddle_pieces(paddle.width);
-        for child in children.iter() {
-            if let Ok((prong, mut transform)) = prongs.get_mut(child) {
-                transform.translation.x = prong.side * pieces.prong_offset;
-            }
-            if let Ok(mut sprite) = fields.get_mut(child) {
-                sprite.custom_size = Some(Vec2::new(pieces.field_width, PADDLE_HEIGHT));
-            }
-        }
-    }
-}
-
 /// A fresh random board of brick classes (see [`bricks::generate_board`]),
 /// each brick at its class's colour and hit count.
 fn spawn_bricks(commands: &mut Commands) {
@@ -502,43 +420,6 @@ fn brick_y(row: usize) -> f32 {
 fn record_ball_approach(mut balls: Query<(&LinearVelocity, &mut BallApproach), With<Ball>>) {
     for (velocity, mut approach) in &mut balls {
         approach.0 = velocity.0;
-    }
-}
-
-/// Arrow keys / A/D push the paddle with a force in both control modes. In
-/// Mouse mode, with no movement key held, the paddle's velocity is driven
-/// toward the cursor target instead (see `controls`); a held key takes over
-/// and clears that target.
-fn paddle_movement(
-    time: Res<Time>,
-    keyboard: Res<ButtonInput<KeyCode>>,
-    settings: Res<ControlSettings>,
-    mut target: ResMut<PaddleTarget>,
-    mut paddle_query: Query<(&Transform, &Paddle, &mut ConstantForce, &mut LinearVelocity)>,
-) {
-    let Ok((transform, paddle, mut force, mut velocity)) = paddle_query.single_mut() else {
-        return;
-    };
-
-    let mut fx = 0.0;
-    if keyboard.pressed(KeyCode::ArrowLeft) || keyboard.pressed(KeyCode::KeyA) {
-        fx -= PADDLE_FORCE;
-    }
-    if keyboard.pressed(KeyCode::ArrowRight) || keyboard.pressed(KeyCode::KeyD) {
-        fx += PADDLE_FORCE;
-    }
-    force.0 = Vec2::new(fx, 0.0);
-
-    if fx != 0.0 {
-        target.x = None;
-        return;
-    }
-    if settings.paddle == PaddleControl::Mouse {
-        if let Some(target_x) = target.x {
-            let target_x = controls::clamp_paddle_x(target_x, paddle.width);
-            velocity.0.x =
-                controls::follow_velocity(transform.translation.x, target_x, time.delta_secs());
-        }
     }
 }
 
@@ -792,6 +673,8 @@ fn update_hud(
 mod tests {
     use super::test_support::*;
     use super::*;
+    use crate::controls::*;
+    use crate::paddle::*;
     use crate::world::*;
 
     fn text<M: Component>(app: &mut App) -> String {
@@ -1060,70 +943,6 @@ mod tests {
         // Served again from there.
         tap(&mut app, KeyCode::Space);
         assert!(!is_anchored(&mut app));
-    }
-
-    fn paddle_state(app: &mut App) -> (f32, Vec2, Vec2) {
-        let paddle = paddle(app);
-        let entity = app.world().entity(paddle);
-        (
-            entity.get::<Transform>().unwrap().translation.x,
-            entity.get::<LinearVelocity>().unwrap().0,
-            entity.get::<ConstantForce>().unwrap().0,
-        )
-    }
-
-    fn hold(app: &mut App, key: KeyCode) {
-        app.world_mut()
-            .resource_mut::<ButtonInput<KeyCode>>()
-            .press(key);
-        app.update();
-    }
-
-    #[test]
-    fn in_mouse_mode_the_paddle_heads_for_the_cursor() {
-        let mut app = app();
-        aim_mouse_at(&mut app, 200.0);
-        app.update();
-        let (_, v, force) = paddle_state(&mut app);
-        assert!(v.x > 0.0, "moving right toward the cursor, got {v:?}");
-        assert_eq!(force, Vec2::ZERO);
-
-        set_paddle_x(&mut app, 300.0);
-        aim_mouse_at(&mut app, -200.0);
-        app.update();
-        assert!(paddle_state(&mut app).1.x < 0.0);
-    }
-
-    #[test]
-    fn the_mouse_target_is_clamped_to_the_walls() {
-        let mut app = app();
-        let edge = (PLAYFIELD_WIDTH - PADDLE_WIDTH) / 2.0;
-        set_paddle_x(&mut app, edge);
-        aim_mouse_at(&mut app, 10_000.0);
-        app.update();
-        assert_eq!(paddle_state(&mut app).1.x, 0.0, "already at the wall");
-    }
-
-    #[test]
-    fn in_keyboard_mode_the_mouse_does_not_move_the_paddle() {
-        let mut app = app();
-        app.world_mut().resource_mut::<ControlSettings>().paddle = PaddleControl::Keyboard;
-        aim_mouse_at(&mut app, 300.0);
-        app.update();
-        assert_eq!(paddle_state(&mut app).1.x, 0.0);
-
-        hold(&mut app, KeyCode::KeyD);
-        assert_eq!(paddle_state(&mut app).2.x, PADDLE_FORCE);
-    }
-
-    #[test]
-    fn in_mouse_mode_keys_still_move_the_paddle_and_take_over() {
-        let mut app = app();
-        aim_mouse_at(&mut app, 300.0);
-        hold(&mut app, KeyCode::ArrowLeft);
-
-        assert_eq!(paddle_state(&mut app).2.x, -PADDLE_FORCE);
-        assert_eq!(app.world().resource::<PaddleTarget>().x, None);
     }
 
     fn score(app: &App) -> i32 {
@@ -1485,34 +1304,6 @@ mod tests {
     }
 
     #[test]
-    fn the_paddle_prongs_stay_at_its_ends_when_it_widens() {
-        let mut app = app();
-        let prong_xs = |app: &mut App| {
-            let mut xs: Vec<f32> = app
-                .world_mut()
-                .query_filtered::<&Transform, With<PaddleProng>>()
-                .iter(app.world())
-                .map(|t| t.translation.x)
-                .collect();
-            xs.sort_by(f32::total_cmp);
-            xs
-        };
-        let edge = (PADDLE_WIDTH - PRONG_WIDTH) / 2.0;
-        assert_eq!(prong_xs(&mut app), [-edge, edge]);
-
-        // Super-Sizer widens the paddle (it recomputes the width every frame).
-        app.world_mut().trigger(powerups::PowerUpCollected {
-            kind: powerups::PowerUpKind::SuperSizer,
-        });
-        app.update();
-        let paddle = paddle(&mut app);
-        let width = app.world().get::<Paddle>(paddle).unwrap().width;
-        assert!(width > PADDLE_WIDTH);
-        let wide_edge = (width - PRONG_WIDTH) / 2.0;
-        assert_eq!(prong_xs(&mut app), [-wide_edge, wide_edge]);
-    }
-
-    #[test]
     fn the_hud_shows_uppercase_labels_and_ink_values() {
         let mut app = app();
         let world = app.world_mut();
@@ -1608,93 +1399,6 @@ mod tests {
         assert_eq!(
             title_or_default(Some("Breakout [tester@tester sim-rdl.2]".into())),
             "Breakout [tester@tester sim-rdl.2]"
-        );
-    }
-
-    #[test]
-    fn paddle_pieces_fit_seamlessly_at_normal_and_super_sized_widths() {
-        for (width, offset, field) in [
-            (PADDLE_WIDTH, 46.5 * GAME_SCALE, 66.0 * GAME_SCALE),
-            (PADDLE_WIDTH * 1.25, 61.5 * GAME_SCALE, 96.0 * GAME_SCALE),
-        ] {
-            let pieces = paddle_pieces(width);
-            assert_eq!(
-                pieces,
-                PaddlePieces {
-                    prong_offset: offset,
-                    field_width: field
-                }
-            );
-            // Outer prong edge on the paddle's edge; inner edge meets the field.
-            assert_eq!(pieces.prong_offset + PRONG_WIDTH / 2.0, width / 2.0);
-            assert_eq!(
-                pieces.prong_offset - PRONG_WIDTH / 2.0,
-                pieces.field_width / 2.0
-            );
-        }
-    }
-
-    fn paddle_look(app: &mut App) -> (Vec<f32>, f32, f32) {
-        let paddle = paddle(app);
-        let width = app.world().get::<Paddle>(paddle).unwrap().width;
-        let world = app.world_mut();
-        let mut prongs: Vec<f32> = world
-            .query_filtered::<&Transform, With<PaddleProng>>()
-            .iter(world)
-            .map(|t| t.translation.x)
-            .collect();
-        prongs.sort_by(f32::total_cmp);
-        let field = world
-            .query_filtered::<&Sprite, With<PaddleField>>()
-            .single(world)
-            .unwrap()
-            .custom_size
-            .unwrap()
-            .x;
-        (prongs, field, width)
-    }
-
-    #[test]
-    fn the_paddle_is_two_prongs_and_a_field_that_follow_super_sizer() {
-        let mut app = app();
-        let paddle = paddle(&mut app);
-        assert!(
-            !app.world().entity(paddle).contains::<Sprite>(),
-            "drawn by its pieces"
-        );
-        assert_eq!(
-            paddle_look(&mut app),
-            (
-                vec![-46.5 * GAME_SCALE, 46.5 * GAME_SCALE],
-                66.0 * GAME_SCALE,
-                PADDLE_WIDTH
-            )
-        );
-
-        app.world_mut().trigger(powerups::PowerUpCollected {
-            kind: powerups::PowerUpKind::SuperSizer,
-        });
-        app.update();
-        assert_eq!(
-            paddle_look(&mut app),
-            (
-                vec![-61.5 * GAME_SCALE, 61.5 * GAME_SCALE],
-                96.0 * GAME_SCALE,
-                PADDLE_WIDTH * 1.25
-            )
-        );
-
-        // The effect runs out (7 s at the test app's 100 ms step).
-        for _ in 0..80 {
-            app.update();
-        }
-        assert_eq!(
-            paddle_look(&mut app),
-            (
-                vec![-46.5 * GAME_SCALE, 46.5 * GAME_SCALE],
-                66.0 * GAME_SCALE,
-                PADDLE_WIDTH
-            )
         );
     }
 

@@ -2,9 +2,10 @@ mod super_sizer;
 
 use crate::bricks::BrickClass;
 use crate::game_state::{AppState, PlayState};
+use crate::paddle::{Paddle, PADDLE_HEIGHT};
 use crate::spawner::Spawner;
 use crate::world::{GAME_SCALE, PLAYFIELD_HEIGHT};
-use crate::{Brick, BrickDestroyed, Paddle, RestartGame, PADDLE_HEIGHT};
+use crate::{Brick, BrickDestroyed, RestartGame};
 use bevy::prelude::*;
 
 const POWER_UP_SIZE: f32 = 24.0 * GAME_SCALE;
@@ -114,7 +115,7 @@ impl Plugin for PowerUpsPlugin {
                 Update,
                 tick_active_effects
                     .in_set(TickActiveEffects)
-                    .before(crate::PaddleMovementSet)
+                    .before(crate::paddle::PaddleMovementSet)
                     .run_if(in_state(PlayState::Playing)),
             )
             .add_plugins(super_sizer::SuperSizerPlugin);
@@ -518,7 +519,7 @@ mod tests {
             .world()
             .resource::<ActiveEffects>()
             .is_active(PowerUpKind::SuperSizer));
-        assert!(app.world().get::<Paddle>(paddle).unwrap().width > crate::PADDLE_WIDTH);
+        assert!(app.world().get::<Paddle>(paddle).unwrap().width > crate::paddle::PADDLE_WIDTH);
     }
 
     #[test]

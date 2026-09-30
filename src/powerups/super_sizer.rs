@@ -1,5 +1,5 @@
 use super::{ActiveEffects, PowerUpCollected, PowerUpKind, PowerUpSpawner, TickActiveEffects};
-use crate::{Paddle, PADDLE_HEIGHT, PADDLE_WIDTH};
+use crate::paddle::{Paddle, PADDLE_HEIGHT, PADDLE_WIDTH};
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
@@ -21,7 +21,7 @@ impl Plugin for SuperSizerPlugin {
             Update,
             update_paddle_width
                 .after(TickActiveEffects)
-                .before(crate::PaddleMovementSet),
+                .before(crate::paddle::PaddleMovementSet),
         );
     }
 }

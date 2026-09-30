@@ -3,6 +3,8 @@
 //! driven by hand via [`tap`].
 
 use super::*;
+use crate::controls::PaddleTarget;
+use crate::paddle::Paddle;
 use crate::world::PLAYFIELD_HEIGHT;
 use bevy::state::app::StatesPlugin;
 use bevy::time::TimeUpdateStrategy;

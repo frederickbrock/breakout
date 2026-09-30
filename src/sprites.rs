@@ -19,9 +19,10 @@
 //! the sprite ([`theme::brick_sprite_tint`]); damage is shown by particles.
 
 use crate::bricks::{BrickClass, ShieldFlash};
+use crate::paddle::{PaddleField, PaddleProng};
 use crate::powerups::PowerUp;
 use crate::world::{PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH};
-use crate::{theme, Ball, Brick, PaddleField, PaddleProng, BALL_SIZE};
+use crate::{theme, Ball, Brick, BALL_SIZE};
 use bevy::prelude::*;
 
 /// Paths relative to `assets/`.
