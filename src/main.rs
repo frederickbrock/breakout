@@ -32,7 +32,7 @@ mod view;
 mod world;
 
 use avian2d::prelude::*;
-use ball::{ball_movement, follow_paddle, launch_ball, record_ball_approach};
+use ball::{ball_movement, follow_paddle, launch_ball, record_ball_approach, BallSpeed};
 use bevy::asset::AssetMetaCheck;
 use bevy::prelude::*;
 use collision::{on_ball_collision, BallCollisionSignals};
@@ -124,6 +124,7 @@ fn add_game(app: &mut App) {
     .insert_resource(Gravity(Vec2::new(0.0, 0.8 * GAME_SCALE)))
     .init_resource::<ButtonInput<MouseButton>>()
     .init_resource::<Score>()
+    .init_resource::<BallSpeed>()
     .insert_resource(Lives(STARTING_LIVES))
     .init_resource::<BallCollisionSignals>()
     .add_observer(on_ball_collision)

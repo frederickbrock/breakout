@@ -3,8 +3,9 @@
 //!
 //! The ball is a round `Mesh2d(Circle)` whose handles live in [`BallLook`]
 //! (made in [`crate::world::setup_level`]). [`ball_movement`] reapplies the
-//! paddle-hit spin, keeps the speed at a constant [`BALL_SPEED`] with a
-//! minimum vertical component, ends the run on a win and takes a life when
+//! paddle-hit spin, keeps the speed at the run's constant [`BallSpeed`]
+//! (set from the level; default [`BALL_SPEED`]) with a minimum vertical
+//! component, ends the run on a win and takes a life when
 //! the ball falls out.
 //!
 //! At the start of a run and after every lost life the ball is served from
@@ -29,7 +30,7 @@ pub(crate) const BALL_SIZE: f32 = 15.0 * GAME_SCALE;
 /// Tunable: the ball's speed factor over its old design value, separate from
 /// `GAME_SCALE` so the ball can be faster without resizing anything.
 pub(crate) const BALL_SPEED_SCALE: f32 = 1.8;
-/// The ball's speed (world units/s): its 300 design value times
+/// The default [`BallSpeed`] (world units/s): its 300 design value times
 /// [`BALL_SPEED_SCALE`] (the one gameplay speed not scaled by `GAME_SCALE`).
 pub(crate) const BALL_SPEED: f32 = 300.0 * BALL_SPEED_SCALE;
 /// Gap between the anchored ball and the paddle, so the launch doesn't start
@@ -50,6 +51,18 @@ pub(crate) const BALL_MIN_VERTICAL_FRACTION: f32 = 0.3;
 
 #[derive(Component)]
 pub(crate) struct Ball;
+
+/// The ball's constant speed this run (world units/s). `start_run` sets it
+/// from the level's `ball_speed` (design units x [`BALL_SPEED_SCALE`]); the
+/// default is [`BALL_SPEED`].
+#[derive(Resource, Clone, Copy, Debug, PartialEq)]
+pub(crate) struct BallSpeed(pub(crate) f32);
+
+impl Default for BallSpeed {
+    fn default() -> Self {
+        Self(BALL_SPEED)
+    }
+}
 
 /// The ball's velocity at the start of the current physics step, recorded
 /// by [`record_ball_approach`]. Avian triggers `CollisionStart` after its
@@ -94,12 +107,13 @@ pub(crate) fn record_ball_approach(
 pub(crate) fn ball_movement(
     mut commands: Commands,
     mut next_state: ResMut<NextState<AppState>>,
-    mut lives: ResMut<Lives>,
+    (mut lives, speed): (ResMut<Lives>, Res<BallSpeed>),
     mut signals: ResMut<BallCollisionSignals>,
     paddle_query: Query<(&Transform, &Paddle), Without<Ball>>,
     brick_query: Query<(), With<Brick>>,
     mut ball_query: Query<(Entity, &mut Transform, &mut LinearVelocity), FlyingBall>,
 ) {
+    let speed = speed.0;
     let broke_brick = signals.broke_brick;
     let paddle_hit_x = signals.paddle_hit_x;
     *signals = BallCollisionSignals::default();
@@ -115,7 +129,7 @@ pub(crate) fn ball_movement(
         if let Ok((_, paddle)) = paddle_query.single() {
             let paddle_left = paddle_x - paddle.width / 2.0;
             let hit_pos = (ball_transform.translation.x - paddle_left) / paddle.width;
-            ball_velocity.0.x = (hit_pos - 0.5) * BALL_SPEED * 2.0;
+            ball_velocity.0.x = (hit_pos - 0.5) * speed * 2.0;
             ball_velocity.0.y = ball_velocity.0.y.abs();
         }
     }
@@ -124,13 +138,13 @@ pub(crate) fn ball_movement(
     // Avian's momentum transfer produced, and enforce a minimum vertical
     // component so it can't get stuck in a purely horizontal bounce loop.
     if ball_velocity.0 != Vec2::ZERO {
-        let mut v = ball_velocity.0.normalize() * BALL_SPEED;
-        let min_y = BALL_SPEED * BALL_MIN_VERTICAL_FRACTION;
+        let mut v = ball_velocity.0.normalize() * speed;
+        let min_y = speed * BALL_MIN_VERTICAL_FRACTION;
         if v.y.abs() < min_y {
             let y_sign = if v.y < 0.0 { -1.0 } else { 1.0 };
             let x_sign = if v.x < 0.0 { -1.0 } else { 1.0 };
             v.y = min_y * y_sign;
-            let remaining_x = (BALL_SPEED * BALL_SPEED - v.y * v.y).max(0.0).sqrt();
+            let remaining_x = (speed * speed - v.y * v.y).max(0.0).sqrt();
             v.x = remaining_x * x_sign;
         }
         ball_velocity.0 = v;
@@ -193,7 +207,7 @@ pub(crate) fn follow_paddle(
     }
 }
 
-/// Space or a left click serves an anchored ball: upward at [`BALL_SPEED`],
+/// Space or a left click serves an anchored ball: upward at [`BallSpeed`],
 /// 45° toward the side the paddle is moving (right if it's still). Does
 /// nothing once the ball is in flight; gated to `Playing` like all gameplay
 /// input, so it's ignored while paused.
@@ -201,6 +215,7 @@ pub(crate) fn launch_ball(
     mut commands: Commands,
     keyboard: Res<ButtonInput<KeyCode>>,
     mouse: Res<ButtonInput<MouseButton>>,
+    speed: Res<BallSpeed>,
     paddle: Query<&LinearVelocity, (With<Paddle>, Without<Ball>)>,
     mut ball: Query<(Entity, &mut LinearVelocity), AnchoredBall>,
 ) {
@@ -216,7 +231,7 @@ pub(crate) fn launch_ball(
     } else {
         1.0
     };
-    velocity.0 = Vec2::new(side, 1.0).normalize() * BALL_SPEED;
+    velocity.0 = Vec2::new(side, 1.0).normalize() * speed.0;
     commands
         .entity(entity)
         .remove::<(Anchored, RigidBodyDisabled, ColliderDisabled)>();
