@@ -67,3 +67,6 @@ pub(crate) fn build_board<R: Rng + ?Sized>(def: &LevelDef, rng: &mut R) -> Vec<P
     }
     board
 }
+
+#[cfg(test)]
+mod tests;
