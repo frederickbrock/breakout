@@ -50,29 +50,34 @@ pub(crate) struct BrickHealth(pub(crate) u8);
 #[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct BrickMaxHits(pub(crate) u8);
 
-/// A fresh random board of brick classes (see [`bricks::generate_board`]),
+/// A fresh random board of brick classes (see [`bricks::random_classes`]),
 /// each brick at its class's colour and hit count.
 pub(crate) fn spawn_bricks(commands: &mut Commands) {
-    let board = bricks::generate_board(&mut rand::rng());
-    for (row, classes) in board.iter().enumerate() {
-        for (col, &class) in classes.iter().enumerate() {
-            let cell = BrickCell { row, col };
-            commands.spawn((
-                Sprite::from_color(
-                    theme::brick_color(class),
-                    Vec2::new(BRICK_WIDTH, BRICK_HEIGHT),
-                ),
-                Transform::from_translation(brick_translation(cell)),
-                RigidBody::Static,
-                Collider::rectangle(BRICK_WIDTH, BRICK_HEIGHT),
-                Brick,
-                class,
-                cell,
-                BrickHealth(class.max_hits()),
-                BrickMaxHits(class.max_hits()),
-                DespawnOnExit(AppState::InGame),
-            ));
-        }
+    let classes = bricks::random_classes(
+        bricks::BOARD_ROWS * bricks::BOARD_COLS,
+        bricks::REACTOR_BRICKS,
+        &mut rand::rng(),
+    );
+    for (i, &class) in classes.iter().enumerate() {
+        let cell = BrickCell {
+            row: i / bricks::BOARD_COLS,
+            col: i % bricks::BOARD_COLS,
+        };
+        commands.spawn((
+            Sprite::from_color(
+                theme::brick_color(class),
+                Vec2::new(BRICK_WIDTH, BRICK_HEIGHT),
+            ),
+            Transform::from_translation(brick_translation(cell)),
+            RigidBody::Static,
+            Collider::rectangle(BRICK_WIDTH, BRICK_HEIGHT),
+            Brick,
+            class,
+            cell,
+            BrickHealth(class.max_hits()),
+            BrickMaxHits(class.max_hits()),
+            DespawnOnExit(AppState::InGame),
+        ));
     }
 }
 

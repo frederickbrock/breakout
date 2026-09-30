@@ -2,8 +2,12 @@ use super::*;
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 
-fn board(seed: u64) -> Board {
-    generate_board(&mut StdRng::seed_from_u64(seed))
+fn board(seed: u64) -> Vec<BrickClass> {
+    random_classes(
+        BOARD_ROWS * BOARD_COLS,
+        REACTOR_BRICKS,
+        &mut StdRng::seed_from_u64(seed),
+    )
 }
 
 #[test]
@@ -46,7 +50,7 @@ fn the_same_seed_gives_the_same_board() {
 
 #[test]
 fn boards_differ_between_seeds() {
-    let boards: Vec<Board> = (0..20).map(board).collect();
+    let boards: Vec<Vec<BrickClass>> = (0..20).map(board).collect();
     for (i, a) in boards.iter().enumerate() {
         for b in &boards[i + 1..] {
             assert_ne!(a, b);
@@ -57,8 +61,8 @@ fn boards_differ_between_seeds() {
 #[test]
 fn patching_an_all_ceramic_board_adds_each_missing_class_once() {
     for seed in 0..100 {
-        let mut board = [[BrickClass::Ceramic; BOARD_COLS]; BOARD_ROWS];
-        patch_board(&mut board, &mut StdRng::seed_from_u64(seed));
+        let mut board = vec![BrickClass::Ceramic; BOARD_ROWS * BOARD_COLS];
+        patch_classes(&mut board, REACTOR_BRICKS, &mut StdRng::seed_from_u64(seed));
         assert_eq!(count(&board, BrickClass::Reactor), REACTOR_BRICKS);
         for (class, _) in &FILL_WEIGHTS[1..] {
             assert_eq!(count(&board, *class), 1, "seed {seed}: {class:?}");
@@ -72,18 +76,14 @@ fn patching_an_all_ceramic_board_adds_each_missing_class_once() {
 
 #[test]
 fn patching_a_complete_board_only_places_reactors() {
-    let mut original = [[BrickClass::Ceramic; BOARD_COLS]; BOARD_ROWS];
-    for (r, row) in original.iter_mut().enumerate() {
-        for (c, cell) in row.iter_mut().enumerate() {
-            *cell = FILL_WEIGHTS[(r * BOARD_COLS + c) % FILL_WEIGHTS.len()].0;
-        }
-    }
-    let mut board = original;
-    patch_board(&mut board, &mut StdRng::seed_from_u64(3));
+    let original: Vec<BrickClass> = (0..BOARD_ROWS * BOARD_COLS)
+        .map(|i| FILL_WEIGHTS[i % FILL_WEIGHTS.len()].0)
+        .collect();
+    let mut board = original.clone();
+    patch_classes(&mut board, REACTOR_BRICKS, &mut StdRng::seed_from_u64(3));
     let changed: Vec<BrickClass> = board
         .iter()
-        .flatten()
-        .zip(original.iter().flatten())
+        .zip(original.iter())
         .filter(|(a, b)| a != b)
         .map(|(a, _)| *a)
         .collect();
@@ -94,7 +94,7 @@ fn patching_a_complete_board_only_places_reactors() {
 fn the_fill_roughly_follows_the_weights() {
     let (mut ceramic, mut explosive, mut shield, mut total) = (0, 0, 0, 0);
     for seed in 0..1000 {
-        for &class in board(seed).iter().flatten() {
+        for class in board(seed) {
             match class {
                 BrickClass::Reactor => continue,
                 BrickClass::Ceramic => ceramic += 1,
