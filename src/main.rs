@@ -854,15 +854,6 @@ mod tests {
             .unwrap_or_default()
     }
 
-    fn move_ball_below_screen(app: &mut App) {
-        let mut ball = app
-            .world_mut()
-            .query_filtered::<&mut Transform, With<Ball>>()
-            .single_mut(app.world_mut())
-            .expect("a run has exactly one ball");
-        ball.translation.y = -PLAYFIELD_HEIGHT;
-    }
-
     #[test]
     fn leaving_the_menu_for_a_run_starts_playing() {
         let mut app = app();
@@ -977,20 +968,6 @@ mod tests {
         assert_eq!(count::<With<Brick>>(&mut app), BRICK_ROWS * BRICK_COLS);
     }
 
-    fn ball(app: &mut App) -> Entity {
-        app.world_mut()
-            .query_filtered::<Entity, With<Ball>>()
-            .single(app.world())
-            .expect("a run has exactly one ball")
-    }
-
-    fn paddle(app: &mut App) -> Entity {
-        app.world_mut()
-            .query_filtered::<Entity, With<Paddle>>()
-            .single(app.world())
-            .expect("a run has exactly one paddle")
-    }
-
     fn is_anchored(app: &mut App) -> bool {
         let ball = ball(app);
         let entity = app.world().entity(ball);
@@ -1004,19 +981,6 @@ mod tests {
     fn ball_velocity(app: &mut App) -> Vec2 {
         let ball = ball(app);
         app.world().get::<LinearVelocity>(ball).unwrap().0
-    }
-
-    fn translation(app: &App, entity: Entity) -> Vec3 {
-        app.world().get::<Transform>(entity).unwrap().translation
-    }
-
-    fn set_paddle_x(app: &mut App, x: f32) {
-        let paddle = paddle(app);
-        app.world_mut()
-            .get_mut::<Transform>(paddle)
-            .unwrap()
-            .translation
-            .x = x;
     }
 
     fn set_paddle_vx(app: &mut App, vx: f32) {
@@ -1158,10 +1122,6 @@ mod tests {
             entity.get::<LinearVelocity>().unwrap().0,
             entity.get::<ConstantForce>().unwrap().0,
         )
-    }
-
-    fn aim_mouse_at(app: &mut App, x: f32) {
-        app.world_mut().resource_mut::<PaddleTarget>().x = Some(x);
     }
 
     fn hold(app: &mut App, key: KeyCode) {

@@ -130,3 +130,43 @@ pub(crate) fn brick_of(app: &mut App, class: BrickClass) -> Entity {
         .map(|(e, _)| e)
         .unwrap_or_else(|| panic!("the board has no {class:?} brick"))
 }
+
+pub(crate) fn move_ball_below_screen(app: &mut App) {
+    let mut ball = app
+        .world_mut()
+        .query_filtered::<&mut Transform, With<Ball>>()
+        .single_mut(app.world_mut())
+        .expect("a run has exactly one ball");
+    ball.translation.y = -PLAYFIELD_HEIGHT;
+}
+
+pub(crate) fn ball(app: &mut App) -> Entity {
+    app.world_mut()
+        .query_filtered::<Entity, With<Ball>>()
+        .single(app.world())
+        .expect("a run has exactly one ball")
+}
+
+pub(crate) fn paddle(app: &mut App) -> Entity {
+    app.world_mut()
+        .query_filtered::<Entity, With<Paddle>>()
+        .single(app.world())
+        .expect("a run has exactly one paddle")
+}
+
+pub(crate) fn translation(app: &App, entity: Entity) -> Vec3 {
+    app.world().get::<Transform>(entity).unwrap().translation
+}
+
+pub(crate) fn set_paddle_x(app: &mut App, x: f32) {
+    let paddle = paddle(app);
+    app.world_mut()
+        .get_mut::<Transform>(paddle)
+        .unwrap()
+        .translation
+        .x = x;
+}
+
+pub(crate) fn aim_mouse_at(app: &mut App, x: f32) {
+    app.world_mut().resource_mut::<PaddleTarget>().x = Some(x);
+}
