@@ -4,9 +4,9 @@
 //! [`BRICK_WIDTH`] is derived, not set: a full row fills the playfield well
 //! less a [`SIDE_CHANNEL`] each side, and [`SIDE_CHANNEL_BALLS`] (ball widths)
 //! is the one knob. The pure [`brick_x`] and [`brick_y`] centre the grid, so
-//! fewer columns just widen the equal channels. Each brick spawns at its
-//! class's `max_hits()` with its [`crate::bricks::BrickCell`], scoped to the
-//! run.
+//! fewer columns just widen the equal channels. Each brick spawns at its own
+//! [`BrickMaxHits`] (its class's `max_hits()`) with its
+//! [`crate::bricks::BrickCell`], scoped to the run.
 
 use avian2d::prelude::*;
 use bevy::prelude::*;
@@ -39,10 +39,16 @@ pub(crate) const BRICK_COLS: usize = bricks::BOARD_COLS;
 #[derive(Component)]
 pub(crate) struct Brick;
 
-/// Hits a brick still takes before it breaks; it spawns at its class's
-/// `max_hits()`.
+/// Hits a brick still takes before it breaks; it spawns at its
+/// [`BrickMaxHits`].
 #[derive(Component)]
 pub(crate) struct BrickHealth(pub(crate) u8);
+
+/// The hits a full-health brick of this kind takes: its class's
+/// `max_hits()`, or a level's `hits=` override. Healing (regen) and damage
+/// visuals compare against this, never the class default.
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct BrickMaxHits(pub(crate) u8);
 
 /// A fresh random board of brick classes (see [`bricks::generate_board`]),
 /// each brick at its class's colour and hit count.
@@ -63,6 +69,7 @@ pub(crate) fn spawn_bricks(commands: &mut Commands) {
                 class,
                 cell,
                 BrickHealth(class.max_hits()),
+                BrickMaxHits(class.max_hits()),
                 DespawnOnExit(AppState::InGame),
             ));
         }

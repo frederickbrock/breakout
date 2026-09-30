@@ -39,7 +39,7 @@
 //! clock. Headless tests insert placeholder `ParticleEffects` /
 //! `ParticleMaterials` and count spawner entities.
 
-use crate::bricks::grid::{Brick, BrickHealth};
+use crate::bricks::grid::{Brick, BrickHealth, BrickMaxHits};
 use crate::bricks::BrickClass;
 use crate::collision::{BrickDamaged, BrickDestroyed};
 use crate::game_state::{AppState, PlayState};
@@ -257,11 +257,20 @@ fn sync_damage_emitters(
     mut commands: Commands,
     effects: Res<ParticleEffects>,
     materials: Res<ParticleMaterials>,
-    bricks: Query<(Entity, &BrickClass, &BrickHealth, Option<&Children>), HealthChanged>,
+    bricks: Query<
+        (
+            Entity,
+            &BrickClass,
+            &BrickHealth,
+            &BrickMaxHits,
+            Option<&Children>,
+        ),
+        HealthChanged,
+    >,
     mut emitters: Query<&mut DamageEmitter>,
 ) {
-    for (brick, &class, health, children) in &bricks {
-        let max = class.max_hits();
+    for (brick, &class, health, max_hits, children) in &bricks {
+        let max = max_hits.0;
         let existing: Vec<Entity> = children
             .into_iter()
             .flatten()
