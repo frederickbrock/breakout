@@ -18,6 +18,13 @@ const HEAL_SECS: f32 = 3.0;
 #[derive(Component)]
 pub struct RegenTimer(Timer);
 
+impl RegenTimer {
+    /// How far the countdown has run: 0 just after the hit, 1 at healing.
+    pub fn fraction_elapsed(&self) -> f32 {
+        self.0.fraction()
+    }
+}
+
 impl Default for RegenTimer {
     fn default() -> Self {
         Self(Timer::from_seconds(HEAL_SECS, TimerMode::Once))

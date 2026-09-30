@@ -116,7 +116,13 @@ not hand-rolled kinematics/AABB checks.
   (`BrickDestroyed { by_blast: true }`, score, `broke_brick`, `BrickDamaged` for survivors)
   and then triggers `BrickExploded { cell, position, kind }` once per explosion (origin first,
   then each chained one) for visuals to observe; the placeholder `BlastFlash` is one such
-  observer (the particles epic replaces it). `BricksPlugin` also runs the
+  observer (the particles epic replaces it). `outline.rs` holds the behaviour outlines:
+  each special brick gets a `BrickOutline` child of thin `OutlineStrip` sprites laid out by
+  the pure `strips(style, size)` — red charge/breach/demolition, green regen, cyan shield,
+  violet reactor; plain classes get none. `animate_outlines` pulses them only while
+  `Playing`, and a regen brick with a running `RegenTimer` blinks faster as healing nears.
+  Colours and rates live in `theme.rs`; the final art replaces only the strip children.
+  `BricksPlugin` also runs the
   shield-glass flash timer
   (`ShieldFlash`, frozen while paused). Colours come from `theme::brick_color(class)` and
   `theme::brick_color(class)` whatever its health (damage is shown by particles).

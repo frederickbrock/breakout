@@ -7,6 +7,7 @@
 //! seeded rng.
 
 mod explosive;
+mod outline;
 mod regen;
 
 use crate::game_state::PlayState;
@@ -158,11 +159,15 @@ pub struct BricksPlugin;
 
 impl Plugin for BricksPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((regen::RegenPlugin, explosive::ExplosivePlugin))
-            .add_systems(
-                Update,
-                end_shield_flashes.run_if(in_state(PlayState::Playing)),
-            );
+        app.add_plugins((
+            regen::RegenPlugin,
+            explosive::ExplosivePlugin,
+            outline::OutlinePlugin,
+        ))
+        .add_systems(
+            Update,
+            end_shield_flashes.run_if(in_state(PlayState::Playing)),
+        );
     }
 }
 
