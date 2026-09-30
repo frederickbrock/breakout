@@ -1,0 +1,27 @@
+// Shatter burst when a brick breaks: shards in its face colour (the spawner's
+// material tints this white), flung out and falling with gravity.
+(
+    spawn_rate: 0.05,
+    spawn_amount: 30,
+    emission_shape: Circle(30.0),
+    lifetime: (0.6, 0.3),
+    linear_speed: Some((270.0, 0.6)),
+    linear_acceleration: None,
+    direction: Some(((0.0, 1.0), 1.0)),
+    angular_speed: Some((6.0, 1.0)),
+    angular_acceleration: None,
+    scale: Some((6.0, 0.5)),
+    color: Some((red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0)),
+    gravity_direction: Some(((0.0, -1.0), 0.0)),
+    gravity_speed: Some((900.0, 0.2)),
+    linear_damp: Some((0.5, 0.2)),
+    angular_damp: None,
+    scale_curve: None,
+    color_curve: Some((points: [
+        ((red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0), 0.0, None),
+        ((red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0), 0.7, None),
+        ((red: 1.0, green: 1.0, blue: 1.0, alpha: 0.0), 1.0, None),
+    ])),
+    attractors: None,
+    relative_positioning: None,
+)

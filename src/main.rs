@@ -2,11 +2,13 @@ mod bricks;
 mod controls;
 mod game_state;
 mod menu;
+mod particles;
 mod powerups;
 mod script_manager;
 mod spawner;
 mod sprites;
 mod theme;
+mod view;
 
 use avian2d::prelude::*;
 use bevy::asset::AssetMetaCheck;
@@ -17,27 +19,41 @@ use controls::{ControlSettings, PaddleControl, PaddleTarget};
 use game_state::{AppState, GameOutcome, GameStatePlugin, PlayState};
 
 // Game constants
-const WINDOW_WIDTH: f32 = 900.0;
-const WINDOW_HEIGHT: f32 = 650.0;
-const WALL_THICKNESS: f32 = 40.0;
-const PADDLE_WIDTH: f32 = 120.0;
-const PADDLE_HEIGHT: f32 = 20.0;
+/// Every gameplay size and speed is its old 900x650-window design value times
+/// this, so the game looks and plays the same in the bigger world.
+const GAME_SCALE: f32 = 1.5;
+/// The logical world the camera always shows in full (letterboxed to fit the
+/// window, see `view`).
+const WORLD_WIDTH: f32 = 1920.0;
+const WORLD_HEIGHT: f32 = 1080.0;
+/// The centred playfield well: the walls sit on its left, right and top
+/// edges, and the ball is lost below its bottom edge.
+const PLAYFIELD_WIDTH: f32 = 1440.0;
+const PLAYFIELD_HEIGHT: f32 = WORLD_HEIGHT;
+/// The panel either side of the well (240), home of the HUD.
+#[cfg(test)]
+const SIDE_PANEL_WIDTH: f32 = (WORLD_WIDTH - PLAYFIELD_WIDTH) / 2.0;
+/// The native window's opening size; it is resizable and the world scales.
+const WINDOW_START_WIDTH: u32 = 1280;
+const WINDOW_START_HEIGHT: u32 = 720;
+const WALL_THICKNESS: f32 = 40.0 * GAME_SCALE;
+const PADDLE_WIDTH: f32 = 120.0 * GAME_SCALE;
+const PADDLE_HEIGHT: f32 = 20.0 * GAME_SCALE;
 const PADDLE_MASS: f32 = 3.0;
-const PADDLE_FORCE: f32 = 7000.0;
+const PADDLE_FORCE: f32 = 7000.0 * GAME_SCALE;
 const PADDLE_LINEAR_DAMPING: f32 = 4.0;
-const PADDLE_MARGIN_BOTTOM: f32 = 10.0;
-/// Width of each paddle end prong (purely visual).
+const PADDLE_MARGIN_BOTTOM: f32 = 10.0 * GAME_SCALE;
 /// Width of each paddle end prong (the sprite is 54 px at 2x).
-const PRONG_WIDTH: f32 = 27.0;
-const BALL_SIZE: f32 = 15.0;
-const BALL_SPEED: f32 = 300.0;
+const PRONG_WIDTH: f32 = 27.0 * GAME_SCALE;
+const BALL_SIZE: f32 = 15.0 * GAME_SCALE;
+const BALL_SPEED: f32 = 300.0 * GAME_SCALE;
 /// Gap between the anchored ball and the paddle, so the launch doesn't start
 /// in contact with the paddle (which would trigger the paddle-hit spin rule
 /// and override the 45° serve).
-const BALL_ANCHOR_GAP: f32 = 2.0;
+const BALL_ANCHOR_GAP: f32 = 2.0 * GAME_SCALE;
 /// Below this horizontal paddle speed the paddle counts as still, and the
 /// serve goes right.
-const PADDLE_STILL_SPEED: f32 = 1.0;
+const PADDLE_STILL_SPEED: f32 = 1.0 * GAME_SCALE;
 // Guards against a real failure mode observed in testing: a wall bounce only
 // inverts the velocity component perpendicular to the wall, so a ball that
 // ends up moving near-perfectly horizontally between the side walls (below
@@ -46,8 +62,19 @@ const PADDLE_STILL_SPEED: f32 = 1.0;
 // velocity again. Keeping a minimum vertical fraction guarantees the ball
 // always keeps drifting toward the bricks or the paddle.
 const BALL_MIN_VERTICAL_FRACTION: f32 = 0.3;
-const BRICK_WIDTH: f32 = 80.0;
-const BRICK_HEIGHT: f32 = 30.0;
+/// Minimum clear gap between the outermost brick and each wall, in ball
+/// widths. Raising it narrows the (derived) bricks; nothing else changes.
+const SIDE_CHANNEL_BALLS: f32 = 3.0;
+const SIDE_CHANNEL: f32 = SIDE_CHANNEL_BALLS * BALL_SIZE;
+/// Gap between neighbouring bricks, both ways.
+const BRICK_GAP: f32 = 5.0 * GAME_SCALE;
+/// Distance from the top wall to the top of the first brick row.
+const BRICK_TOP_MARGIN: f32 = 50.0 * GAME_SCALE;
+const BRICK_HEIGHT: f32 = 30.0 * GAME_SCALE;
+/// Derived so a full row fills the well less a [`SIDE_CHANNEL`] each side.
+const BRICK_WIDTH: f32 =
+    (PLAYFIELD_WIDTH - 2.0 * SIDE_CHANNEL - (bricks::BOARD_COLS as f32 - 1.0) * BRICK_GAP)
+        / bricks::BOARD_COLS as f32;
 // Board size, for tests across modules (the game itself uses `bricks::BOARD_*`).
 #[cfg(test)]
 const BRICK_ROWS: usize = bricks::BOARD_ROWS;
@@ -55,6 +82,13 @@ const BRICK_ROWS: usize = bricks::BOARD_ROWS;
 const BRICK_COLS: usize = bricks::BOARD_COLS;
 /// Lives at the start of every run, including the first.
 const STARTING_LIVES: i32 = 3;
+const HUD_FONT_SIZE: f32 = 24.0 * GAME_SCALE;
+/// Inset of the HUD from the world's left and top edges.
+const HUD_MARGIN: f32 = 30.0;
+/// Vertical distance between the tops of the SCORE and LIVES blocks.
+const HUD_BLOCK_SPACING: f32 = 120.0;
+/// Left edge of the HUD text, in the left side panel.
+const HUD_X: f32 = -WORLD_WIDTH / 2.0 + HUD_MARGIN;
 
 #[derive(Component)]
 struct Paddle {
@@ -152,6 +186,7 @@ struct RestartGame;
 struct BrickDestroyed {
     brick: Entity,
     position: Vec2,
+    class: BrickClass,
     /// Destroyed by an explosive's blast rather than the ball. The blast's
     /// whole chain is resolved at once, so this doesn't set off another one.
     by_blast: bool,
@@ -164,6 +199,10 @@ struct BrickDestroyed {
 #[derive(Event)]
 struct BrickDamaged {
     brick: Entity,
+    /// Where the hit landed: the ball's position for a ball hit, the brick's
+    /// centre for blast damage.
+    position: Vec2,
+    class: BrickClass,
 }
 
 /// Lets other systems (e.g. a power-up that changes paddle width) declare
@@ -190,7 +229,11 @@ fn main() {
             .set(WindowPlugin {
                 primary_window: Some(Window {
                     title: window_title(),
-                    resolution: (WINDOW_WIDTH as u32, WINDOW_HEIGHT as u32).into(),
+                    resolution: (WINDOW_START_WIDTH, WINDOW_START_HEIGHT).into(),
+                    resizable: true,
+                    // Web only: the canvas follows its parent (the page body,
+                    // sized to the viewport by index.html).
+                    fit_canvas_to_parent: true,
                     ..default()
                 }),
                 ..default()
@@ -205,6 +248,7 @@ fn main() {
     .add_plugins(PhysicsPlugins::default())
     .add_plugins(script_manager::ScriptPlugin)
     .add_plugins(sprites::SpritesPlugin)
+    .add_plugins(particles::ParticlesPlugin)
     .insert_resource(ClearColor(theme::VOID));
     add_game(&mut app);
     app.run();
@@ -240,8 +284,10 @@ fn add_game(app: &mut App) {
         controls::ControlsPlugin,
         sprites::SkinPlugin,
         bricks::BricksPlugin,
+        particles::VfxPlugin,
+        view::ViewPlugin,
     ))
-    .insert_resource(Gravity(Vec2::new(0.0, 0.8)))
+    .insert_resource(Gravity(Vec2::new(0.0, 0.8 * GAME_SCALE)))
     .init_resource::<ButtonInput<MouseButton>>()
     .init_resource::<Score>()
     .insert_resource(Lives(STARTING_LIVES))
@@ -293,7 +339,7 @@ fn start_run(
 fn spawn_run_entities(commands: &mut Commands, ball_look: &BallLook) {
     let paddle_start = Vec3::new(
         0.0,
-        -WINDOW_HEIGHT / 2.0 + PADDLE_HEIGHT / 2.0 + PADDLE_MARGIN_BOTTOM,
+        -PLAYFIELD_HEIGHT / 2.0 + PADDLE_HEIGHT / 2.0 + PADDLE_MARGIN_BOTTOM,
         0.0,
     );
     commands.spawn((
@@ -335,16 +381,16 @@ fn spawn_run_entities(commands: &mut Commands, ball_look: &BallLook) {
 
     spawn_hud_line(
         commands,
-        "SCORE ",
+        "SCORE\n",
         "0",
-        WINDOW_HEIGHT / 2.0 - 10.0,
+        PLAYFIELD_HEIGHT / 2.0 - HUD_MARGIN,
         ScoreText,
     );
     spawn_hud_line(
         commands,
-        "LIVES ",
+        "LIVES\n",
         &STARTING_LIVES.to_string(),
-        WINDOW_HEIGHT / 2.0 - 40.0,
+        PLAYFIELD_HEIGHT / 2.0 - HUD_MARGIN - HUD_BLOCK_SPACING,
         LivesText,
     );
 }
@@ -354,7 +400,6 @@ fn setup_level(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    commands.spawn(Camera2d);
     commands.insert_resource(BallLook {
         mesh: meshes.add(Circle::new(BALL_SIZE / 2.0)),
         material: materials.add(theme::STEEL),
@@ -363,40 +408,35 @@ fn setup_level(
     // Static walls the ball (and paddle) physically bounce off, instead of
     // manual clamp/reflect code. No bottom wall — a ball reaching the bottom
     // is a life lost, checked separately from physics.
-    let wall_specs = [
-        // left
-        (
-            -WINDOW_WIDTH / 2.0 - WALL_THICKNESS / 2.0,
-            0.0,
-            WALL_THICKNESS,
-            WINDOW_HEIGHT + WALL_THICKNESS * 2.0,
-        ),
-        // right
-        (
-            WINDOW_WIDTH / 2.0 + WALL_THICKNESS / 2.0,
-            0.0,
-            WALL_THICKNESS,
-            WINDOW_HEIGHT + WALL_THICKNESS * 2.0,
-        ),
-        // top
-        (
-            0.0,
-            WINDOW_HEIGHT / 2.0 + WALL_THICKNESS / 2.0,
-            WINDOW_WIDTH + WALL_THICKNESS * 2.0,
-            WALL_THICKNESS,
-        ),
-    ];
-    for (x, y, w, h) in wall_specs {
+    for (centre, size) in wall_specs() {
         commands.spawn((
             RigidBody::Static,
-            Collider::rectangle(w, h),
-            Transform::from_xyz(x, y, 0.0),
+            Collider::rectangle(size.x, size.y),
+            Transform::from_translation(centre.extend(0.0)),
         ));
     }
 }
 
-/// A HUD line: an uppercase label in the label colour followed by a value
-/// span in ink. `marker` goes on the value span, which [`update_hud`] writes.
+/// The left, right and top walls as (centre, size), with their inner faces
+/// exactly on the playfield well's edges.
+fn wall_specs() -> [(Vec2, Vec2); 3] {
+    let half_w = PLAYFIELD_WIDTH / 2.0;
+    let half_h = PLAYFIELD_HEIGHT / 2.0;
+    let t = WALL_THICKNESS;
+    let side = Vec2::new(t, PLAYFIELD_HEIGHT + 2.0 * t);
+    [
+        (Vec2::new(-half_w - t / 2.0, 0.0), side),
+        (Vec2::new(half_w + t / 2.0, 0.0), side),
+        (
+            Vec2::new(0.0, half_h + t / 2.0),
+            Vec2::new(PLAYFIELD_WIDTH + 2.0 * t, t),
+        ),
+    ]
+}
+
+/// A HUD block in the left side panel: an uppercase label line in the label
+/// colour with the value span in ink on the line below. Top-left anchored at
+/// [`HUD_X`], `y`. `marker` goes on the value span, which [`update_hud`] writes.
 fn spawn_hud_line(
     commands: &mut Commands,
     label: &str,
@@ -405,7 +445,7 @@ fn spawn_hud_line(
     marker: impl Component,
 ) {
     let font = TextFont {
-        font_size: FontSize::Px(24.0),
+        font_size: FontSize::Px(HUD_FONT_SIZE),
         ..default()
     };
     commands.spawn((
@@ -414,7 +454,7 @@ fn spawn_hud_line(
         font.clone(),
         TextColor(theme::LABEL),
         Anchor::TOP_LEFT,
-        Transform::from_xyz(-WINDOW_WIDTH / 2.0 + 20.0, y, 1.0),
+        Transform::from_xyz(HUD_X, y, 1.0),
         children![(TextSpan::new(value), font, TextColor(theme::INK), marker)],
     ));
 }
@@ -483,13 +523,29 @@ fn spawn_bricks(commands: &mut Commands) {
     }
 }
 
-/// Where the brick in `cell` sits: columns from the left wall, rows down
-/// from a 50 px top margin, 5 px gaps.
+/// Where the brick in `cell` sits (see [`brick_x`] and [`brick_y`]).
 fn brick_translation(cell: BrickCell) -> Vec3 {
-    let x = cell.col as f32 * (BRICK_WIDTH + 5.0) + 40.0 + BRICK_WIDTH / 2.0 - WINDOW_WIDTH / 2.0;
-    let y =
-        WINDOW_HEIGHT / 2.0 - (cell.row as f32 * (BRICK_HEIGHT + 5.0) + 50.0 + BRICK_HEIGHT / 2.0);
-    Vec3::new(x, y, 0.0)
+    Vec3::new(
+        brick_x(cell.col, bricks::BOARD_COLS),
+        brick_y(cell.row),
+        0.0,
+    )
+}
+
+/// Centre x of column `col` in a row of `cols` bricks, centred in the well so
+/// the left and right channels are equal (fewer columns, wider channels).
+fn brick_x(col: usize, cols: usize) -> f32 {
+    let grid_width = cols as f32 * BRICK_WIDTH + (cols as f32 - 1.0) * BRICK_GAP;
+    -grid_width / 2.0 + BRICK_WIDTH / 2.0 + col as f32 * (BRICK_WIDTH + BRICK_GAP)
+}
+
+/// Centre y of row `row` (0 at the top), [`BRICK_TOP_MARGIN`] below the top
+/// wall.
+fn brick_y(row: usize) -> f32 {
+    PLAYFIELD_HEIGHT / 2.0
+        - BRICK_TOP_MARGIN
+        - BRICK_HEIGHT / 2.0
+        - row as f32 * (BRICK_HEIGHT + BRICK_GAP)
 }
 
 /// Copies the ball's velocity into [`BallApproach`] at the start of every
@@ -558,7 +614,7 @@ fn on_ball_collision(
     mut signals: ResMut<BallCollisionSignals>,
     mut brick_query: Query<(&Transform, &BrickClass, &mut BrickHealth, &mut Sprite), With<Brick>>,
     paddle_query: Query<&Transform, With<Paddle>>,
-    ball_query: Query<&BallApproach, With<Ball>>,
+    ball_query: Query<(&BallApproach, &Transform), With<Ball>>,
 ) {
     let other = on.collider2;
     if let Ok((transform, &class, mut health, mut sprite)) = brick_query.get_mut(other) {
@@ -571,7 +627,7 @@ fn on_ball_collision(
         if class == BrickClass::Shield {
             let from_above = ball_query
                 .get(on.collider1)
-                .is_ok_and(|approach| approach.0.y < 0.0);
+                .is_ok_and(|(approach, _)| approach.0.y < 0.0);
             if !from_above {
                 sprite.color = theme::SHIELD_FLASH;
                 commands
@@ -587,13 +643,20 @@ fn on_ball_collision(
             commands.trigger(BrickDestroyed {
                 brick: other,
                 position: transform.translation.truncate(),
+                class,
                 by_blast: false,
             });
             commands.entity(other).despawn();
             signals.broke_brick = true;
         } else {
-            sprite.color = theme::brick_face(class, health.0);
-            commands.trigger(BrickDamaged { brick: other });
+            let contact = ball_query
+                .get(on.collider1)
+                .map_or(transform.translation, |(_, ball)| ball.translation);
+            commands.trigger(BrickDamaged {
+                brick: other,
+                position: contact.truncate(),
+                class,
+            });
         }
     } else if let Ok(paddle_transform) = paddle_query.get(other) {
         signals.paddle_hit_x = Some(paddle_transform.translation.x);
@@ -662,7 +725,7 @@ fn ball_movement(
     // `on_ball_collision`'s despawn is already applied by now (Avian
     // triggers collisions from an exclusive system in FixedPostUpdate, whose
     // commands flush before Update), so the run is won only once no brick is
-    // left at all, cracked multi-hit bricks included.
+    // left at all, damaged multi-hit bricks included.
     if broke_brick && brick_query.is_empty() {
         end_run(&mut commands, &mut next_state, GameOutcome::Won);
         return;
@@ -670,7 +733,7 @@ fn ball_movement(
 
     // Ball fell off the bottom (no physical wall there, so this stays a
     // plain position check rather than a collision).
-    if ball_transform.translation.y < -WINDOW_HEIGHT / 2.0 {
+    if ball_transform.translation.y < -PLAYFIELD_HEIGHT / 2.0 {
         lives.0 -= 1;
         if lives.0 <= 0 {
             end_run(&mut commands, &mut next_state, GameOutcome::Lost);
@@ -930,7 +993,7 @@ mod tests {
             .query_filtered::<&mut Transform, With<Ball>>()
             .single_mut(app.world_mut())
             .expect("a run has exactly one ball");
-        ball.translation.y = -WINDOW_HEIGHT;
+        ball.translation.y = -PLAYFIELD_HEIGHT;
     }
 
     #[test]
@@ -1259,7 +1322,7 @@ mod tests {
     #[test]
     fn the_mouse_target_is_clamped_to_the_walls() {
         let mut app = app();
-        let edge = (WINDOW_WIDTH - PADDLE_WIDTH) / 2.0;
+        let edge = (PLAYFIELD_WIDTH - PADDLE_WIDTH) / 2.0;
         set_paddle_x(&mut app, edge);
         aim_mouse_at(&mut app, 10_000.0);
         app.update();
@@ -1325,8 +1388,8 @@ mod tests {
                 );
                 assert_eq!(
                     app.world().get::<Sprite>(brick).unwrap().color,
-                    theme::cracked(theme::brick_color(class)),
-                    "{class:?} shows its cracked look"
+                    theme::brick_color(class),
+                    "{class:?} keeps its colour (damage shows as particles)"
                 );
                 assert_eq!(score(&app), 10 * i as i32);
                 assert!(!app.world().resource::<BallCollisionSignals>().broke_brick);
@@ -1366,7 +1429,7 @@ mod tests {
         hit(&mut app, b);
         app.update();
         app.update();
-        assert_eq!(app_state(&app), AppState::InGame, "a cracked brick is left");
+        assert_eq!(app_state(&app), AppState::InGame, "a damaged brick is left");
 
         hit(&mut app, b);
         app.update();
@@ -1395,6 +1458,106 @@ mod tests {
             assert!(cells.insert(*cell), "duplicate cell {cell:?}");
         }
         assert_eq!(cells.len(), 70);
+    }
+
+    #[test]
+    fn spawned_bricks_are_brick_sized_with_equal_side_channels() {
+        let mut app = app();
+        let world = app.world_mut();
+        let (mut left, mut right) = (f32::INFINITY, f32::NEG_INFINITY);
+        for (sprite, transform) in world
+            .query_filtered::<(&Sprite, &Transform), With<Brick>>()
+            .iter(world)
+        {
+            assert_eq!(
+                sprite.custom_size,
+                Some(Vec2::new(BRICK_WIDTH, BRICK_HEIGHT))
+            );
+            left = left.min(transform.translation.x - BRICK_WIDTH / 2.0);
+            right = right.max(transform.translation.x + BRICK_WIDTH / 2.0);
+        }
+        let left_channel = left + PLAYFIELD_WIDTH / 2.0;
+        let right_channel = PLAYFIELD_WIDTH / 2.0 - right;
+        assert!((left_channel - right_channel).abs() <= 0.5);
+        assert!(left_channel >= SIDE_CHANNEL - 1e-3);
+        assert!(right_channel >= SIDE_CHANNEL - 1e-3);
+    }
+
+    #[test]
+    fn walls_sit_on_the_playfield_edges() {
+        assert_eq!(SIDE_PANEL_WIDTH, 240.0);
+        assert_eq!(PLAYFIELD_WIDTH + 2.0 * SIDE_PANEL_WIDTH, WORLD_WIDTH);
+        assert_eq!(PLAYFIELD_HEIGHT, WORLD_HEIGHT);
+        let [left, right, top] = wall_specs();
+        assert_eq!(left.0.x + left.1.x / 2.0, -PLAYFIELD_WIDTH / 2.0);
+        assert_eq!(right.0.x - right.1.x / 2.0, PLAYFIELD_WIDTH / 2.0);
+        assert_eq!(top.0.y - top.1.y / 2.0, PLAYFIELD_HEIGHT / 2.0);
+        // The well is centred and the walls close its corners.
+        assert_eq!(left.0.x, -right.0.x);
+        assert_eq!(top.0.x, 0.0);
+        assert_eq!(
+            left.1,
+            Vec2::new(WALL_THICKNESS, PLAYFIELD_HEIGHT + 2.0 * WALL_THICKNESS)
+        );
+        assert_eq!(
+            top.1,
+            Vec2::new(PLAYFIELD_WIDTH + 2.0 * WALL_THICKNESS, WALL_THICKNESS)
+        );
+    }
+
+    #[test]
+    fn the_brick_grid_is_centred_with_equal_side_channels() {
+        const { assert!(BRICK_WIDTH > 0.0) };
+        const { assert!(BRICK_TOP_MARGIN >= 2.0 * BALL_SIZE) };
+        for cols in [bricks::BOARD_COLS, bricks::BOARD_COLS - 3, 1] {
+            let left = brick_x(0, cols) - BRICK_WIDTH / 2.0 + PLAYFIELD_WIDTH / 2.0;
+            let right = PLAYFIELD_WIDTH / 2.0 - (brick_x(cols - 1, cols) + BRICK_WIDTH / 2.0);
+            assert!(
+                (left - right).abs() <= 0.5,
+                "{cols} cols: {left} vs {right}"
+            );
+            assert!(left >= SIDE_CHANNEL - 1e-3, "{cols} cols: {left}");
+            assert!(right >= SIDE_CHANNEL - 1e-3, "{cols} cols: {right}");
+            if cols > 1 {
+                let pitch = brick_x(1, cols) - brick_x(0, cols);
+                assert!((pitch - (BRICK_WIDTH + BRICK_GAP)).abs() < 1e-3);
+            }
+        }
+        // A full board uses exactly the minimum channel.
+        let full_left = brick_x(0, bricks::BOARD_COLS) - BRICK_WIDTH / 2.0 + PLAYFIELD_WIDTH / 2.0;
+        assert!((full_left - SIDE_CHANNEL).abs() < 1e-2);
+        // Rows step down from the top margin.
+        assert_eq!(
+            brick_y(0) + BRICK_HEIGHT / 2.0,
+            PLAYFIELD_HEIGHT / 2.0 - BRICK_TOP_MARGIN
+        );
+        assert!((brick_y(0) - brick_y(1) - (BRICK_HEIGHT + BRICK_GAP)).abs() < 1e-3);
+    }
+
+    #[test]
+    fn gameplay_sizes_are_the_old_design_times_game_scale() {
+        assert_eq!(GAME_SCALE, 1.5);
+        for (scaled, design) in [
+            (WALL_THICKNESS, 40.0),
+            (PADDLE_WIDTH, 120.0),
+            (PADDLE_HEIGHT, 20.0),
+            (PADDLE_FORCE, 7000.0),
+            (PADDLE_MARGIN_BOTTOM, 10.0),
+            (PRONG_WIDTH, 27.0),
+            (BALL_SIZE, 15.0),
+            (BALL_SPEED, 300.0),
+            (BALL_ANCHOR_GAP, 2.0),
+            (PADDLE_STILL_SPEED, 1.0),
+            (BRICK_GAP, 5.0),
+            (BRICK_TOP_MARGIN, 50.0),
+            (BRICK_HEIGHT, 30.0),
+        ] {
+            assert_eq!(scaled, design * GAME_SCALE);
+        }
+        // Unit-free tuning stays put.
+        assert_eq!(PADDLE_MASS, 3.0);
+        assert_eq!(PADDLE_LINEAR_DAMPING, 4.0);
+        assert_eq!(BALL_MIN_VERTICAL_FRACTION, 0.3);
     }
 
     fn layout(app: &mut App) -> Vec<(usize, usize, BrickClass)> {
@@ -1442,7 +1605,7 @@ mod tests {
             .translation
             .y
             + PADDLE_HEIGHT / 2.0;
-        assert!(lowest - BRICK_HEIGHT / 2.0 - paddle_top >= 250.0);
+        assert!(lowest - BRICK_HEIGHT / 2.0 - paddle_top >= 250.0 * GAME_SCALE);
     }
 
     #[test]
@@ -1609,8 +1772,8 @@ mod tests {
         assert_eq!(
             labels,
             [
-                ("LIVES ".to_string(), theme::LABEL),
-                ("SCORE ".to_string(), theme::LABEL)
+                ("LIVES\n".to_string(), theme::LABEL),
+                ("SCORE\n".to_string(), theme::LABEL)
             ]
         );
         let values: Vec<Color> = world
@@ -1619,6 +1782,35 @@ mod tests {
             .map(|c| c.0)
             .collect();
         assert_eq!(values, [theme::INK, theme::INK]);
+    }
+
+    #[test]
+    fn the_hud_sits_in_the_left_side_panel() {
+        let mut app = app();
+        let world = app.world_mut();
+        let mut blocks: Vec<(f32, f32, Anchor, f32)> = world
+            .query_filtered::<(&Transform, &TextFont, &Anchor), With<Text2d>>()
+            .iter(world)
+            .map(|(t, f, a)| {
+                let FontSize::Px(size) = f.font_size else {
+                    panic!("HUD font size in px");
+                };
+                (t.translation.x, t.translation.y, *a, size)
+            })
+            .collect();
+        assert_eq!(blocks.len(), 2);
+        // Widest line is 6 glyphs ("SCORE", a value); monospace ~0.6 em each.
+        let widest = 6.0 * 0.6 * HUD_FONT_SIZE;
+        for &(x, _, anchor, size) in &blocks {
+            assert_eq!(anchor, Anchor::TOP_LEFT);
+            assert_eq!(size, HUD_FONT_SIZE);
+            assert!(x >= -WORLD_WIDTH / 2.0);
+            assert!(x + widest <= -PLAYFIELD_WIDTH / 2.0);
+        }
+        // Each two-line block (~1.2 em line height) ends before the next.
+        blocks.sort_by(|a, b| b.1.total_cmp(&a.1));
+        assert!(blocks[0].1 <= WORLD_HEIGHT / 2.0);
+        assert!(blocks[0].1 - blocks[1].1 >= 2.0 * 1.2 * HUD_FONT_SIZE);
     }
 
     #[test]
@@ -1668,7 +1860,10 @@ mod tests {
 
     #[test]
     fn paddle_pieces_fit_seamlessly_at_normal_and_super_sized_widths() {
-        for (width, offset, field) in [(120.0, 46.5, 66.0), (150.0, 61.5, 96.0)] {
+        for (width, offset, field) in [
+            (PADDLE_WIDTH, 46.5 * GAME_SCALE, 66.0 * GAME_SCALE),
+            (PADDLE_WIDTH * 1.25, 61.5 * GAME_SCALE, 96.0 * GAME_SCALE),
+        ] {
             let pieces = paddle_pieces(width);
             assert_eq!(
                 pieces,
@@ -1716,14 +1911,25 @@ mod tests {
         );
         assert_eq!(
             paddle_look(&mut app),
-            (vec![-46.5, 46.5], 66.0, PADDLE_WIDTH)
+            (
+                vec![-46.5 * GAME_SCALE, 46.5 * GAME_SCALE],
+                66.0 * GAME_SCALE,
+                PADDLE_WIDTH
+            )
         );
 
         app.world_mut().trigger(powerups::PowerUpCollected {
             kind: powerups::PowerUpKind::SuperSizer,
         });
         app.update();
-        assert_eq!(paddle_look(&mut app), (vec![-61.5, 61.5], 96.0, 150.0));
+        assert_eq!(
+            paddle_look(&mut app),
+            (
+                vec![-61.5 * GAME_SCALE, 61.5 * GAME_SCALE],
+                96.0 * GAME_SCALE,
+                PADDLE_WIDTH * 1.25
+            )
+        );
 
         // The effect runs out (7 s at the test app's 100 ms step).
         for _ in 0..80 {
@@ -1731,7 +1937,45 @@ mod tests {
         }
         assert_eq!(
             paddle_look(&mut app),
-            (vec![-46.5, 46.5], 66.0, PADDLE_WIDTH)
+            (
+                vec![-46.5 * GAME_SCALE, 46.5 * GAME_SCALE],
+                66.0 * GAME_SCALE,
+                PADDLE_WIDTH
+            )
+        );
+    }
+
+    #[derive(Resource, Default)]
+    struct Seen {
+        damaged: Vec<(Entity, Vec2, BrickClass)>,
+        destroyed: Vec<(Entity, Vec2, BrickClass, bool)>,
+    }
+
+    #[test]
+    fn brick_damage_and_break_events_carry_class_and_position() {
+        let mut app = app();
+        app.init_resource::<Seen>()
+            .add_observer(|on: On<BrickDamaged>, mut seen: ResMut<Seen>| {
+                seen.damaged.push((on.brick, on.position, on.class));
+            })
+            .add_observer(|on: On<BrickDestroyed>, mut seen: ResMut<Seen>| {
+                seen.destroyed
+                    .push((on.brick, on.position, on.class, on.by_blast));
+            });
+        let titanium = brick_of(&mut app, BrickClass::Titanium);
+        let centre = translation(&app, titanium).truncate();
+        let ball = ball(&mut app);
+        let ball_at = translation(&app, ball).truncate();
+
+        hit(&mut app, titanium);
+        hit(&mut app, titanium);
+        let seen = app.world().resource::<Seen>();
+        // The surviving hit: at the contact point (the ball), with its class.
+        assert_eq!(seen.damaged, [(titanium, ball_at, BrickClass::Titanium)]);
+        // The break: at the brick's centre, by the ball.
+        assert_eq!(
+            seen.destroyed,
+            [(titanium, centre, BrickClass::Titanium, false)]
         );
     }
 }

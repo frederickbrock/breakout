@@ -12,9 +12,17 @@
 //!   always spawn as their `theme` shapes, so a missing or broken file just
 //!   leaves the shape in place: no panic, nothing invisible. A new sprite is a
 //!   [`GameSprites`] field plus a skin rule here.
+//!
+//! Bricks follow the same rule: each spawns as its class's flat colour and
+//! is skinned with its class's intact sprite ([`BrickSprite::of`]) once that
+//! image is loaded. A skinned brick's shield flash is then shown as a tint over
+//! the sprite ([`theme::brick_sprite_tint`]); damage is shown by particles.
 
+use crate::bricks::{BrickClass, ShieldFlash};
 use crate::powerups::PowerUp;
-use crate::{theme, Ball, PaddleField, PaddleProng, BALL_SIZE, WINDOW_HEIGHT, WINDOW_WIDTH};
+use crate::{
+    theme, Ball, Brick, PaddleField, PaddleProng, BALL_SIZE, PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH,
+};
 use bevy::prelude::*;
 
 /// Paths relative to `assets/`.
@@ -24,6 +32,58 @@ const PRONG_LEFT_PATH: &str = "sprites/paddle_prong_left.png";
 const PRONG_RIGHT_PATH: &str = "sprites/paddle_prong_right.png";
 const PADDLE_FIELD_PATH: &str = "sprites/paddle_field.png";
 const POWER_UP_PATH: &str = "sprites/powerup.png";
+/// Which brick sprite a brick draws: one per material. The three explosive
+/// variants share one plate (their outlines tell them apart).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum BrickSprite {
+    Ceramic,
+    Titanium,
+    Tungsten,
+    Reactor,
+    Explosive,
+    Regen,
+    Shield,
+}
+
+impl BrickSprite {
+    /// Every brick sprite; also the order of [`GameSprites::bricks`].
+    pub const ALL: [Self; 7] = [
+        Self::Ceramic,
+        Self::Titanium,
+        Self::Tungsten,
+        Self::Reactor,
+        Self::Explosive,
+        Self::Regen,
+        Self::Shield,
+    ];
+
+    /// The sprite a brick of `class` draws.
+    pub fn of(class: BrickClass) -> Self {
+        match class {
+            BrickClass::Ceramic => Self::Ceramic,
+            BrickClass::Titanium => Self::Titanium,
+            BrickClass::Tungsten => Self::Tungsten,
+            BrickClass::Reactor => Self::Reactor,
+            BrickClass::Explosive(_) => Self::Explosive,
+            BrickClass::Regen => Self::Regen,
+            BrickClass::Shield => Self::Shield,
+        }
+    }
+
+    /// The intact sprite's path, relative to `assets/`.
+    pub fn path(self) -> &'static str {
+        match self {
+            Self::Ceramic => "sprites/bricks/ceramic_intact.png",
+            Self::Titanium => "sprites/bricks/titanium_intact.png",
+            Self::Tungsten => "sprites/bricks/tungsten_intact.png",
+            Self::Reactor => "sprites/bricks/reactor_intact.png",
+            Self::Explosive => "sprites/bricks/explosive_intact.png",
+            Self::Regen => "sprites/bricks/regen_intact.png",
+            Self::Shield => "sprites/bricks/shield_intact.png",
+        }
+    }
+}
+
 /// Far behind every game entity (which all sit at z 0..1).
 const BACKGROUND_Z: f32 = -10.0;
 
@@ -39,10 +99,19 @@ pub struct GameSprites {
     pub paddle_field: Handle<Image>,
     /// One icon for every power-up kind, for now.
     pub power_up: Handle<Image>,
+    /// Intact brick plates, in [`BrickSprite::ALL`] order.
+    pub bricks: [Handle<Image>; 7],
 }
 
-/// The full-window background. Global (not scoped to a run), so the menus
-/// show it too.
+impl GameSprites {
+    pub fn brick(&self, sprite: BrickSprite) -> &Handle<Image> {
+        // `ALL` lists the variants in declaration order.
+        &self.bricks[sprite as usize]
+    }
+}
+
+/// The playfield-well background, sized to the well (the side panels stay
+/// clear colour). Global (not scoped to a run), so the menus show it too.
 #[derive(Component)]
 pub struct Background;
 
@@ -62,6 +131,7 @@ fn load_sprites(mut commands: Commands, assets: Res<AssetServer>) {
         prong_right: assets.load(PRONG_RIGHT_PATH),
         paddle_field: assets.load(PADDLE_FIELD_PATH),
         power_up: assets.load(POWER_UP_PATH),
+        bricks: BrickSprite::ALL.map(|sprite| assets.load(sprite.path())),
     });
 }
 
@@ -80,7 +150,13 @@ impl Plugin for SkinPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             PostUpdate,
-            (skin_ball, skin_paddle, skin_power_ups).run_if(resource_exists::<GameSprites>),
+            (
+                skin_ball,
+                skin_paddle,
+                skin_power_ups,
+                (skin_bricks, tint_skinned_bricks).chain(),
+            )
+                .run_if(resource_exists::<GameSprites>),
         );
     }
 }
@@ -164,12 +240,46 @@ fn skin_power_ups(
     }
 }
 
+/// Each brick draws its class's intact plate once that image is loaded; a
+/// class whose file is missing keeps its flat colour.
+fn skin_bricks(
+    mut commands: Commands,
+    sprites: Res<GameSprites>,
+    images: Res<Assets<Image>>,
+    mut bricks: Query<(Entity, &BrickClass, &mut Sprite), Unskinned<Brick>>,
+) {
+    for (entity, &class, mut sprite) in &mut bricks {
+        if let Some(image) = loaded(sprites.brick(BrickSprite::of(class)), &images) {
+            sprite.image = image.clone();
+            commands.entity(entity).insert(Skinned);
+        }
+    }
+}
+
+/// Whether a brick flashes, plus the sprite its tint goes on.
+type BrickLook = (Has<ShieldFlash>, &'static mut Sprite);
+type SkinnedBrick = (With<Brick>, With<Skinned>);
+
+/// Keeps a skinned brick's tint in step with its shield flash. Runs after
+/// gameplay has written the flat-colour look for the frame and replaces it,
+/// so the code that changes a brick's look (flashes) needs nothing
+/// sprite-specific.
+fn tint_skinned_bricks(mut bricks: Query<BrickLook, SkinnedBrick>) {
+    for (flashing, mut sprite) in &mut bricks {
+        let tint = theme::brick_sprite_tint(flashing);
+        // Reading through `Mut` doesn't mark the sprite changed.
+        if sprite.color != tint {
+            sprite.color = tint;
+        }
+    }
+}
+
 fn spawn_background(mut commands: Commands, sprites: Res<GameSprites>) {
     commands.spawn((
         Background,
         Sprite {
             image: sprites.background.clone(),
-            custom_size: Some(Vec2::new(WINDOW_WIDTH, WINDOW_HEIGHT)),
+            custom_size: Some(Vec2::new(PLAYFIELD_WIDTH, PLAYFIELD_HEIGHT)),
             ..default()
         },
         Transform::from_xyz(0.0, 0.0, BACKGROUND_Z),
@@ -202,7 +312,7 @@ mod tests {
         assert_eq!(sprite.image, handle);
         assert_eq!(
             sprite.custom_size,
-            Some(Vec2::new(WINDOW_WIDTH, WINDOW_HEIGHT))
+            Some(Vec2::new(PLAYFIELD_WIDTH, PLAYFIELD_HEIGHT))
         );
         assert_eq!(transform.translation.z, BACKGROUND_Z);
     }
@@ -230,6 +340,7 @@ mod tests {
             prong_right: image("prong_right"),
             paddle_field: image("paddle_field"),
             power_up: image("power_up"),
+            bricks: BrickSprite::ALL.map(|b| image(b.path())),
         };
         app.world_mut().insert_resource(sprites);
         app.update();
@@ -308,5 +419,105 @@ mod tests {
         app.update();
         let sprite = app.world().get::<Sprite>(power_up).unwrap();
         assert_ne!(sprite.color, theme::UNTINTED, "keeps its flat colour");
+    }
+
+    #[test]
+    fn each_brick_class_picks_its_own_intact_sprite() {
+        use crate::bricks::ExplosiveKind::*;
+        let cases = [
+            (BrickClass::Ceramic, "ceramic"),
+            (BrickClass::Titanium, "titanium"),
+            (BrickClass::Tungsten, "tungsten"),
+            (BrickClass::Reactor, "reactor"),
+            (BrickClass::Explosive(Charge), "explosive"),
+            (BrickClass::Explosive(Breach), "explosive"),
+            (BrickClass::Explosive(Demolition), "explosive"),
+            (BrickClass::Regen, "regen"),
+            (BrickClass::Shield, "shield"),
+        ];
+        for (class, name) in cases {
+            assert_eq!(
+                BrickSprite::of(class).path(),
+                format!("sprites/bricks/{name}_intact.png"),
+                "{class:?}"
+            );
+        }
+        // One handle slot per sprite, in `ALL` order.
+        for (i, sprite) in BrickSprite::ALL.into_iter().enumerate() {
+            assert_eq!(sprite as usize, i);
+        }
+    }
+
+    #[test]
+    fn every_brick_sprite_file_ships() {
+        for sprite in BrickSprite::ALL {
+            let path = std::path::Path::new("assets").join(sprite.path());
+            assert!(path.is_file(), "{} missing", path.display());
+        }
+    }
+
+    fn brick_sprite(app: &App, brick: Entity) -> Sprite {
+        app.world().get::<Sprite>(brick).unwrap().clone()
+    }
+
+    #[test]
+    fn every_brick_draws_its_class_sprite_untinted() {
+        let mut app = app_with_sprites(&[]);
+        let sprites = app.world().resource::<GameSprites>().bricks.clone();
+        let world = app.world_mut();
+        let bricks: Vec<_> = world
+            .query_filtered::<(&BrickClass, &Sprite, Has<Skinned>), With<Brick>>()
+            .iter(world)
+            .map(|(c, s, skinned)| (*c, s.clone(), skinned))
+            .collect();
+        assert_eq!(bricks.len(), 70);
+        for (class, sprite, skinned) in bricks {
+            assert!(skinned, "{class:?}");
+            assert_eq!(sprite.image, sprites[BrickSprite::of(class) as usize]);
+            assert_eq!(sprite.color, theme::UNTINTED);
+            assert_eq!(
+                sprite.custom_size,
+                Some(Vec2::new(crate::BRICK_WIDTH, crate::BRICK_HEIGHT))
+            );
+        }
+    }
+
+    #[test]
+    fn a_missing_brick_sprite_keeps_that_class_flat() {
+        let mut app = app_with_sprites(&[BrickSprite::Ceramic.path()]);
+        let ceramic = brick_of(&mut app, BrickClass::Ceramic);
+        assert!(!app.world().entity(ceramic).contains::<Skinned>());
+        assert_eq!(brick_sprite(&app, ceramic).color, theme::CERAMIC);
+        let titanium = brick_of(&mut app, BrickClass::Titanium);
+        assert!(app.world().entity(titanium).contains::<Skinned>());
+    }
+
+    #[test]
+    fn a_damaged_brick_keeps_its_intact_sprite_untinted() {
+        let mut app = app_with_sprites(&[]);
+        let titanium = brick_of(&mut app, BrickClass::Titanium);
+        let image = brick_sprite(&app, titanium).image;
+        hit(&mut app, titanium);
+        app.update();
+        assert_eq!(
+            app.world().get::<crate::BrickHealth>(titanium).unwrap().0,
+            1
+        );
+        let sprite = brick_sprite(&app, titanium);
+        assert_eq!(sprite.image, image, "no cracked sprite");
+        assert_eq!(sprite.color, theme::UNTINTED, "damage shows as particles");
+    }
+
+    #[test]
+    fn skinned_shield_glass_still_flashes() {
+        let mut app = app_with_sprites(&[]);
+        let shield = brick_of(&mut app, BrickClass::Shield);
+        hit_moving(&mut app, shield, Vec2::new(0.0, crate::BALL_SPEED));
+        app.update();
+        assert_eq!(brick_sprite(&app, shield).color, theme::SHIELD_FLASH_TINT);
+        app.update();
+        app.update();
+        assert!(!app.world().entity(shield).contains::<ShieldFlash>());
+        assert_eq!(brick_sprite(&app, shield).color, theme::UNTINTED);
     }
 }
