@@ -43,7 +43,7 @@ mod tests {
     use crate::game_state::{AppState, PlayState};
     use crate::test_support::*;
     use crate::{Ball, BallCollisionSignals, Brick, Lives, Score, STARTING_LIVES};
-    use crate::{BRICK_COLS, BRICK_ROWS, WINDOW_HEIGHT};
+    use crate::{BRICK_COLS, BRICK_ROWS, PLAYFIELD_HEIGHT};
     use bevy::prelude::*;
 
     fn lose(app: &mut App, score: i32) {
@@ -56,7 +56,7 @@ mod tests {
             .query_filtered::<&mut Transform, With<Ball>>()
             .single_mut(world)
             .expect("a run has exactly one ball");
-        ball.translation.y = -WINDOW_HEIGHT;
+        ball.translation.y = -PLAYFIELD_HEIGHT;
         app.update();
         app.update();
         assert_eq!(app_state(app), AppState::GameOver);

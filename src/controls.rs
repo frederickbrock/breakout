@@ -8,7 +8,7 @@
 //! so they're testable without a window.
 
 use crate::game_state::PlayState;
-use crate::{RestartGame, WINDOW_WIDTH};
+use crate::{RestartGame, GAME_SCALE, PLAYFIELD_WIDTH};
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
@@ -57,16 +57,16 @@ pub struct PaddleTarget {
 /// How quickly the paddle closes the gap to its target, per second.
 const FOLLOW_GAIN: f32 = 20.0;
 /// Top horizontal speed while following the mouse.
-const MAX_FOLLOW_SPEED: f32 = 2000.0;
+const MAX_FOLLOW_SPEED: f32 = 2000.0 * GAME_SCALE;
 /// Most of the gap a single frame may close. The velocity is set once per
 /// frame but Avian integrates it over every fixed step in that frame, so at
 /// a low frame rate an uncapped gain would overshoot and ring.
 const MAX_GAP_PER_FRAME: f32 = 0.8;
 
 /// The paddle-centre X for a cursor at `cursor_x`, clamped so a paddle of
-/// `paddle_width` stays between the side walls.
+/// `paddle_width` stays between the side walls, inside the playfield well.
 pub fn clamp_paddle_x(cursor_x: f32, paddle_width: f32) -> f32 {
-    let half_room = ((WINDOW_WIDTH - paddle_width) / 2.0).max(0.0);
+    let half_room = ((PLAYFIELD_WIDTH - paddle_width) / 2.0).max(0.0);
     cursor_x.clamp(-half_room, half_room)
 }
 
@@ -140,7 +140,7 @@ mod tests {
 
     #[test]
     fn clamp_keeps_the_paddle_between_the_walls() {
-        let edge = (WINDOW_WIDTH - PADDLE_WIDTH) / 2.0;
+        let edge = (PLAYFIELD_WIDTH - PADDLE_WIDTH) / 2.0;
         assert_eq!(clamp_paddle_x(0.0, PADDLE_WIDTH), 0.0);
         assert_eq!(clamp_paddle_x(123.0, PADDLE_WIDTH), 123.0);
         assert_eq!(clamp_paddle_x(10_000.0, PADDLE_WIDTH), edge);
@@ -150,9 +150,12 @@ mod tests {
     #[test]
     fn clamp_respects_a_wider_paddle() {
         let wide = PADDLE_WIDTH * 1.5;
-        assert_eq!(clamp_paddle_x(10_000.0, wide), (WINDOW_WIDTH - wide) / 2.0);
+        assert_eq!(
+            clamp_paddle_x(10_000.0, wide),
+            (PLAYFIELD_WIDTH - wide) / 2.0
+        );
         // Wider than the play area: stay centred rather than invert the range.
-        assert_eq!(clamp_paddle_x(300.0, WINDOW_WIDTH * 2.0), 0.0);
+        assert_eq!(clamp_paddle_x(300.0, PLAYFIELD_WIDTH * 2.0), 0.0);
     }
 
     #[test]

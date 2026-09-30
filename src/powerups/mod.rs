@@ -3,13 +3,15 @@ mod super_sizer;
 use crate::bricks::BrickClass;
 use crate::game_state::{AppState, PlayState};
 use crate::spawner::Spawner;
-use crate::{Brick, BrickDestroyed, Paddle, RestartGame, PADDLE_HEIGHT, WINDOW_HEIGHT};
+use crate::{
+    Brick, BrickDestroyed, Paddle, RestartGame, GAME_SCALE, PADDLE_HEIGHT, PLAYFIELD_HEIGHT,
+};
 use bevy::prelude::*;
 
-const POWER_UP_SIZE: f32 = 24.0;
-const BASE_GRAVITY: f32 = 140.0;
-const GRAVITY_STEP: f32 = 20.0;
-const MAX_GRAVITY: f32 = 420.0;
+const POWER_UP_SIZE: f32 = 24.0 * GAME_SCALE;
+const BASE_GRAVITY: f32 = 140.0 * GAME_SCALE;
+const GRAVITY_STEP: f32 = 20.0 * GAME_SCALE;
+const MAX_GRAVITY: f32 = 420.0 * GAME_SCALE;
 
 pub type PowerUpSpawner = Spawner<PowerUpKind>;
 
@@ -180,7 +182,7 @@ fn power_up_physics(
         power_up.velocity.y -= power_up.gravity * dt;
         transform.translation.y += power_up.velocity.y * dt;
 
-        if transform.translation.y < -WINDOW_HEIGHT / 2.0 - POWER_UP_SIZE {
+        if transform.translation.y < -PLAYFIELD_HEIGHT / 2.0 - POWER_UP_SIZE {
             commands.entity(entity).despawn();
         }
     }
@@ -339,7 +341,7 @@ mod tests {
             .query_filtered::<&mut Transform, With<crate::Ball>>()
             .single_mut(app.world_mut())
             .unwrap();
-        ball.translation.y = -WINDOW_HEIGHT;
+        ball.translation.y = -PLAYFIELD_HEIGHT;
         app.update();
         app.update();
         assert_eq!(app_state(&app), AppState::GameOver);
@@ -436,7 +438,7 @@ mod tests {
             .get_mut::<Transform>(ball)
             .unwrap()
             .translation
-            .y = -WINDOW_HEIGHT;
+            .y = -PLAYFIELD_HEIGHT;
         app.update();
         app.update();
         assert_eq!(app_state(&app), AppState::GameOver);

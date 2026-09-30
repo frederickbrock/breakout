@@ -31,7 +31,24 @@ not hand-rolled kinematics/AABB checks.
 
 - `src/main.rs` — core game: `Ball`, `Paddle`, `Brick` entities/components, score/lives
   resources, the `App` wiring (`add_game`), starting a run (`start_run`), and the systems
-  that react to physics (`ball_movement`, `paddle_movement`, `update_hud`).
+  that react to physics (`ball_movement`, `paddle_movement`, `update_hud`). It also holds
+  the world geometry: a fixed `WORLD_WIDTH`×`WORLD_HEIGHT` (1920×1080) logical world,
+  independent of the window (which opens at `WINDOW_START_WIDTH`×`WINDOW_START_HEIGHT`,
+  1280×720, and is resizable), with a centred `PLAYFIELD_WIDTH`×`PLAYFIELD_HEIGHT`
+  (1440×1080) playfield well and a `SIDE_PANEL_WIDTH` (240) panel either side. The walls
+  (the pure `wall_specs()`) sit on the well's left, right and top edges; the ball is lost
+  below its bottom edge. Every gameplay size/speed is written as its old design value
+  `x * GAME_SCALE` (1.5). `BRICK_WIDTH` is derived, not set: a full row fills the well
+  less a `SIDE_CHANNEL` (`SIDE_CHANNEL_BALLS` ball widths, the one knob) each side, and
+  the pure `brick_x(col, cols)` / `brick_y(row)` centre the grid, so fewer columns just
+  widen the equal channels. The HUD (SCORE / LIVES blocks, label line then value line)
+  sits in the left side panel at `HUD_X`.
+- `src/view.rs` — `ViewPlugin`: the one `Camera2d`, with `world_projection()` (an
+  orthographic `ScalingMode::AutoMin` of the world size, so the whole world is always
+  visible and spare window space shows `theme::VOID` bars), and `UiScale` following the
+  primary window (`ui_scale_for(w, h)` = fit factor × `GAME_SCALE`: 1.0 at 1280×720, 1.5 at
+  1920×1080), so menus stay the same size relative to the world. On the web the window
+  uses `fit_canvas_to_parent` and `index.html` sizes the canvas to the viewport.
 - `src/game_state.rs` — the state machine: `AppState { MainMenu, Settings, InGame, GameOver }`
   (the app launches into `MainMenu`), the
   `InGame` sub-state `PlayState { Playing, Paused }` (P/Esc toggles it), the `GameOutcome`
@@ -59,13 +76,14 @@ not hand-rolled kinematics/AABB checks.
   the paddle is drawn by three children (left prong, stretched `PaddleField`, right prong)
   laid out by the pure `paddle_pieces(width)` and kept in place by `place_paddle_pieces`
   as Super-Sizer changes `Paddle.width` (the parent keeps the one full-width collider and
-  has no sprite of its own). The HUD is `SCORE `/`LIVES ` labels with the value in a `TextSpan`
+  has no sprite of its own). The HUD is `SCORE\n`/`LIVES\n` labels with the value in a `TextSpan`
   child (the markers sit on the span). The headless test app adds `AssetPlugin` plus
   `Mesh`/`ColorMaterial` assets for the ball.
 - `src/sprites.rs` — image assets. `SpritesPlugin` (registered from `main()`, not
   `add_game`, since the headless test app has no image loaders) loads every handle once at
   `Startup` into the `GameSprites` resource (background, ball, paddle prongs and field,
-  power-up icon) and spawns the global `Background`. `SkinPlugin` (in `add_game`, a no-op
+  power-up icon) and spawns the global `Background`, sized to the playfield well (the side
+  panels stay clear colour). `SkinPlugin` (in `add_game`, a no-op
   without `GameSprites`) swaps an entity's `theme` shape for its sprite once that image is
   in `Assets<Image>`, marking it `Skinned`. Everything spawns as its shape first, so a
   missing or broken file just leaves the shape (no panic, nothing invisible). Sprites live
@@ -81,8 +99,8 @@ not hand-rolled kinematics/AABB checks.
   (`PaddleControl::Mouse` by default, or `Keyboard`, toggled on the Settings screen) and
   the mouse side of paddle control. While `Playing` in Mouse mode, `track_cursor` turns
   cursor movement into a `PaddleTarget` (world X); `paddle_movement` then drives the
-  paddle's `LinearVelocity.x` toward it (`clamp_paddle_x` keeps it between the walls for
-  the current `Paddle.width`, `follow_velocity` is the capped proportional drive, limited to ~80% of the gap per frame so
+  paddle's `LinearVelocity.x` toward it (`clamp_paddle_x` keeps it between the walls,
+  inside the playfield well, for the current `Paddle.width`, `follow_velocity` is the capped proportional drive, limited to ~80% of the gap per frame so
   low frame rates don't overshoot), so Avian
   still resolves ball bounces. Arrow keys / A/D push with `ConstantForce` in both modes, and
   a held key clears the mouse target. Tests set `PaddleTarget` directly (no window).
@@ -117,7 +135,7 @@ not hand-rolled kinematics/AABB checks.
   two child emitters on the brick (`brick_damage_smoke` in smoke grey + `brick_damage_sparks`
   in glow), emitting more often the more damage taken; back to max (regen) → removed;
   `BrickDestroyed` → `brick_break` shatter burst in the face colour, falling with gravity.
-  Effect files are white; colour comes from each spawner's `ColorParticle2dMaterial`
+  Effect files are white and in world units (sizes/speeds already ×`GAME_SCALE`); colour comes from each spawner's `ColorParticle2dMaterial`
   (`ParticleMaterials`, one per class and role). A live-particle budget
   (`DAMAGE_PARTICLE_BUDGET`, via the pure `damage_emitter_interval`) stretches the damage
   emitters' spawn interval when many bricks are damaged (not `max_particles`: bevy_enoki

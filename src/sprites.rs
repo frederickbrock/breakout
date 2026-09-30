@@ -20,7 +20,9 @@
 
 use crate::bricks::{BrickClass, ShieldFlash};
 use crate::powerups::PowerUp;
-use crate::{theme, Ball, Brick, PaddleField, PaddleProng, BALL_SIZE, WINDOW_HEIGHT, WINDOW_WIDTH};
+use crate::{
+    theme, Ball, Brick, PaddleField, PaddleProng, BALL_SIZE, PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH,
+};
 use bevy::prelude::*;
 
 /// Paths relative to `assets/`.
@@ -108,8 +110,8 @@ impl GameSprites {
     }
 }
 
-/// The full-window background. Global (not scoped to a run), so the menus
-/// show it too.
+/// The playfield-well background, sized to the well (the side panels stay
+/// clear colour). Global (not scoped to a run), so the menus show it too.
 #[derive(Component)]
 pub struct Background;
 
@@ -277,7 +279,7 @@ fn spawn_background(mut commands: Commands, sprites: Res<GameSprites>) {
         Background,
         Sprite {
             image: sprites.background.clone(),
-            custom_size: Some(Vec2::new(WINDOW_WIDTH, WINDOW_HEIGHT)),
+            custom_size: Some(Vec2::new(PLAYFIELD_WIDTH, PLAYFIELD_HEIGHT)),
             ..default()
         },
         Transform::from_xyz(0.0, 0.0, BACKGROUND_Z),
@@ -310,7 +312,7 @@ mod tests {
         assert_eq!(sprite.image, handle);
         assert_eq!(
             sprite.custom_size,
-            Some(Vec2::new(WINDOW_WIDTH, WINDOW_HEIGHT))
+            Some(Vec2::new(PLAYFIELD_WIDTH, PLAYFIELD_HEIGHT))
         );
         assert_eq!(transform.translation.z, BACKGROUND_Z);
     }
