@@ -196,3 +196,6 @@ pub(crate) fn sync_current_level(
         None => {}
     }
 }
+
+#[cfg(test)]
+mod tests;
