@@ -6,9 +6,10 @@
 //! further non-lethal hit restarts the timer. The timer only ticks while
 //! playing, so pausing freezes it.
 
+use super::grid::BrickHealth;
 use super::BrickClass;
 use crate::game_state::PlayState;
-use crate::{BrickDamaged, BrickHealth};
+use crate::BrickDamaged;
 use bevy::prelude::*;
 
 /// How long a damaged regen brick waits before healing to full.

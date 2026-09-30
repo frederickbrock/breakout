@@ -18,11 +18,12 @@
 //! image is loaded. A skinned brick's shield flash is then shown as a tint over
 //! the sprite ([`theme::brick_sprite_tint`]); damage is shown by particles.
 
+use crate::bricks::grid::Brick;
 use crate::bricks::{BrickClass, ShieldFlash};
 use crate::paddle::{PaddleField, PaddleProng};
 use crate::powerups::PowerUp;
 use crate::world::{PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH};
-use crate::{theme, Ball, Brick, BALL_SIZE};
+use crate::{theme, Ball, BALL_SIZE};
 use bevy::prelude::*;
 
 /// Paths relative to `assets/`.
@@ -317,6 +318,7 @@ mod tests {
         assert_eq!(transform.translation.z, BACKGROUND_Z);
     }
 
+    use crate::bricks::grid::{BrickHealth, BRICK_HEIGHT, BRICK_WIDTH};
     use crate::test_support::*;
     use crate::BALL_SIZE;
 
@@ -477,7 +479,7 @@ mod tests {
             assert_eq!(sprite.color, theme::UNTINTED);
             assert_eq!(
                 sprite.custom_size,
-                Some(Vec2::new(crate::BRICK_WIDTH, crate::BRICK_HEIGHT))
+                Some(Vec2::new(BRICK_WIDTH, BRICK_HEIGHT))
             );
         }
     }
@@ -499,10 +501,7 @@ mod tests {
         let image = brick_sprite(&app, titanium).image;
         hit(&mut app, titanium);
         app.update();
-        assert_eq!(
-            app.world().get::<crate::BrickHealth>(titanium).unwrap().0,
-            1
-        );
+        assert_eq!(app.world().get::<BrickHealth>(titanium).unwrap().0, 1);
         let sprite = brick_sprite(&app, titanium);
         assert_eq!(sprite.image, image, "no cracked sprite");
         assert_eq!(sprite.color, theme::UNTINTED, "damage shows as particles");

@@ -40,11 +40,11 @@ fn spawn_game_over(mut commands: Commands, outcome: Option<Res<GameOutcome>>, sc
 #[cfg(test)]
 mod tests {
     use super::super::test_helpers::*;
+    use crate::bricks::grid::{Brick, BRICK_COLS, BRICK_ROWS};
     use crate::game_state::{AppState, PlayState};
     use crate::test_support::*;
     use crate::world::PLAYFIELD_HEIGHT;
-    use crate::{Ball, BallCollisionSignals, Brick, Lives, Score, STARTING_LIVES};
-    use crate::{BRICK_COLS, BRICK_ROWS};
+    use crate::{Ball, BallCollisionSignals, Lives, Score, STARTING_LIVES};
     use bevy::prelude::*;
 
     fn lose(app: &mut App, score: i32) {

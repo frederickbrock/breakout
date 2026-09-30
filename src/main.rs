@@ -18,13 +18,14 @@ use avian2d::prelude::*;
 use bevy::asset::AssetMetaCheck;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
-use bricks::{BrickCell, BrickClass};
+use bricks::grid::{spawn_bricks, Brick, BrickHealth};
+use bricks::BrickClass;
 use game_state::{AppState, GameOutcome, GameStatePlugin, PlayState};
 use paddle::{
     paddle_field, paddle_movement, place_paddle_pieces, prong, Paddle, PaddleMovementSet,
     PADDLE_HEIGHT, PADDLE_LINEAR_DAMPING, PADDLE_MARGIN_BOTTOM, PADDLE_MASS, PADDLE_WIDTH,
 };
-use world::{setup_level, GAME_SCALE, PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH, WORLD_WIDTH};
+use world::{setup_level, GAME_SCALE, PLAYFIELD_HEIGHT, WORLD_WIDTH};
 
 /// The native window's opening size; it is resizable and the world scales.
 const WINDOW_START_WIDTH: u32 = 1280;
@@ -46,24 +47,6 @@ const PADDLE_STILL_SPEED: f32 = 1.0 * GAME_SCALE;
 // velocity again. Keeping a minimum vertical fraction guarantees the ball
 // always keeps drifting toward the bricks or the paddle.
 const BALL_MIN_VERTICAL_FRACTION: f32 = 0.3;
-/// Minimum clear gap between the outermost brick and each wall, in ball
-/// widths. Raising it narrows the (derived) bricks; nothing else changes.
-const SIDE_CHANNEL_BALLS: f32 = 3.0;
-const SIDE_CHANNEL: f32 = SIDE_CHANNEL_BALLS * BALL_SIZE;
-/// Gap between neighbouring bricks, both ways.
-const BRICK_GAP: f32 = 5.0 * GAME_SCALE;
-/// Distance from the top wall to the top of the first brick row.
-const BRICK_TOP_MARGIN: f32 = 50.0 * GAME_SCALE;
-const BRICK_HEIGHT: f32 = 30.0 * GAME_SCALE;
-/// Derived so a full row fills the well less a [`SIDE_CHANNEL`] each side.
-const BRICK_WIDTH: f32 =
-    (PLAYFIELD_WIDTH - 2.0 * SIDE_CHANNEL - (bricks::BOARD_COLS as f32 - 1.0) * BRICK_GAP)
-        / bricks::BOARD_COLS as f32;
-// Board size, for tests across modules (the game itself uses `bricks::BOARD_*`).
-#[cfg(test)]
-const BRICK_ROWS: usize = bricks::BOARD_ROWS;
-#[cfg(test)]
-const BRICK_COLS: usize = bricks::BOARD_COLS;
 /// Lives at the start of every run, including the first.
 const STARTING_LIVES: i32 = 3;
 const HUD_FONT_SIZE: f32 = 24.0 * GAME_SCALE;
@@ -93,14 +76,6 @@ struct Anchored;
 
 type FlyingBall = (With<Ball>, Without<Anchored>);
 type AnchoredBall = (With<Ball>, With<Anchored>);
-
-#[derive(Component)]
-struct Brick;
-
-/// Hits a brick still takes before it breaks; it spawns at its class's
-/// `max_hits()`.
-#[derive(Component)]
-struct BrickHealth(u8);
 
 #[derive(Component)]
 struct ScoreText;
@@ -365,56 +340,6 @@ fn spawn_hud_line(
     ));
 }
 
-/// A fresh random board of brick classes (see [`bricks::generate_board`]),
-/// each brick at its class's colour and hit count.
-fn spawn_bricks(commands: &mut Commands) {
-    let board = bricks::generate_board(&mut rand::rng());
-    for (row, classes) in board.iter().enumerate() {
-        for (col, &class) in classes.iter().enumerate() {
-            let cell = BrickCell { row, col };
-            commands.spawn((
-                Sprite::from_color(
-                    theme::brick_color(class),
-                    Vec2::new(BRICK_WIDTH, BRICK_HEIGHT),
-                ),
-                Transform::from_translation(brick_translation(cell)),
-                RigidBody::Static,
-                Collider::rectangle(BRICK_WIDTH, BRICK_HEIGHT),
-                Brick,
-                class,
-                cell,
-                BrickHealth(class.max_hits()),
-                DespawnOnExit(AppState::InGame),
-            ));
-        }
-    }
-}
-
-/// Where the brick in `cell` sits (see [`brick_x`] and [`brick_y`]).
-fn brick_translation(cell: BrickCell) -> Vec3 {
-    Vec3::new(
-        brick_x(cell.col, bricks::BOARD_COLS),
-        brick_y(cell.row),
-        0.0,
-    )
-}
-
-/// Centre x of column `col` in a row of `cols` bricks, centred in the well so
-/// the left and right channels are equal (fewer columns, wider channels).
-fn brick_x(col: usize, cols: usize) -> f32 {
-    let grid_width = cols as f32 * BRICK_WIDTH + (cols as f32 - 1.0) * BRICK_GAP;
-    -grid_width / 2.0 + BRICK_WIDTH / 2.0 + col as f32 * (BRICK_WIDTH + BRICK_GAP)
-}
-
-/// Centre y of row `row` (0 at the top), [`BRICK_TOP_MARGIN`] below the top
-/// wall.
-fn brick_y(row: usize) -> f32 {
-    PLAYFIELD_HEIGHT / 2.0
-        - BRICK_TOP_MARGIN
-        - BRICK_HEIGHT / 2.0
-        - row as f32 * (BRICK_HEIGHT + BRICK_GAP)
-}
-
 /// Copies the ball's velocity into [`BallApproach`] at the start of every
 /// physics step, before the solver bounces it.
 fn record_ball_approach(mut balls: Query<(&LinearVelocity, &mut BallApproach), With<Ball>>) {
@@ -673,6 +598,7 @@ fn update_hud(
 mod tests {
     use super::test_support::*;
     use super::*;
+    use crate::bricks::grid::*;
     use crate::controls::*;
     use crate::paddle::*;
     use crate::world::*;
@@ -1036,77 +962,6 @@ mod tests {
     }
 
     #[test]
-    fn every_brick_gets_its_class_look_health_and_cell() {
-        let mut app = app();
-        assert_eq!(BRICK_ROWS * BRICK_COLS, 70);
-        let world = app.world_mut();
-        let mut cells = std::collections::HashSet::new();
-        for (class, health, sprite, transform, cell) in world
-            .query_filtered::<(&BrickClass, &BrickHealth, &Sprite, &Transform, &BrickCell), With<Brick>>()
-            .iter(world)
-        {
-            assert_eq!(health.0, class.max_hits());
-            assert_eq!(sprite.color, theme::brick_color(*class));
-            assert_eq!(transform.translation, brick_translation(*cell));
-            assert!(cell.row < 7 && cell.col < 10);
-            assert!(cells.insert(*cell), "duplicate cell {cell:?}");
-        }
-        assert_eq!(cells.len(), 70);
-    }
-
-    #[test]
-    fn spawned_bricks_are_brick_sized_with_equal_side_channels() {
-        let mut app = app();
-        let world = app.world_mut();
-        let (mut left, mut right) = (f32::INFINITY, f32::NEG_INFINITY);
-        for (sprite, transform) in world
-            .query_filtered::<(&Sprite, &Transform), With<Brick>>()
-            .iter(world)
-        {
-            assert_eq!(
-                sprite.custom_size,
-                Some(Vec2::new(BRICK_WIDTH, BRICK_HEIGHT))
-            );
-            left = left.min(transform.translation.x - BRICK_WIDTH / 2.0);
-            right = right.max(transform.translation.x + BRICK_WIDTH / 2.0);
-        }
-        let left_channel = left + PLAYFIELD_WIDTH / 2.0;
-        let right_channel = PLAYFIELD_WIDTH / 2.0 - right;
-        assert!((left_channel - right_channel).abs() <= 0.5);
-        assert!(left_channel >= SIDE_CHANNEL - 1e-3);
-        assert!(right_channel >= SIDE_CHANNEL - 1e-3);
-    }
-
-    #[test]
-    fn the_brick_grid_is_centred_with_equal_side_channels() {
-        const { assert!(BRICK_WIDTH > 0.0) };
-        const { assert!(BRICK_TOP_MARGIN >= 2.0 * BALL_SIZE) };
-        for cols in [bricks::BOARD_COLS, bricks::BOARD_COLS - 3, 1] {
-            let left = brick_x(0, cols) - BRICK_WIDTH / 2.0 + PLAYFIELD_WIDTH / 2.0;
-            let right = PLAYFIELD_WIDTH / 2.0 - (brick_x(cols - 1, cols) + BRICK_WIDTH / 2.0);
-            assert!(
-                (left - right).abs() <= 0.5,
-                "{cols} cols: {left} vs {right}"
-            );
-            assert!(left >= SIDE_CHANNEL - 1e-3, "{cols} cols: {left}");
-            assert!(right >= SIDE_CHANNEL - 1e-3, "{cols} cols: {right}");
-            if cols > 1 {
-                let pitch = brick_x(1, cols) - brick_x(0, cols);
-                assert!((pitch - (BRICK_WIDTH + BRICK_GAP)).abs() < 1e-3);
-            }
-        }
-        // A full board uses exactly the minimum channel.
-        let full_left = brick_x(0, bricks::BOARD_COLS) - BRICK_WIDTH / 2.0 + PLAYFIELD_WIDTH / 2.0;
-        assert!((full_left - SIDE_CHANNEL).abs() < 1e-2);
-        // Rows step down from the top margin.
-        assert_eq!(
-            brick_y(0) + BRICK_HEIGHT / 2.0,
-            PLAYFIELD_HEIGHT / 2.0 - BRICK_TOP_MARGIN
-        );
-        assert!((brick_y(0) - brick_y(1) - (BRICK_HEIGHT + BRICK_GAP)).abs() < 1e-3);
-    }
-
-    #[test]
     fn gameplay_sizes_are_the_old_design_times_game_scale() {
         assert_eq!(GAME_SCALE, 1.5);
         for (scaled, design) in [
@@ -1130,54 +985,6 @@ mod tests {
         assert_eq!(PADDLE_MASS, 3.0);
         assert_eq!(PADDLE_LINEAR_DAMPING, 4.0);
         assert_eq!(BALL_MIN_VERTICAL_FRACTION, 0.3);
-    }
-
-    fn layout(app: &mut App) -> Vec<(usize, usize, BrickClass)> {
-        let mut layout: Vec<(usize, usize, BrickClass)> = app
-            .world_mut()
-            .query::<(&BrickCell, &BrickClass)>()
-            .iter(app.world())
-            .map(|(cell, class)| (cell.row, cell.col, *class))
-            .collect();
-        layout.sort_by_key(|(row, col, _)| (*row, *col));
-        layout
-    }
-
-    #[test]
-    fn the_board_layout_changes_between_runs() {
-        let mut app = app();
-        let first = layout(&mut app);
-        tap(&mut app, KeyCode::Space);
-        app.world_mut().resource_mut::<Lives>().0 = 1;
-        move_ball_below_screen(&mut app);
-        app.update();
-        app.update();
-        assert_eq!(app_state(&app), AppState::GameOver);
-        tap(&mut app, KeyCode::KeyR);
-        let second = layout(&mut app);
-        assert_eq!(second.len(), 70);
-        assert_ne!(first, second);
-    }
-
-    #[test]
-    fn seven_rows_leave_room_above_the_paddle() {
-        let mut app = app();
-        let world = app.world_mut();
-        let lowest = world
-            .query_filtered::<&Transform, With<Brick>>()
-            .iter(world)
-            .map(|t| t.translation.y)
-            .fold(f32::INFINITY, f32::min);
-        let rows = world.query::<&BrickCell>().iter(world).map(|c| c.row).max();
-        assert_eq!(rows, Some(6));
-        let paddle_top = world
-            .query_filtered::<&Transform, With<Paddle>>()
-            .single(world)
-            .unwrap()
-            .translation
-            .y
-            + PADDLE_HEIGHT / 2.0;
-        assert!(lowest - BRICK_HEIGHT / 2.0 - paddle_top >= 250.0 * GAME_SCALE);
     }
 
     #[test]

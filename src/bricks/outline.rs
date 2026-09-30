@@ -9,10 +9,11 @@
 //! outline's pulse phase and sets its strips' brightness; it only runs while
 //! playing, so the animation freezes while paused.
 
+use super::grid::{BRICK_HEIGHT, BRICK_WIDTH};
 use super::regen::RegenTimer;
 use super::{BrickClass, ExplosiveKind};
 use crate::game_state::PlayState;
-use crate::{theme, BRICK_HEIGHT, BRICK_WIDTH};
+use crate::theme;
 use bevy::prelude::*;
 use std::f32::consts::TAU;
 

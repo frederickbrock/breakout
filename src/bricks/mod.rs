@@ -7,6 +7,7 @@
 //! seeded rng.
 
 mod explosive;
+pub(crate) mod grid;
 mod outline;
 mod regen;
 

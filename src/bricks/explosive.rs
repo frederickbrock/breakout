@@ -15,12 +15,10 @@
 //! win check), and `BrickDamaged` for survivors (regen's heal timer). Blasts
 //! ignore shield glass's "from above" rule.
 
+use super::grid::{Brick, BrickHealth, BRICK_HEIGHT, BRICK_WIDTH};
 use super::{BrickCell, BrickClass, ExplosiveKind};
 use crate::game_state::{AppState, PlayState};
-use crate::{
-    theme, BallCollisionSignals, Brick, BrickDamaged, BrickDestroyed, BrickHealth, Score,
-    BRICK_HEIGHT, BRICK_WIDTH,
-};
+use crate::{theme, BallCollisionSignals, BrickDamaged, BrickDestroyed, Score};
 use bevy::prelude::*;
 use std::collections::{BTreeMap, VecDeque};
 

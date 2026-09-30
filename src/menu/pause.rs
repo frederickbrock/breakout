@@ -33,9 +33,10 @@ fn spawn_pause_menu(mut commands: Commands) {
 #[cfg(test)]
 mod tests {
     use super::super::test_helpers::*;
+    use crate::bricks::grid::{Brick, BRICK_COLS, BRICK_ROWS};
     use crate::game_state::{AppState, PlayState};
     use crate::test_support::*;
-    use crate::{Ball, Brick, Lives, Score, STARTING_LIVES};
+    use crate::{Ball, Lives, Score, STARTING_LIVES};
     use bevy::prelude::*;
 
     fn ball_position(app: &mut App) -> Vec3 {
@@ -114,10 +115,7 @@ mod tests {
         assert_eq!(play_state(&app), Some(PlayState::Playing));
         assert_eq!(app.world().resource::<Score>().0, 0);
         assert_eq!(app.world().resource::<Lives>().0, STARTING_LIVES);
-        assert_eq!(
-            count::<With<Brick>>(&mut app),
-            crate::BRICK_ROWS * crate::BRICK_COLS
-        );
+        assert_eq!(count::<With<Brick>>(&mut app), BRICK_ROWS * BRICK_COLS);
         assert!(button_labels(&mut app).is_empty());
     }
 }

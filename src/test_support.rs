@@ -3,6 +3,7 @@
 //! driven by hand via [`tap`].
 
 use super::*;
+use crate::bricks::grid::Brick;
 use crate::controls::PaddleTarget;
 use crate::paddle::Paddle;
 use crate::world::PLAYFIELD_HEIGHT;

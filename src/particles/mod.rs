@@ -30,9 +30,10 @@
 //! particle budget ([`damage_emitter_interval`]) slows the continuous
 //! emitters when many bricks are damaged.
 
+use crate::bricks::grid::{Brick, BrickHealth};
 use crate::bricks::BrickClass;
 use crate::game_state::{AppState, PlayState};
-use crate::{theme, Brick, BrickDamaged, BrickDestroyed, BrickHealth};
+use crate::{theme, BrickDamaged, BrickDestroyed};
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 use bevy_enoki::prelude::*;

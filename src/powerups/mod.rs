@@ -1,11 +1,12 @@
 mod super_sizer;
 
+use crate::bricks::grid::Brick;
 use crate::bricks::BrickClass;
 use crate::game_state::{AppState, PlayState};
 use crate::paddle::{Paddle, PADDLE_HEIGHT};
 use crate::spawner::Spawner;
 use crate::world::{GAME_SCALE, PLAYFIELD_HEIGHT};
-use crate::{Brick, BrickDestroyed, RestartGame};
+use crate::{BrickDestroyed, RestartGame};
 use bevy::prelude::*;
 
 const POWER_UP_SIZE: f32 = 24.0 * GAME_SCALE;
@@ -259,9 +260,10 @@ pub(crate) fn test_spawn_power_up(app: &mut App) -> Entity {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::bricks::grid::{BrickHealth, BRICK_COLS, BRICK_ROWS};
     use crate::bricks::REACTOR_BRICKS;
     use crate::test_support::*;
-    use crate::{theme, BrickHealth};
+    use crate::theme;
 
     fn spawn_falling_power_up(app: &mut App) -> Entity {
         app.world_mut()
@@ -398,10 +400,7 @@ mod tests {
     fn every_reactor_brick_and_only_those_carry_a_power_up() {
         let mut app = app();
         assert_eq!(power_up_bricks(&mut app).len(), REACTOR_BRICKS);
-        assert_eq!(
-            bricks(&mut app).len(),
-            crate::BRICK_ROWS * crate::BRICK_COLS
-        );
+        assert_eq!(bricks(&mut app).len(), BRICK_ROWS * BRICK_COLS);
 
         for brick in bricks(&mut app) {
             let entity = app.world().entity(brick);
