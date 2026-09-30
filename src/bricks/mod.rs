@@ -83,6 +83,17 @@ pub struct BrickCell {
     pub col: usize,
 }
 
+/// One resolved brick of a board: where it goes, its class, its full health
+/// and whether it drops a power-up besides being a reactor. Produced by
+/// `crate::levels::build_board`, spawned by [`grid::spawn_bricks`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PlacedBrick {
+    pub cell: BrickCell,
+    pub class: BrickClass,
+    pub hits: u8,
+    pub powerup: bool,
+}
+
 /// Weighted-fill table: the spec's weights ×3, so explosive's 16 splits
 /// evenly over its three variants (ceramic 30, titanium 20, tungsten 12,
 /// explosive 16, regen 12, shield 10). Also the list of classes every board

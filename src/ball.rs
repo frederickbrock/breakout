@@ -64,6 +64,13 @@ impl Default for BallSpeed {
     }
 }
 
+impl BallSpeed {
+    /// From a level's design-unit speed (300 = the default).
+    pub(crate) fn from_design(units: f32) -> Self {
+        Self(units * BALL_SPEED_SCALE)
+    }
+}
+
 /// The ball's velocity at the start of the current physics step, recorded
 /// by [`record_ball_approach`]. Avian triggers `CollisionStart` after its
 /// solver, when `LinearVelocity` has usually already been reflected, so

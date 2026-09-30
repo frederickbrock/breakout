@@ -36,7 +36,7 @@ fn every_brick_gets_its_class_look_health_and_cell() {
         assert_eq!(max.0, class.max_hits());
         assert_eq!(health.0, max.0);
         assert_eq!(sprite.color, theme::brick_color(*class));
-        assert_eq!(transform.translation, brick_translation(*cell));
+        assert_eq!(transform.translation, brick_translation(*cell, BRICK_COLS));
         assert!(cell.row < 7 && cell.col < 10);
         assert!(cells.insert(*cell), "duplicate cell {cell:?}");
     }
