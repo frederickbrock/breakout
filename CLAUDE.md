@@ -18,7 +18,7 @@ Verifying the web build requires manually opening it in a browser (there is no X
 watch loop for wasm).
 
 Single binary crate (`sim`), no workspace. Tests: `cargo test` — headless ECS tests that run
-the real game logic on `MinimalPlugins` via `test_support::app()` in `main.rs` (no window or
+the real game logic on `MinimalPlugins` via `test_support::app()` in `src/test_support.rs` (no window or
 physics simulation; drive input with `test_support::tap`). Lint: `cargo clippy --all-targets -- -D warnings`.
 
 ## Architecture
@@ -27,163 +27,44 @@ A Breakout clone built on Bevy 0.19 with Avian2D (`avian2d`) driving physics —
 paddle, and bricks are real rigid bodies (`RigidBody::Dynamic`/`Static` + `Collider`),
 not hand-rolled kinematics/AABB checks.
 
-### Module layout
+### Module index
 
-- `src/main.rs` — core game: `Ball`, `Paddle`, `Brick` entities/components, score/lives
-  resources, the `App` wiring (`add_game`), starting a run (`start_run`), and the systems
-  that react to physics (`ball_movement`, `paddle_movement`, `update_hud`). It also holds
-  the world geometry: a fixed `WORLD_WIDTH`×`WORLD_HEIGHT` (1920×1080) logical world,
-  independent of the window (which opens at `WINDOW_START_WIDTH`×`WINDOW_START_HEIGHT`,
-  1280×720, and is resizable), with a centred `PLAYFIELD_WIDTH`×`PLAYFIELD_HEIGHT`
-  (1440×1080) playfield well and a `SIDE_PANEL_WIDTH` (240) panel either side. The walls
-  (the pure `wall_specs()`) sit on the well's left, right and top edges; the ball is lost
-  below its bottom edge. Every gameplay size/speed is written as its old design value
-  `x * GAME_SCALE` (1.5). `BRICK_WIDTH` is derived, not set: a full row fills the well
-  less a `SIDE_CHANNEL` (`SIDE_CHANNEL_BALLS` ball widths, the one knob) each side, and
-  the pure `brick_x(col, cols)` / `brick_y(row)` centre the grid, so fewer columns just
-  widen the equal channels. The HUD (SCORE / LIVES blocks, label line then value line)
-  sits in the left side panel at `HUD_X`.
-- `src/view.rs` — `ViewPlugin`: the one `Camera2d`, with `world_projection()` (an
-  orthographic `ScalingMode::AutoMin` of the world size, so the whole world is always
-  visible and spare window space shows `theme::VOID` bars), and `UiScale` following the
-  primary window (`ui_scale_for(w, h)` = fit factor × `GAME_SCALE`: 1.0 at 1280×720, 1.5 at
-  1920×1080), so menus stay the same size relative to the world. On the web the window
-  uses `fit_canvas_to_parent` and `index.html` sizes the canvas to the viewport.
-- `src/game_state.rs` — the state machine: `AppState { MainMenu, Settings, InGame, GameOver }`
-  (the app launches into `MainMenu`), the
-  `InGame` sub-state `PlayState { Playing, Paused }` (P/Esc toggles it), the `GameOutcome`
-  (won/lost) resource, and control of Avian's physics clock.
-- `src/menu/` — menu screens and the reusable widget kit they share. `mod.rs` holds the kit:
-  `menu_screen(state)` (state-scoped full-window root), `menu_list()` (a `MenuList` column
-  whose children order is the keyboard navigation order), `menu_button(label)`, the
-  `Focused` marker, and the `ButtonActivated` entity event fired on click or Enter/Space.
-  Mouse hover/press looks, Up/Down/W/S focus (wrapping) and activation come for free; each
-  button's behaviour is its own `.observe(...)` (e.g. `go_to(AppState::InGame)`), so a new
-  screen (pause, game over) is a new file with its own plugin, not an edit to a shared
-  match. The screens: `main_menu.rs` (Start/Settings/Quit — Quit is native-only),
-  `settings.rs` (the "Paddle control: Mouse/Keyboard" toggle; Back or Esc returns), `pause.rs` (Resume / Main menu, shown
-  over the frozen game while `PlayState::Paused`) and `game_over.rs` ("GAME OVER" or
-  "YOU WIN!", final score, Play again / Main menu). Pause and game-over roots use
-  `OVERLAY_DIM` as background so the game shows through.
-- `src/theme.rs` — the Steelbreak palette: every colour the game draws with (void clear
-  colour, steel ball, cyan emitter paddle and its prongs, the brick class face colours
-  (`brick_color`) and glow colours (`brick_glow`, used for sparks), particle smoke,
-  power-up drops, HUD ink/label, menu buttons and the overlay dim). Damage never changes a
-  brick's colour: it shows as particles. Use a `theme::` constant instead of a colour literal;
-  the later sprite swap and palette tweaks touch only this file. These colours are also
-  the fallback look when a sprite file is missing (see `src/sprites.rs`): the ball is a
-  round `Mesh2d(Circle)` (handles in the `BallLook` resource, made in `setup_level`), and
-  the paddle is drawn by three children (left prong, stretched `PaddleField`, right prong)
-  laid out by the pure `paddle_pieces(width)` and kept in place by `place_paddle_pieces`
-  as Super-Sizer changes `Paddle.width` (the parent keeps the one full-width collider and
-  has no sprite of its own). The HUD is `SCORE\n`/`LIVES\n` labels with the value in a `TextSpan`
-  child (the markers sit on the span). The headless test app adds `AssetPlugin` plus
-  `Mesh`/`ColorMaterial` assets for the ball.
-- `src/sprites.rs` — image assets. `SpritesPlugin` (registered from `main()`, not
-  `add_game`, since the headless test app has no image loaders) loads every handle once at
-  `Startup` into the `GameSprites` resource (background, ball, paddle prongs and field,
-  power-up icon) and spawns the global `Background`, sized to the playfield well (the side
-  panels stay clear colour). `SkinPlugin` (in `add_game`, a no-op
-  without `GameSprites`) swaps an entity's `theme` shape for its sprite once that image is
-  in `Assets<Image>`, marking it `Skinned`. Everything spawns as its shape first, so a
-  missing or broken file just leaves the shape (no panic, nothing invisible). Sprites live
-  at `assets/sprites/<name>.png`; a new one is a `GameSprites` field plus a skin rule.
-  Bricks too: `GameSprites::bricks` holds the 7 intact plates
-  (`assets/sprites/bricks/<material>_intact.png`), picked per class by the pure
-  `BrickSprite::of(class)` (the three explosive variants share one plate). Gameplay keeps
-  writing the flat class colour (and the shield flash); for a skinned brick
-  `tint_skinned_bricks` (PostUpdate) replaces it with `theme::brick_sprite_tint(flashing)` —
-  untinted, bright while shield glass flashes — so flash code needs nothing sprite-specific.
-  Damage never tints a brick (particles show it); the `*_cracked.png` files are unused.
-- `src/controls.rs` — player controls: the session-only `ControlSettings` resource
-  (`PaddleControl::Mouse` by default, or `Keyboard`, toggled on the Settings screen) and
-  the mouse side of paddle control. While `Playing` in Mouse mode, `track_cursor` turns
-  cursor movement into a `PaddleTarget` (world X); `paddle_movement` then drives the
-  paddle's `LinearVelocity.x` toward it (`clamp_paddle_x` keeps it between the walls,
-  inside the playfield well, for the current `Paddle.width`, `follow_velocity` is the capped proportional drive, limited to ~80% of the gap per frame so
-  low frame rates don't overshoot), so Avian
-  still resolves ball bounces. Arrow keys / A/D push with `ConstantForce` in both modes, and
-  a held key clears the mouse target. Tests set `PaddleTarget` directly (no window).
-- `src/bricks/` (`mod.rs`) — the brick model: `BrickClass` (`Ceramic`, `Titanium`, `Tungsten`,
-  `Reactor` = the power-up brick, `Explosive(ExplosiveKind::{Charge, Breach, Demolition})`,
-  `Regen`, `Shield`) with `max_hits()` (1/2/3/2/1/2/1), a `BrickCell { row, col }` on
-  every brick (row 0 at the top), and the pure `generate_board(rng) -> [[BrickClass; 10]; 7]`:
-  a weighted fill (ceramic 30, titanium 20, tungsten 12, explosive 16 split over the three
-  variants, regen 12, shield 10), then one bounded patch pass that places exactly
-  `REACTOR_BRICKS` (6) reactors and guarantees at least one of every other class and
-  variant. Tested with a seeded rng. Per-class behaviours are submodules composed into
-  `BricksPlugin`: `regen.rs` (a regen brick that survives a hit gets a 3 s `RegenTimer`,
-  restarted by each further non-lethal hit; when it runs out the brick heals to full and
-  stops smoking; ticks only while `Playing`) and `explosive.rs` (a ball-destroyed
-  explosive sets off a blast: charge = 1 hit to the 8 around, breach = destroys the 4
-  orthogonal, demolition = destroys the 8 around; charge/breach chain into explosives they
-  destroy, demolition doesn't; blasts ignore shield glass's direction rule). The chain is
-  resolved by the pure `resolve_blast(grid, origin, kind)` on a `BrickCell`-keyed snapshot,
-  so each hit point is removed (and scored) once, then applied through the normal break path
-  (`BrickDestroyed { by_blast: true }`, score, `broke_brick`, `BrickDamaged` for survivors)
-  and then triggers `BrickExploded { cell, position, kind }` once per explosion (origin first,
-  then each chained one) for visuals to observe; the placeholder `BlastFlash` is one such
-  observer (the particles epic replaces it). `outline.rs` holds the behaviour outlines:
-  each special brick gets a `BrickOutline` child of thin `OutlineStrip` sprites laid out by
-  the pure `strips(style, size)` — red charge/breach/demolition, green regen, cyan shield,
-  violet reactor; plain classes get none. `animate_outlines` pulses them only while
-  `Playing`, and a regen brick with a running `RegenTimer` blinks faster as healing nears.
-  Colours and rates live in `theme.rs`; the final art replaces only the strip children.
-  `BricksPlugin` also runs the
-  shield-glass flash timer
-  (`ShieldFlash`, frozen while paused). Colours come from `theme::brick_color(class)` and
-  `theme::brick_color(class)` whatever its health (damage is shown by particles).
-- `src/particles/` — the VFX layer on bevy_enoki. **Gameplay fires events, particles
-  observe**: gameplay only triggers `BrickDamaged { brick, position, class }` (a hit a brick
-  survives; `position` is the contact point) / `BrickDestroyed` and changes `BrickHealth`,
-  and `VfxPlugin` (in `add_game`) reacts. Event → effect (`assets/particles/*.particle.ron`):
-  `BrickDamaged` → `brick_hit` spark burst in the class glow colour; `BrickHealth` below max →
-  two child emitters on the brick (`brick_damage_smoke` in smoke grey + `brick_damage_sparks`
-  in glow), emitting more often the more damage taken; back to max (regen) → removed;
-  `BrickDestroyed` → `brick_break` shatter burst in the face colour, falling with gravity.
-  Effect files are white and in world units (sizes/speeds already ×`GAME_SCALE`); colour comes from each spawner's `ColorParticle2dMaterial`
-  (`ParticleMaterials`, one per class and role). A live-particle budget
-  (`DAMAGE_PARTICLE_BUDGET`, via the pure `damage_emitter_interval`) stretches the damage
-  emitters' spawn interval when many bricks are damaged (not `max_particles`: bevy_enoki
-  stops *moving* a spawner's particles once it's at that cap). `ParticlesPlugin` (from
-  `main()`, needs the renderer) adds `EnokiPlugin`, loads effects/materials and **freezes
-  particles while paused by pausing `Time<Virtual>`** (bevy_enoki ticks on it) from
-  `OnEnter(PlayState::Paused)` to `OnExit` — gameplay gates on `PlayState::Playing` and
-  physics has its own clock, so nothing else depends on virtual time then. Every spawner is
-  run-scoped (a brick child or `DespawnOnExit(AppState::InGame)`). Effect files hot-reload
-  natively; headless tests insert placeholder `ParticleEffects`/`ParticleMaterials` and
-  count spawner entities.
-- `src/spawner.rs` — `Spawner<T>`, a generic weighted registry of spawnable kinds
-  (`register(kind, weight, color)` + `pick()`, no timer). Reusable across any future domain (obstacles, brick respawns, etc.) because
-  Bevy resources are keyed by concrete type: `Spawner<PowerUpKind>` and a hypothetical
-  `Spawner<ObstacleKind>` are automatically independent resources (same trick Bevy itself
-  uses for `Time<T>`/`Events<T>`). It only decides *which kind*; when to pick and
-  actually spawning an entity (components, physics) stay domain-specific.
-- `src/powerups/mod.rs` — the power-up framework: `PowerUp` component, `PowerUpCollected`
-  event, `ActiveEffects` resource (the "game state" active effects land in — consumers
-  recompute derived values from it every frame, so an effect expiring needs no explicit
-  revert step), `PowerUpBrick` (each run `attach_reactor_power_ups`, a `RestartGame`
-  observer, gives every reactor-class brick a kind picked from `PowerUpSpawner`),
-  and the drop/fall/paddle-pickup systems. A power-up only ever appears when a power-up
-  brick breaks: `drop_power_up` observes `BrickDestroyed` and spawns it at the brick's
-  position (no timed drops).
-- `src/script_manager/mod.rs` — `ScriptPlugin`, the Lua scripting entry point (wraps
-  bevy_mod_scripting's `BMSPlugin`). Native-only in effect; see the wasm note below.
-- `src/powerups/super_sizer.rs` — one concrete power-up (Super-Sizer: temporarily widens
-  the paddle), fully self-contained as its own `Plugin`. **This is the pattern for adding a
-  new power-up**: a new file with its own `Plugin` that (1) registers itself into the
-  shared `PowerUpSpawner` registry (`Spawner<PowerUpKind>`) at `build()` time via
-  `app.world_mut().resource_mut::<PowerUpSpawner>().register(...)`, (2) reacts to
-  `PowerUpCollected` via its own `add_observer`, and (3) is composed in via
-  `PowerUpsPlugin`'s `.add_plugins(...)`. No shared match statement to edit — only
-  `PowerUpKind` needs a new enum variant centrally.
+One line per file; each module's details live in its own `//!` doc comment.
+
+- `src/main.rs` — entry point: engine plugins in `main()`, and `add_game` wiring every module in (wiring only).
+- `src/world.rs` — the 1920×1080 world, the centred playfield well, `GAME_SCALE` and the walls.
+- `src/view.rs` — `ViewPlugin`: the camera that fits the world to the window, and `UiScale`.
+- `src/game_state.rs` — `AppState` / `PlayState` state machine, `GameOutcome` and the physics clock.
+- `src/run.rs` — starting and ending a run, `Score` / `Lives`, `RestartGame` and the HUD.
+- `src/paddle.rs` — the paddle, its movement and its prong/field pieces; `PaddleMovementSet`.
+- `src/ball.rs` — ball movement rules, the serve from the paddle and `BallApproach`.
+- `src/collision.rs` — `on_ball_collision`, scoring, `BrickDamaged` / `BrickDestroyed`.
+- `src/controls.rs` — `ControlSettings` (Mouse/Keyboard) and the mouse side of paddle control.
+- `src/bricks/mod.rs` — `BrickClass`, `BrickCell`, `generate_board` and `BricksPlugin`.
+- `src/bricks/grid.rs` — the `Brick` / `BrickHealth` entities, grid layout and `spawn_bricks`.
+- `src/bricks/regen.rs` — regen alloy: damaged bricks heal after a timer.
+- `src/bricks/explosive.rs` — explosive bricks and their chained blasts.
+- `src/bricks/outline.rs` — behaviour outlines drawn over special bricks.
+- `src/menu/mod.rs` — `MenuPlugin` and the reusable menu widget kit.
+- `src/menu/main_menu.rs` — title screen: Start, Settings, Quit (native only).
+- `src/menu/settings.rs` — Settings screen: the paddle-control toggle.
+- `src/menu/pause.rs` — pause menu over the frozen game.
+- `src/menu/game_over.rs` — game-over / win screen with the final score.
+- `src/theme.rs` — the Steelbreak palette; every colour the game draws with.
+- `src/sprites.rs` — image assets: `GameSprites`, the background and sprite skinning.
+- `src/particles/mod.rs` — the bevy_enoki VFX layer reacting to brick events.
+- `src/spawner.rs` — `Spawner<T>`, a generic weighted registry of spawnable kinds.
+- `src/powerups/mod.rs` — the power-up framework: drops, pickup and `ActiveEffects`.
+- `src/powerups/super_sizer.rs` — Super-Sizer, and the pattern for adding a power-up.
+- `src/script_manager/mod.rs` — `ScriptPlugin`, Lua scripting (native only).
+- `src/test_support.rs` — shared headless test helpers (`app`, `tap`, `click`, `hit`, ...).
 
 ### Cross-cutting mechanisms worth knowing before touching gameplay code
 
 - **Avian's collision events are observer-only, not message-queue.** `CollisionStart`/
   `CollisionEnd` derive `Message` but are dispatched purely via `World::trigger` — a
   `MessageReader<CollisionStart>` will silently never receive anything. Consume them with
-  an observer (`On<CollisionStart>`), as `on_ball_collision` in `main.rs` does. Only the
+  an observer (`On<CollisionStart>`), as `on_ball_collision` in `collision.rs` does. Only the
   ball has `CollisionEventsEnabled`; Avian guarantees the enabled side always ends up as
   `collider1`, which is why `on_ball_collision` can assume `on.collider1` is the ball
   without checking.
@@ -199,12 +80,12 @@ not hand-rolled kinematics/AABB checks.
   finds a brick of a class).
 - **Direction-dependent brick rules read `BallApproach`, not `LinearVelocity`.** Avian
   triggers `CollisionStart` after its solver, so the ball's `LinearVelocity` at the event
-  has usually already been reflected. `record_ball_approach` copies it into the ball's
+  has usually already been reflected. `record_ball_approach` (`ball.rs`) copies it into the ball's
   `BallApproach` in `FixedPostUpdate` `PhysicsSystems::First`, just before each physics step.
   Shield glass takes damage only if `BallApproach.y < 0` (the ball was moving down at
   contact); otherwise it only flashes (no damage, no score).
 - **Ball speed is deliberately kept at a controlled, constant magnitude**, not left to
-  Avian's real momentum transfer — `ball_movement` renormalizes `LinearVelocity` back to
+  Avian's real momentum transfer — `ball_movement` (`ball.rs`) renormalizes `LinearVelocity` back to
   `BALL_SPEED` after every frame's bounce (with a minimum-vertical-component clamp to
   prevent a real observed failure mode: a ball moving near-perfectly horizontally between
   the side walls, below the bricks and above the paddle, can otherwise get stuck bouncing
@@ -236,8 +117,8 @@ not hand-rolled kinematics/AABB checks.
   R on the game-over screen goes back to `InGame` (a shortcut for its Play again button);
   Main menu from the pause or game-over screen leaves `InGame`, so the run is torn down and
   the next Start begins fresh.
-- **`RestartGame` is a crate-wide broadcast event**, not a resource `main.rs` reaches into.
-  `start_run` (on `OnEnter(AppState::InGame)`, i.e. first launch and every restart) only
+- **`RestartGame` is a crate-wide broadcast event**, not a resource `run.rs` reaches into.
+  `start_run` (in `run.rs`, on `OnEnter(AppState::InGame)`, i.e. first launch and every restart) only
   resets what it directly owns (score, lives = `STARTING_LIVES`, ball/paddle/bricks/HUD) and
   fires `commands.trigger(RestartGame)`; each subsystem with its own state to reset
   (currently just power-ups: `reset_on_restart` clears drops and effects, and
@@ -273,6 +154,17 @@ not hand-rolled kinematics/AABB checks.
   `BMSPlugin` registration inside `ScriptPlugin::build`, so `main.rs` adds `ScriptPlugin`
   unconditionally and on wasm it registers no scripting runtime. Any new code touching
   `bevy_mod_scripting` must be gated the same way or the web build breaks.
+
+## Conventions for parallel work
+
+- Tests live in `<module>/tests.rs` via `#[cfg(test)] mod tests;` (e.g. `src/ball.rs` →
+  `src/ball/tests.rs`), never inline in a file over ~150 lines.
+- Shared headless test helpers go in `src/test_support.rs`.
+- A new feature gets its own module with its own `Plugin`, added to `add_game` with one line;
+  `main.rs` is wiring only.
+- Import items from their owning module (`crate::ball::Ball`), not from the crate root.
+- Document a module in its own `//!` comment and add one line to the module index above, not
+  a paragraph.
 
 ## Beads Workflow Integration
 
