@@ -22,11 +22,19 @@ fn every_brick_gets_its_class_look_health_and_cell() {
     assert_eq!(BRICK_ROWS * BRICK_COLS, 70);
     let world = app.world_mut();
     let mut cells = std::collections::HashSet::new();
-    for (class, health, sprite, transform, cell) in world
-        .query_filtered::<(&BrickClass, &BrickHealth, &Sprite, &Transform, &BrickCell), With<Brick>>()
+    for (class, health, max, sprite, transform, cell) in world
+        .query_filtered::<(
+            &BrickClass,
+            &BrickHealth,
+            &BrickMaxHits,
+            &Sprite,
+            &Transform,
+            &BrickCell,
+        ), With<Brick>>()
         .iter(world)
     {
-        assert_eq!(health.0, class.max_hits());
+        assert_eq!(max.0, class.max_hits());
+        assert_eq!(health.0, max.0);
         assert_eq!(sprite.color, theme::brick_color(*class));
         assert_eq!(transform.translation, brick_translation(*cell));
         assert!(cell.row < 7 && cell.col < 10);
