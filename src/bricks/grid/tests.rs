@@ -131,3 +131,14 @@ fn seven_rows_leave_room_above_the_paddle() {
         + PADDLE_HEIGHT / 2.0;
     assert!(lowest - BRICK_HEIGHT / 2.0 - paddle_top >= 250.0 * GAME_SCALE);
 }
+
+#[test]
+fn ten_rows_leave_room_above_the_paddle() {
+    use crate::paddle::PADDLE_MARGIN_BOTTOM;
+    let paddle_top = -PLAYFIELD_HEIGHT / 2.0 + PADDLE_MARGIN_BOTTOM + PADDLE_HEIGHT;
+    let lowest = brick_y(crate::levels::MAX_ROWS - 1) - BRICK_HEIGHT / 2.0;
+    assert!(
+        lowest - paddle_top >= 250.0 * GAME_SCALE,
+        "{lowest} vs {paddle_top}"
+    );
+}
