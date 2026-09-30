@@ -1,0 +1,26 @@
+Sci-fi industrial game art, clean hard-surface rendering: machined steel, bevelled
+metal plates, bolts and seams, crisp specular edges, subtle glossy highlights.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Restrained glow, high readability at small size, strong
+silhouette. Absolutely no text, lettering, numbers, logos, watermarks, borders or
+UI, no letter-like marks.
+
+Subject: the LIGHT damage ("cracked") state of the reference "tungsten plate"
+brick plate (attached reference image). Keep the exact same plate silhouette,
+aspect ratio, corner bevel, bolt positions, heavy dark-gold metal face colour and
+seam-glow position as the reference — do not redesign the plate. Add light damage
+specific to this thick, heavy, dense metal: a few shallow gouges (short, wide,
+dug-out scrape channels where a chunk of the surface material has been physically
+gouged away, not just scratched) exposing a slightly darker, rougher metal
+underneath. No glowing or heat effects yet at this light-damage stage — the metal
+is dented physically but not yet hot/glowing. Keep it LIGHT damage: still clearly
+mostly intact and solid. The seam glow line stays intact.
+
+Use in game: this is the first-hit "lightly damaged" look, distinct from a later
+heavier "broken" state; it must read as only lightly damaged at a glance, from the
+same silhouette, at small size.
+
+Single isolated object, centred, whole object inside frame, orthographic front
+view, plain flat solid #00FF00 green background, no shadow on the background, no
+scenery, no other objects, no text, no numbers, no hit-count pips, no logos.
+

@@ -1,0 +1,27 @@
+This is a GREYSCALE PARTICLE-EFFECT SPRITE SHEET, not a coloured game object.
+Render everything in the image in pure grayscale only — white, light gray, mid
+gray, dark gray, black — with absolutely no color or hue anywhere (this artwork
+will be colour-tinted later by the game engine). Style: clean sci-fi hard-surface
+particle FX, crisp readable shapes, no painterly brushwork.
+
+Format: a single horizontal sprite sheet strip, exactly 4 equal square frames
+arranged left to right in one row (wide 4:1 aspect ratio, like a film strip).
+Each frame's content is centred within its own square cell. No dividing lines,
+no border, no frame numbers or labels, frames touching edge to edge with no gaps
+or padding between them. Flat solid #00FF00 green background filling every
+frame equally — no scenery, no ground plane, no shadow, no text.
+
+Subject: a small burst of angular tempered-glass fleck fragments with sharp
+specular glints, the "hit/break" particle effect for a shield-glass brick.
+Animate across the 4 frames, reading left to right as a short one-shot burst:
+Frame 1: a few small, sharp-edged glass flecks tightly grouped near the frame
+centre, each catching a bright specular highlight glint, the instant after
+impact.
+Frame 2: the flecks have moved slightly further apart, still sharp and glinting.
+Frame 3: the flecks are more spread out, slightly smaller, glints softer, tone
+lightening toward pale gray (glass feels more transparent/faded).
+Frame 4: the flecks are scattered furthest apart, smallest and faintest (barely
+visible, almost translucent-looking pale gray), as the burst finishes
+dispersing.
+Keep the flecks sharp, angular and glassy (thin, flat shards with hard glinting
+highlights), not soft or organic.

@@ -1,0 +1,26 @@
+This is a GREYSCALE PARTICLE-EFFECT SPRITE SHEET, not a coloured game object.
+Render everything in the image in pure grayscale only — white, light gray, mid
+gray, dark gray, black — with absolutely no color or hue anywhere (this artwork
+will be colour-tinted later by the game engine). Style: clean sci-fi hard-surface
+particle FX, crisp readable shapes, no painterly brushwork.
+
+Format: a single horizontal sprite sheet strip, exactly 4 equal square frames
+arranged left to right in one row (wide 4:1 aspect ratio, like a film strip).
+Each frame's content is centred within its own square cell. No dividing lines,
+no border, no frame numbers or labels, frames touching edge to edge with no gaps
+or padding between them. Flat solid #00FF00 green background filling every
+frame equally — no scenery, no ground plane, no shadow, no text.
+
+Subject: a single small glob of hot molten tungsten slag, the "hit/break"
+particle effect for a heavy tungsten plate brick. Animate across the 4 frames,
+reading left to right as a short one-shot burst:
+Frame 1: a small, dense, near-white-hot glowing molten droplet with a soft bright
+halo, tight at the frame centre, the instant after impact.
+Frame 2: the droplet has stretched/spattered slightly (a couple of small
+secondary droplets nearby), still very bright, glow slightly less intense.
+Frame 3: the droplet(s) are cooling — mid-gray with only a dim glow remaining at
+the core, edges starting to solidify (harder, less liquid-looking).
+Frame 4: the droplet(s) have fully cooled and solidified into small dark-gray
+irregular solid specks with no glow left, smallest and furthest apart, as the
+burst finishes.
+Keep it reading as heavy, dense molten metal (not sparks, not smoke).

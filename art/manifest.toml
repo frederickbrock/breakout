@@ -113,3 +113,53 @@ processing = [
   "regen: same but --key-color #c71682 --tolerance 100 (magenta #FF00FF key, per the brief's exception) — needed a much higher tolerance than the others because the vine/lattice pattern's thin anti-aliased strokes had magenta spill baked into them throughout (not just at the outer silhouette), which a colour-decontamination pass (pushing opaque RGB outward before resize) could not fix since there was no nearby fully-opaque pixel to source clean colour from inside such thin strokes",
   "tolerance for all 5 tuned up from an initial 40 after finding real, visible background-colour fringe on resize (checked by compositing each on the actual #0a0e15 game background and zooming in) — a naive per-pixel green/magenta detector flagged some of shield's own cyan/teal glow colour as false-positive \"green fringe\"; that one was left alone after visual confirmation it reads clean",
 ]
+
+[[asset]]
+id = "brick-damage-ladder"
+issue = "sim-rdl.7.6"
+files = [
+  "assets/sprites/bricks/tungsten_cracked.png",
+  "assets/sprites/bricks/tungsten_broken.png",
+  "assets/sprites/bricks/titanium_broken.png",
+  "assets/sprites/bricks/reactor_broken.png",
+  "assets/sprites/bricks/regen_broken.png",
+]
+source = "tungsten_cracked=r5/v3, tungsten_broken=r6/v3, titanium_broken=r4/v4, reactor_broken=r8/v3, regen_broken=r11/v2 — scope trimmed 2026-09-29 by the user via pm (see beads comments) to only these 5 of the original per-material cracked+broken set; the rest of rounds 1-9 (ceramic/explosive/shield cracked+broken, titanium/reactor cracked) are left as history, unused"
+model = "google/gemini-2.5-flash-image"
+prompt_file_r4 = "art/prompts/sim-rdl.7.6-r4.txt"
+prompt_file_r5 = "art/prompts/sim-rdl.7.6-r5.txt"
+prompt_file_r6 = "art/prompts/sim-rdl.7.6-r6.txt"
+prompt_file_r8 = "art/prompts/sim-rdl.7.6-r8.txt"
+prompt_file_r11 = "art/prompts/sim-rdl.7.6-r11.txt"
+processing = [
+  "all 5: process --bg flood --tolerance 35 --trim --size 160x60 --fit stretch (green #00FF00 key; regen_broken used #FF00FF magenta per the brief's exception since it's a green brick)",
+  "sources rendered a muted sage/orchid gradient background rather than flat key colour, so --bg key at default tolerance left a visible fringe on every sprite; switched to --bg flood which handled the gradient cleanly at tolerance 35 (verified by compositing on the real #0a0e15 background and zooming in)",
+  "post-process edge-clamp fill on all 5 (small script, not an artgen flag): titanium_broken's render had a warped top/bottom plate edge (per the art-director's pick note) that left small transparent notches (up to 4px of 60) breaking the 'fills its box edge to edge' rule — clamped by extending each column's nearest opaque edge pixel outward to a full rectangle; applied to all 5 for consistency though the other 4 only needed 0-2px of correction",
+]
+
+[[asset]]
+id = "brick-damage-particles"
+issue = "sim-rdl.7.6"
+files = [
+  "assets/particles/ceramic.png",
+  "assets/particles/titanium.png",
+  "assets/particles/tungsten.png",
+  "assets/particles/reactor.png",
+  "assets/particles/explosive.png",
+  "assets/particles/regen.png",
+  "assets/particles/shield.png",
+]
+source = "ceramic=r12/v3, titanium=r13/v1, tungsten=r14/v2, reactor=r15/v1, explosive=r16/v2, regen=r17/v2, shield=r18/v4 — each a 4-frame decay/burst sequence per the art-director's pick"
+model = "google/gemini-2.5-flash-image"
+prompt_file_r12 = "art/prompts/sim-rdl.7.6-r12.txt"
+prompt_file_r13 = "art/prompts/sim-rdl.7.6-r13.txt"
+prompt_file_r14 = "art/prompts/sim-rdl.7.6-r14.txt"
+prompt_file_r15 = "art/prompts/sim-rdl.7.6-r15.txt"
+prompt_file_r16 = "art/prompts/sim-rdl.7.6-r16.txt"
+prompt_file_r17 = "art/prompts/sim-rdl.7.6-r17.txt"
+prompt_file_r18 = "art/prompts/sim-rdl.7.6-r18.txt"
+processing = [
+  "custom script (not plain artgen process), since each source is a single 1024x1024 image containing all 4 frames laid out in one row rather than 4 separate files: detected the background colour from the image corners, found the content row's bounding box by per-pixel colour distance (two thresholds — a looser one to find the row's y-extent, a tighter one to catch a near-invisible last frame some sequences fade to), cropped to that row, split into 4 equal-width frames with a ~3.5% inset on every side (titanium's r13 and tungsten's r14 renders drew a visible frame border box per the pick note; the inset crops it out uniformly on all 7 for consistency), converted each frame to greyscale (luminosity) with alpha from a feathered colour-distance threshold around the detected background (avoids a hard jagged key edge), then resized each frame to 32x32 (Lanczos, not nearest — smooth hard-surface art, not pixel art) and composited into a 128x32 strip",
+  "backgrounds rendered as a muted sage-green (not flat #00FF00) on every one of the 7 — same non-flat-background issue as the damage sprites above, handled by the per-image detected-colour + feathered-threshold approach rather than a fixed key colour",
+  "verified each at 128x32 with alpha and by compositing on the #0a0e15 game background, zoomed 4-5x, checking for background fringe and that the 4-frame fade/decay progression reads clearly in both colour and a greyscale-only render",
+]
