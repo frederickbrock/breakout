@@ -20,9 +20,8 @@
 
 use crate::bricks::{BrickClass, ShieldFlash};
 use crate::powerups::PowerUp;
-use crate::{
-    theme, Ball, Brick, PaddleField, PaddleProng, BALL_SIZE, PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH,
-};
+use crate::world::{PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH};
+use crate::{theme, Ball, Brick, PaddleField, PaddleProng, BALL_SIZE};
 use bevy::prelude::*;
 
 /// Paths relative to `assets/`.

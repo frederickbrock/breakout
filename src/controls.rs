@@ -8,7 +8,8 @@
 //! so they're testable without a window.
 
 use crate::game_state::PlayState;
-use crate::{RestartGame, GAME_SCALE, PLAYFIELD_WIDTH};
+use crate::world::{GAME_SCALE, PLAYFIELD_WIDTH};
+use crate::RestartGame;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 

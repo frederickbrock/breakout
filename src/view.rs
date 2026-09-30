@@ -7,7 +7,7 @@ use bevy::camera::ScalingMode;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
-use crate::{GAME_SCALE, WORLD_HEIGHT, WORLD_WIDTH};
+use crate::world::{GAME_SCALE, WORLD_HEIGHT, WORLD_WIDTH};
 
 pub struct ViewPlugin;
 

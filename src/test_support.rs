@@ -3,6 +3,7 @@
 //! driven by hand via [`tap`].
 
 use super::*;
+use crate::world::PLAYFIELD_HEIGHT;
 use bevy::state::app::StatesPlugin;
 use bevy::time::TimeUpdateStrategy;
 use std::time::Duration;
