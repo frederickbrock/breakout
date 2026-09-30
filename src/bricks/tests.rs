@@ -122,3 +122,38 @@ fn the_fill_roughly_follows_the_weights() {
         share(shield)
     );
 }
+
+#[test]
+fn patching_few_random_cells_places_what_fits() {
+    for n in 0..=16 {
+        for reactors in [0, 3, 6, 20] {
+            for seed in 0..50 {
+                let mut classes = vec![BrickClass::Ceramic; n];
+                patch_classes(&mut classes, reactors, &mut StdRng::seed_from_u64(seed));
+                assert_eq!(
+                    count(&classes, BrickClass::Reactor),
+                    reactors.min(n),
+                    "{n} cells, {reactors} reactors, seed {seed}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn enough_random_cells_always_get_every_class() {
+    for reactors in [0, 6] {
+        let n = reactors + 8;
+        for seed in 0..200 {
+            let classes = random_classes(n, reactors, &mut StdRng::seed_from_u64(seed));
+            assert_eq!(classes.len(), n);
+            assert_eq!(count(&classes, BrickClass::Reactor), reactors);
+            for (class, _) in FILL_WEIGHTS {
+                assert!(
+                    count(&classes, class) >= 1,
+                    "{n} cells, seed {seed}: no {class:?}"
+                );
+            }
+        }
+    }
+}
