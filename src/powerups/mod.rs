@@ -1,3 +1,19 @@
+//! The power-up framework: the [`PowerUp`] component, the
+//! [`PowerUpCollected`] event, and the drop, fall and paddle-pickup systems.
+//!
+//! A power-up only ever appears when a power-up brick breaks: each run,
+//! `attach_reactor_power_ups` (a [`crate::run::RestartGame`] observer) gives
+//! every reactor-class brick a [`PowerUpBrick`] with a kind picked from
+//! [`PowerUpSpawner`], and `drop_power_up` observes
+//! [`crate::collision::BrickDestroyed`] and spawns it at the brick's position
+//! (no timed drops). `reset_on_restart` clears drops and effects.
+//!
+//! [`ActiveEffects`] is where collected effects land. Consumers recompute
+//! their derived values from it every frame, so an effect expiring needs no
+//! explicit revert step. [`TickActiveEffects`] is an ordering-only set for
+//! those consumers. Each concrete power-up is its own plugin (see
+//! [`super_sizer`]).
+
 mod super_sizer;
 
 use crate::bricks::grid::Brick;

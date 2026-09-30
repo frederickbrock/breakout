@@ -5,6 +5,21 @@
 //! Every run builds a fresh board with [`generate_board`], a pure function
 //! (rng in, class grid out), so its guarantees are unit-testable with a
 //! seeded rng.
+//!
+//! [`BrickClass`] is `Ceramic`, `Titanium`, `Tungsten`, `Reactor` (the
+//! power-up brick), `Explosive(ExplosiveKind::{Charge, Breach, Demolition})`,
+//! `Regen` or `Shield`, with `max_hits()` 1/2/3/2/1/2/1. Every brick carries
+//! a [`BrickCell`] (row 0 at the top). [`generate_board`] does a weighted
+//! fill (ceramic 30, titanium 20, tungsten 12, explosive 16 split over the
+//! three variants, regen 12, shield 10), then one bounded patch pass that
+//! places exactly [`REACTOR_BRICKS`] reactors and guarantees at least one of
+//! every other class and variant.
+//!
+//! The brick entities themselves and the grid layout are in `grid`.
+//! Per-class behaviours are submodules composed into [`BricksPlugin`]
+//! (`regen`, `explosive`, and `outline` for the behaviour borders), which
+//! also runs the shield-glass flash timer ([`ShieldFlash`], frozen while
+//! paused). Colours come from [`crate::theme::brick_color`].
 
 mod explosive;
 pub(crate) mod grid;

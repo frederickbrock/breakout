@@ -1,3 +1,13 @@
+//! [`Spawner<T>`], a generic weighted registry of spawnable kinds
+//! ([`Spawner::register`] a kind with a weight and colour, then
+//! [`Spawner::pick`]; no timer).
+//!
+//! Reusable across domains (obstacles, brick respawns, ...) because Bevy
+//! resources are keyed by concrete type: `Spawner<PowerUpKind>` and a
+//! hypothetical `Spawner<ObstacleKind>` are automatically independent
+//! resources (the same trick Bevy uses for `Time<T>`). It only decides *which
+//! kind*; when to pick and actually spawning an entity stay domain-specific.
+
 use bevy::prelude::*;
 use rand::{Rng, RngExt};
 

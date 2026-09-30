@@ -3,9 +3,16 @@
 //! [`ControlSettings`] is session-only (it resets to Mouse on every launch)
 //! and is toggled from the Settings screen. While playing in Mouse mode,
 //! [`track_cursor`] turns cursor movement into a [`PaddleTarget`];
-//! `paddle_movement` in `main.rs` then drives the paddle's velocity toward it
-//! with [`follow_velocity`]. The target and clamp maths are pure functions
-//! so they're testable without a window.
+//! [`crate::paddle::paddle_movement`] then drives the paddle's velocity
+//! toward it with [`follow_velocity`]. The target and clamp maths are pure
+//! functions so they're testable without a window.
+//!
+//! [`clamp_paddle_x`] keeps the target between the walls, inside the
+//! playfield well, for the current `Paddle.width`; [`follow_velocity`] is a
+//! capped proportional drive, limited to about 80% of the gap per frame so
+//! low frame rates don't overshoot. Arrow keys / A/D push the paddle in both
+//! modes, and a held key clears the mouse target. Tests set [`PaddleTarget`]
+//! directly (no window).
 
 use crate::game_state::PlayState;
 use crate::run::RestartGame;

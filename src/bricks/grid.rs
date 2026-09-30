@@ -1,3 +1,13 @@
+//! Brick entities on the board: the [`Brick`] marker, [`BrickHealth`], the
+//! grid layout and [`spawn_bricks`].
+//!
+//! [`BRICK_WIDTH`] is derived, not set: a full row fills the playfield well
+//! less a [`SIDE_CHANNEL`] each side, and [`SIDE_CHANNEL_BALLS`] (ball widths)
+//! is the one knob. The pure [`brick_x`] and [`brick_y`] centre the grid, so
+//! fewer columns just widen the equal channels. Each brick spawns at its
+//! class's `max_hits()` with its [`crate::bricks::BrickCell`], scoped to the
+//! run.
+
 use avian2d::prelude::*;
 use bevy::prelude::*;
 

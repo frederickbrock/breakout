@@ -1,6 +1,15 @@
 //! The Steelbreak palette: every colour the game draws with, in one place,
 //! so the later swap to sprites (and any palette tweak) touches only this
 //! file. Values follow the Steelbreak concept art.
+//!
+//! Use a `theme::` constant instead of a colour literal. These colours are
+//! also the fallback look when a sprite file is missing (see
+//! [`crate::sprites`]): the ball is a round mesh in [`STEEL`], the paddle's
+//! prongs and field are [`EMITTER_PRONG`] and [`EMITTER`] sprites, and each
+//! brick is its [`brick_color`].
+//!
+//! A brick keeps its class colour whatever its health; damage is shown by
+//! particles.
 
 use crate::bricks::BrickClass;
 use bevy::prelude::*;

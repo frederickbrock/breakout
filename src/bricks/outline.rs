@@ -8,6 +8,10 @@
 //! brick, so it goes when the brick does. [`animate_outlines`] advances each
 //! outline's pulse phase and sets its strips' brightness; it only runs while
 //! playing, so the animation freezes while paused.
+//!
+//! Styles: red charge/breach/demolition, green regen, cyan shield, violet
+//! reactor. A regen brick with a running `RegenTimer` blinks faster as
+//! healing nears. Colours and rates live in `theme.rs`.
 
 use super::grid::{BRICK_HEIGHT, BRICK_WIDTH};
 use super::regen::RegenTimer;

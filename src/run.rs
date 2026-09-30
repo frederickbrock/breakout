@@ -1,3 +1,18 @@
+//! A run: starting it, ending it, and its score, lives and HUD.
+//!
+//! [`start_run`] (on entering `AppState::InGame`, i.e. first launch and every
+//! restart) resets [`Score`] and [`Lives`] (to [`STARTING_LIVES`]), spawns the
+//! run's ball, paddle, bricks and HUD (all scoped to the run), and broadcasts
+//! [`RestartGame`]; every other subsystem with state to reset observes that
+//! instead of being reset from here. [`end_run`] inserts the `GameOutcome`
+//! and switches to `GameOver`; [`restart_from_game_over`] makes R a shortcut
+//! for Play again.
+//!
+//! The HUD is two blocks in the left side panel at [`HUD_X`]: an uppercase
+//! `SCORE\n` / `LIVES\n` label line, with the value in a `TextSpan` child
+//! (the [`ScoreText`] / [`LivesText`] markers sit on the span), kept current
+//! by [`update_hud`].
+
 use avian2d::prelude::*;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;

@@ -1,3 +1,18 @@
+//! The paddle: its sizes, movement and visual pieces.
+//!
+//! The [`Paddle`] parent carries the one full-width collider and has no
+//! sprite of its own. It is drawn by three children, a left [`PaddleProng`],
+//! a stretched [`PaddleField`] and a right prong, laid out by the pure
+//! [`paddle_pieces`] and kept in place by [`place_paddle_pieces`] as
+//! Super-Sizer changes `Paddle.width`.
+//!
+//! [`paddle_movement`] pushes the paddle with a `ConstantForce` for the arrow
+//! keys / A/D in both control modes; in Mouse mode, with no key held, it
+//! drives `LinearVelocity.x` toward the cursor target instead (see
+//! [`crate::controls`]), so Avian still resolves ball bounces.
+//! [`PaddleMovementSet`] lets systems in other modules (Super-Sizer's width
+//! recompute) order themselves before it.
+
 use avian2d::prelude::*;
 use bevy::prelude::*;
 

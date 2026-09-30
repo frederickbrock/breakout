@@ -1,6 +1,6 @@
 //! End-of-run screen: "GAME OVER" or "YOU WIN!", the final score, and
 //! Play again / Main menu. R is kept as a Play again shortcut
-//! (`restart_from_game_over` in `main.rs`).
+//! ([`crate::run::restart_from_game_over`]).
 
 use super::{go_to, heading, menu_button, menu_list, menu_screen, OVERLAY_DIM};
 use crate::game_state::{AppState, GameOutcome};

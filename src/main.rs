@@ -1,3 +1,17 @@
+//! Breakout entry point and app wiring. This file holds no game logic.
+//!
+//! `main` adds the engine plugins (`DefaultPlugins` with the window and asset
+//! settings, Avian's `PhysicsPlugins`, scripting, sprites and particles) and
+//! then calls [`add_game`], which wires every game module's plugins,
+//! resources and core systems into the `App`. The headless tests
+//! (`test_support::app()`) call [`add_game`] too, on `MinimalPlugins`.
+//!
+//! The native window opens at [`WINDOW_START_WIDTH`]×[`WINDOW_START_HEIGHT`]
+//! (1280×720) and is resizable; the world scales to fit (see [`crate::view`]).
+//! `main` sets `WAYLAND_DISPLAY` to an empty string first: a deliberate WSLg
+//! workaround (Wayland plus the llvmpipe software renderer hits a
+//! surface-lost bug; X11 works), compiled out on wasm.
+
 mod ball;
 mod bricks;
 mod collision;

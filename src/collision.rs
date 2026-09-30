@@ -1,3 +1,16 @@
+//! What happens when the ball touches something.
+//!
+//! [`on_ball_collision`] observes Avian's `CollisionStart` (observer-only; a
+//! `MessageReader` never sees it). Each brick hit scores 10 and removes one
+//! hit point; a hit the brick survives triggers [`BrickDamaged`], and the
+//! last one triggers [`BrickDestroyed`] *before* the despawn, so observers
+//! (regen, explosive, power-ups, particles) can still read the brick. Shield
+//! glass only takes damage from a ball that was moving down (read from
+//! [`crate::ball::BallApproach`]); anything else just flashes it.
+//!
+//! [`BallCollisionSignals`] records what happened this frame (a brick broke,
+//! where the paddle was hit) for [`crate::ball::ball_movement`] to consume.
+
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
@@ -106,7 +119,7 @@ pub(crate) fn on_ball_collision(
 }
 
 /// What happened in this frame's ball collisions, recorded by
-/// [`on_ball_collision`] and consumed once per frame by [`ball_movement`].
+/// [`on_ball_collision`] and consumed once per frame by [`ball_movement`](crate::ball::ball_movement).
 #[derive(Resource, Default)]
 pub(crate) struct BallCollisionSignals {
     pub(crate) broke_brick: bool,

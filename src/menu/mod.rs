@@ -9,6 +9,20 @@
 //!
 //! Only one menu is expected on screen at a time; each screen's root carries
 //! `DespawnOnExit(<its state>)` so it disappears when its state is left.
+//!
+//! The kit: [`menu_screen`] (a state-scoped full-window root), [`menu_list`]
+//! (a [`MenuList`] column whose children order is the keyboard navigation
+//! order), [`menu_button`], the [`Focused`] marker and the [`ButtonActivated`]
+//! entity event fired on click or Enter/Space. Each button's behaviour is its
+//! own `.observe(...)` (e.g. [`go_to`]`(AppState::InGame)`), so a new screen
+//! is a new file with its own plugin, not an edit to a shared match.
+//!
+//! The screens: `main_menu` (Start / Settings / Quit, Quit native-only),
+//! `settings` (the "Paddle control: Mouse/Keyboard" toggle; Back or Esc
+//! returns), `pause` (Resume / Main menu over the frozen game while
+//! `PlayState::Paused`) and `game_over` ("GAME OVER" or "YOU WIN!", the final
+//! score, Play again / Main menu). The pause and game-over roots use
+//! `OVERLAY_DIM` as background so the game shows through.
 
 mod game_over;
 mod main_menu;

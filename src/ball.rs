@@ -1,3 +1,20 @@
+//! The ball: its movement rules, the serve from the paddle and the approach
+//! velocity that direction-dependent brick rules read.
+//!
+//! The ball is a round `Mesh2d(Circle)` whose handles live in [`BallLook`]
+//! (made in [`crate::world::setup_level`]). [`ball_movement`] reapplies the
+//! paddle-hit spin, keeps the speed at a constant [`BALL_SPEED`] with a
+//! minimum vertical component, ends the run on a win and takes a life when
+//! the ball falls out.
+//!
+//! At the start of a run and after every lost life the ball is served from
+//! the paddle: it carries [`Anchored`] plus Avian's `RigidBodyDisabled` and
+//! `ColliderDisabled` (always together, via [`anchored`]), [`follow_paddle`]
+//! keeps it centred on top of the paddle, and [`launch_ball`] (Space or left
+//! click, only while `Playing`) sends it off at 45° toward the side the
+//! paddle is moving. [`record_ball_approach`] copies the velocity into
+//! [`BallApproach`] just before each physics step.
+
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
@@ -64,7 +81,7 @@ pub(crate) fn record_ball_approach(
 }
 
 /// Avian resolves the actual collision physics (detection + bounce angle);
-/// this reacts to what [`on_ball_collision`] recorded (score, the paddle-hit
+/// this reacts to what [`on_ball_collision`](crate::collision::on_ball_collision) recorded (score, the paddle-hit
 /// "spin" feel) and keeps the ball's speed at a controlled, designed
 /// magnitude rather than letting raw momentum transfer drift it. Ends the
 /// run (switches to [`AppState::GameOver`]) on a win or on losing the last

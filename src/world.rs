@@ -1,3 +1,18 @@
+//! World geometry and the static walls.
+//!
+//! A fixed [`WORLD_WIDTH`]×[`WORLD_HEIGHT`] (1920×1080) logical world,
+//! independent of the window (which opens at 1280×720 and is resizable, see
+//! [`crate::view`]). A centred [`PLAYFIELD_WIDTH`]×[`PLAYFIELD_HEIGHT`]
+//! (1440×1080) playfield well has a `SIDE_PANEL_WIDTH` (240) panel either
+//! side; the HUD sits in the left one.
+//!
+//! The walls, laid out by the pure [`wall_specs`] and spawned by
+//! [`setup_level`], sit on the well's left, right and top edges; the ball is
+//! lost below its bottom edge. Every gameplay size and speed in the game is
+//! written as its old design value `x * GAME_SCALE` ([`GAME_SCALE`] = 1.5).
+//! [`setup_level`] also makes the ball's mesh and material
+//! ([`crate::ball::BallLook`]).
+
 use avian2d::prelude::*;
 use bevy::prelude::*;
 

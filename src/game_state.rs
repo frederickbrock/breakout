@@ -7,6 +7,11 @@
 //! up. This module also owns Avian's physics clock: it runs only while
 //! `InGame/Playing`, so pausing or ending the game freezes every rigid body
 //! without anyone zeroing velocities.
+//!
+//! [`AppState`] is `MainMenu` (where the app launches), `Settings`, `InGame`
+//! or `GameOver`; [`PlayState`] is an `InGame` sub-state, `Playing` or
+//! `Paused` (P/Esc toggles it). [`GameOutcome`] (won or lost) is inserted
+//! when a run ends.
 
 use avian2d::prelude::*;
 use bevy::prelude::*;

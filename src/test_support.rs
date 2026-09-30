@@ -1,6 +1,16 @@
-//! Headless app running the real game logic (no window, renderer or
-//! scripting), with a fixed 100 ms step per `update()` and keyboard input
-//! driven by hand via [`tap`].
+//! Shared helpers for the headless tests.
+//!
+//! [`app`] is a headless app running the real game logic (no window,
+//! renderer or scripting) in a fresh run, with a fixed 100 ms step per
+//! `update()` and keyboard input driven by hand via [`tap`] ([`launch`] stops
+//! on the main menu instead). There is no physics simulation: [`hit`] fakes a
+//! ball contact with a brick by triggering `CollisionStart` exactly as Avian
+//! does, [`hit_moving`] also sets the ball's velocity, and [`brick_of`] finds
+//! a brick of a class. [`click`] left-clicks. Serve with
+//! `tap(&mut app, KeyCode::Space)` before anything that needs the ball in
+//! flight. The rest ([`ball`], [`paddle`], [`translation`], [`set_paddle_x`],
+//! [`aim_mouse_at`], [`move_ball_below_screen`], [`count`], the state
+//! getters) are small queries and pokes shared across modules' tests.
 
 use super::*;
 use crate::ball::{Ball, BallApproach};

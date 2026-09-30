@@ -1,3 +1,16 @@
+//! Super-Sizer: temporarily widens the paddle.
+//!
+//! This is the pattern for adding a new power-up: a new file with its own
+//! `Plugin` that
+//! 1. registers itself into the shared [`PowerUpSpawner`] registry at
+//!    `build()` time, via
+//!    `app.world_mut().resource_mut::<PowerUpSpawner>().register(...)`,
+//! 2. reacts to [`PowerUpCollected`] with its own observer, and
+//! 3. is composed in by `PowerUpsPlugin`'s `.add_plugins(...)`.
+//!
+//! No shared match statement to edit: only [`PowerUpKind`] needs a new
+//! variant centrally.
+
 use super::{ActiveEffects, PowerUpCollected, PowerUpKind, PowerUpSpawner, TickActiveEffects};
 use crate::paddle::{Paddle, PADDLE_HEIGHT, PADDLE_WIDTH};
 use avian2d::prelude::*;

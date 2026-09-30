@@ -5,6 +5,9 @@
 //! explosion), so `on_ball_collision` needs no regen special case. Each
 //! further non-lethal hit restarts the timer. The timer only ticks while
 //! playing, so pausing freezes it.
+//!
+//! A regen brick that survives a hit gets a [`RegenTimer`]; when it runs
+//! out the brick heals to full health (and its damage particles stop).
 
 use super::grid::BrickHealth;
 use super::BrickClass;

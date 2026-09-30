@@ -17,6 +17,12 @@
 //! is skinned with its class's intact sprite ([`BrickSprite::of`]) once that
 //! image is loaded. A skinned brick's shield flash is then shown as a tint over
 //! the sprite ([`theme::brick_sprite_tint`]); damage is shown by particles.
+//!
+//! [`SpritesPlugin`] loads every handle once at `Startup` into the
+//! [`GameSprites`] resource (background, ball, paddle prongs and field,
+//! power-up icon, one image per brick material) and spawns the global
+//! [`Background`], sized to the playfield well (the side panels stay clear
+//! colour). A skinned entity is marked [`Skinned`].
 
 use crate::ball::{Ball, BALL_SIZE};
 use crate::bricks::grid::Brick;

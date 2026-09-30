@@ -2,6 +2,13 @@
 //! [`WORLD_WIDTH`] × [`WORLD_HEIGHT`] world, scaled uniformly to fit with
 //! clear-colour bars in the spare space, and a [`UiScale`] that follows the
 //! window so the menus keep their size relative to the world.
+//!
+//! [`world_projection`] is an orthographic `ScalingMode::AutoMin` of the
+//! world size, so the whole world is always visible and spare window space
+//! shows `theme::VOID` bars. [`UiScale`] follows the primary window:
+//! [`ui_scale_for`] is the fit factor times `GAME_SCALE` (1.0 at 1280×720,
+//! 1.5 at 1920×1080). On the web the window uses `fit_canvas_to_parent` and
+//! `index.html` sizes the canvas to the viewport.
 
 use bevy::camera::ScalingMode;
 use bevy::prelude::*;

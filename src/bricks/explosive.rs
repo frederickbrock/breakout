@@ -14,6 +14,10 @@
 //! a ball break: `BrickDestroyed` (power-up drops), score, `broke_brick` (the
 //! win check), and `BrickDamaged` for survivors (regen's heal timer). Blasts
 //! ignore shield glass's "from above" rule.
+//!
+//! After the chain is applied, [`BrickExploded`] is triggered once per
+//! explosion (origin first, then each chained one) for visuals to observe;
+//! the placeholder [`BlastFlash`] is one such observer.
 
 use super::grid::{Brick, BrickHealth, BRICK_HEIGHT, BRICK_WIDTH};
 use super::{BrickCell, BrickClass, ExplosiveKind};

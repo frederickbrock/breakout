@@ -29,6 +29,15 @@
 //! `DespawnOnExit(AppState::InGame)`), so leaving the run leaves none. A live
 //! particle budget ([`damage_emitter_interval`]) slows the continuous
 //! emitters when many bricks are damaged.
+//!
+//! The budget is [`DAMAGE_PARTICLE_BUDGET`], applied by stretching the damage
+//! emitters' spawn interval rather than via `max_particles` (bevy_enoki stops
+//! *moving* a spawner's particles once it's at that cap). Effect files are in
+//! world units (sizes and speeds already × `GAME_SCALE`), and the
+//! `brick_break` shatter falls with gravity. Pausing `Time<Virtual>` is safe
+//! because gameplay gates on `PlayState::Playing` and physics has its own
+//! clock. Headless tests insert placeholder `ParticleEffects` /
+//! `ParticleMaterials` and count spawner entities.
 
 use crate::bricks::grid::{Brick, BrickHealth};
 use crate::bricks::BrickClass;
