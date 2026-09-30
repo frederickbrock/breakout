@@ -31,6 +31,7 @@ use crate::theme;
 use bevy::prelude::*;
 use rand::seq::SliceRandom;
 use rand::{Rng, RngExt};
+use serde::{Deserialize, Serialize};
 
 pub const BOARD_ROWS: usize = 7;
 pub const BOARD_COLS: usize = 10;
@@ -40,7 +41,7 @@ pub const REACTOR_BRICKS: usize = 6;
 pub type Board = [[BrickClass; BOARD_COLS]; BOARD_ROWS];
 
 /// The three explosive variants, told apart later by their outline.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ExplosiveKind {
     Charge,
     Breach,
@@ -48,7 +49,7 @@ pub enum ExplosiveKind {
 }
 
 /// A brick's Steelbreak class: its hit count, colour and (later) behaviour.
-#[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum BrickClass {
     Ceramic,
     Titanium,
