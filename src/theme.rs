@@ -114,9 +114,30 @@ pub fn brick_color(class: BrickClass) -> Color {
     }
 }
 
+/// Shield glass's flash over its sprite: brightens the glass (a tint above
+/// 1 scales the image up; the flat-colour fallback uses [`SHIELD_FLASH`]).
+pub const SHIELD_FLASH_TINT: Color = Color::LinearRgba(LinearRgba::rgb(2.5, 2.5, 2.5));
+
+/// The tint over a brick drawn with its sprite: none, or bright while shield
+/// glass flashes. Damage never tints a brick; particles show it.
+pub fn brick_sprite_tint(flashing: bool) -> Color {
+    if flashing {
+        SHIELD_FLASH_TINT
+    } else {
+        UNTINTED
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_brick_sprite_is_untinted_unless_shield_glass_flashes() {
+        let lum = |c: Color| c.to_linear().luminance();
+        assert_eq!(brick_sprite_tint(false), UNTINTED);
+        assert!(lum(brick_sprite_tint(true)) > lum(UNTINTED));
+    }
 
     #[test]
     fn hex_decodes_the_spec_values() {

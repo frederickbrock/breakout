@@ -88,6 +88,13 @@ not hand-rolled kinematics/AABB checks.
   in `Assets<Image>`, marking it `Skinned`. Everything spawns as its shape first, so a
   missing or broken file just leaves the shape (no panic, nothing invisible). Sprites live
   at `assets/sprites/<name>.png`; a new one is a `GameSprites` field plus a skin rule.
+  Bricks too: `GameSprites::bricks` holds the 7 intact plates
+  (`assets/sprites/bricks/<material>_intact.png`), picked per class by the pure
+  `BrickSprite::of(class)` (the three explosive variants share one plate). Gameplay keeps
+  writing the flat class colour (and the shield flash); for a skinned brick
+  `tint_skinned_bricks` (PostUpdate) replaces it with `theme::brick_sprite_tint(flashing)` —
+  untinted, bright while shield glass flashes — so flash code needs nothing sprite-specific.
+  Damage never tints a brick (particles show it); the `*_cracked.png` files are unused.
 - `src/controls.rs` — player controls: the session-only `ControlSettings` resource
   (`PaddleControl::Mouse` by default, or `Keyboard`, toggled on the Settings screen) and
   the mouse side of paddle control. While `Playing` in Mouse mode, `track_cursor` turns
