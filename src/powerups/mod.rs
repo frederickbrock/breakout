@@ -2,11 +2,12 @@ mod super_sizer;
 
 use crate::bricks::grid::Brick;
 use crate::bricks::BrickClass;
+use crate::collision::BrickDestroyed;
 use crate::game_state::{AppState, PlayState};
 use crate::paddle::{Paddle, PADDLE_HEIGHT};
 use crate::spawner::Spawner;
 use crate::world::{GAME_SCALE, PLAYFIELD_HEIGHT};
-use crate::{BrickDestroyed, RestartGame};
+use crate::RestartGame;
 use bevy::prelude::*;
 
 const POWER_UP_SIZE: f32 = 24.0 * GAME_SCALE;

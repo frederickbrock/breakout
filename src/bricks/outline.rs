@@ -283,8 +283,9 @@ fn animate_outlines(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::collision::BrickDamaged;
+    use crate::game_state::AppState;
     use crate::test_support::*;
-    use crate::{AppState, BrickDamaged};
 
     const SIZE: Vec2 = Vec2::new(BRICK_WIDTH, BRICK_HEIGHT);
 

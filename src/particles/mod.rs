@@ -32,8 +32,9 @@
 
 use crate::bricks::grid::{Brick, BrickHealth};
 use crate::bricks::BrickClass;
+use crate::collision::{BrickDamaged, BrickDestroyed};
 use crate::game_state::{AppState, PlayState};
-use crate::{theme, BrickDamaged, BrickDestroyed};
+use crate::theme;
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 use bevy_enoki::prelude::*;

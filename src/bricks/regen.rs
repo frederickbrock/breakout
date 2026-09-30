@@ -8,8 +8,8 @@
 
 use super::grid::BrickHealth;
 use super::BrickClass;
+use crate::collision::BrickDamaged;
 use crate::game_state::PlayState;
-use crate::BrickDamaged;
 use bevy::prelude::*;
 
 /// How long a damaged regen brick waits before healing to full.

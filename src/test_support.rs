@@ -5,6 +5,7 @@
 use super::*;
 use crate::ball::{Ball, BallApproach};
 use crate::bricks::grid::Brick;
+use crate::bricks::BrickClass;
 use crate::controls::PaddleTarget;
 use crate::paddle::Paddle;
 use crate::world::PLAYFIELD_HEIGHT;

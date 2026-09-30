@@ -42,10 +42,11 @@ mod tests {
     use super::super::test_helpers::*;
     use crate::ball::Ball;
     use crate::bricks::grid::{Brick, BRICK_COLS, BRICK_ROWS};
+    use crate::collision::BallCollisionSignals;
     use crate::game_state::{AppState, PlayState};
     use crate::test_support::*;
     use crate::world::PLAYFIELD_HEIGHT;
-    use crate::{BallCollisionSignals, Lives, Score, STARTING_LIVES};
+    use crate::{Lives, Score, STARTING_LIVES};
     use bevy::prelude::*;
 
     fn lose(app: &mut App, score: i32) {
