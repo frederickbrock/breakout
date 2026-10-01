@@ -1,0 +1,28 @@
+// Explosive break: fire-puff debris under the blast (sim-pdp.3 plays the blast itself).
+// Drawn with the class's 4-frame sheet (animated over each particle's
+// life) and coloured by color_curve (src/particles/; sim-rdl.7.8).
+(
+    spawn_rate: 0.05,
+    spawn_amount: 18,
+    emission_shape: Circle(26.0),
+    lifetime: (0.7, 0.3),
+    linear_speed: Some((160.0, 0.5)),
+    linear_acceleration: None,
+    direction: Some(((0.0, 1.0), 1.0)),
+    angular_speed: None,
+    angular_acceleration: None,
+    scale: Some((18.0, 0.4)),
+    color: Some((red: 1.0, green: 0.4072, blue: 0.0742, alpha: 1.0)),
+    gravity_direction: Some(((0.0, 1.0), 0.0)),
+    gravity_speed: Some((60.0, 0.2)),
+    linear_damp: Some((2.0, 0.2)),
+    angular_damp: None,
+    scale_curve: Some((points: [(0.6, 0.0, None), (1.6, 1.0, None)])),
+    color_curve: Some((points: [
+        ((red: 1.0, green: 0.4072, blue: 0.0742, alpha: 1.0), 0.0, None),
+        ((red: 0.7454, green: 0.0296, blue: 0.0423, alpha: 0.9), 0.4, None),
+        ((red: 0.0423, green: 0.0232, blue: 0.0212, alpha: 0.0), 1.0, None),
+    ])),
+    attractors: None,
+    relative_positioning: None,
+)

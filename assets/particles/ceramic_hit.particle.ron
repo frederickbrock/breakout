@@ -1,0 +1,28 @@
+// Ceramic hit: a few clay/glaze shards chipped off at the contact point.
+// Drawn with the class's 4-frame sheet (animated over each particle's
+// life) and coloured by color_curve (src/particles/; sim-rdl.7.8).
+(
+    spawn_rate: 0.05,
+    spawn_amount: 8,
+    emission_shape: Circle(6.0),
+    lifetime: (0.45, 0.3),
+    linear_speed: Some((260.0, 0.5)),
+    linear_acceleration: None,
+    direction: Some(((0.0, 1.0), 1.0)),
+    angular_speed: Some((6.0, 1.0)),
+    angular_acceleration: None,
+    scale: Some((12.0, 0.4)),
+    color: Some((red: 1.0, green: 0.2051, blue: 0.0976, alpha: 1.0)),
+    gravity_direction: Some(((0.0, -1.0), 0.0)),
+    gravity_speed: Some((900.0, 0.2)),
+    linear_damp: Some((0.5, 0.2)),
+    angular_damp: None,
+    scale_curve: None,
+    color_curve: Some((points: [
+        ((red: 1.0, green: 0.2051, blue: 0.0976, alpha: 1.0), 0.0, None),
+        ((red: 1.0, green: 0.1441, blue: 0.0742, alpha: 1.0), 0.6, None),
+        ((red: 1.0, green: 0.1441, blue: 0.0742, alpha: 0.0), 1.0, None),
+    ])),
+    attractors: None,
+    relative_positioning: None,
+)

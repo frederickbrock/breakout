@@ -1,0 +1,28 @@
+// Reactor hit: violet energy wisps that drift up and fade.
+// Drawn with the class's 4-frame sheet (animated over each particle's
+// life) and coloured by color_curve (src/particles/; sim-rdl.7.8).
+(
+    spawn_rate: 0.05,
+    spawn_amount: 8,
+    emission_shape: Circle(8.0),
+    lifetime: (0.7, 0.3),
+    linear_speed: Some((70.0, 0.5)),
+    linear_acceleration: None,
+    direction: Some(((0.0, 1.0), 0.3)),
+    angular_speed: None,
+    angular_acceleration: None,
+    scale: Some((14.0, 0.4)),
+    color: Some((red: 0.4621, green: 0.2623, blue: 1.0, alpha: 0.0)),
+    gravity_direction: None,
+    gravity_speed: None,
+    linear_damp: Some((1.5, 0.2)),
+    angular_damp: None,
+    scale_curve: Some((points: [(0.6, 0.0, None), (1.4, 1.0, None)])),
+    color_curve: Some((points: [
+        ((red: 0.4621, green: 0.2623, blue: 1.0, alpha: 0.0), 0.0, None),
+        ((red: 0.4621, green: 0.2623, blue: 1.0, alpha: 0.9), 0.2, None),
+        ((red: 0.7454, green: 0.6308, blue: 1.0, alpha: 0.0), 1.0, None),
+    ])),
+    attractors: None,
+    relative_positioning: None,
+)
