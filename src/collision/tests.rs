@@ -1,8 +1,11 @@
 use super::*;
+use crate::ball::BALL_SIZE;
 use crate::ball::BALL_SPEED;
-use crate::bricks::grid::{BRICK_COLS, BRICK_ROWS};
+use crate::bricks::grid::{BRICK_COLS, BRICK_HEIGHT, BRICK_ROWS};
 use crate::game_state::{AppState, GameOutcome};
+use crate::paddle::PADDLE_WIDTH;
 use crate::test_support::*;
+use crate::world::{Wall, PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH};
 
 fn score(app: &App) -> i32 {
     app.world().resource::<Score>().0
@@ -213,5 +216,149 @@ fn brick_damage_and_break_events_carry_class_and_position() {
     assert_eq!(
         seen.destroyed,
         [(titanium, centre, BrickClass::Titanium, false)]
+    );
+}
+
+#[derive(Resource, Default)]
+struct Bounces {
+    bounced: Vec<(Vec2, BounceSurface)>,
+    paddle_hits: Vec<(Entity, Vec2)>,
+}
+
+/// A run that records every `BallBounced` and `PaddleHit`.
+fn app_recording_bounces() -> App {
+    let mut app = app();
+    app.init_resource::<Bounces>()
+        .add_observer(|on: On<BallBounced>, mut seen: ResMut<Bounces>| {
+            seen.bounced.push((on.position, on.surface));
+        })
+        .add_observer(|on: On<PaddleHit>, mut seen: ResMut<Bounces>| {
+            seen.paddle_hits.push((on.paddle, on.position));
+        });
+    app
+}
+
+fn bounces(app: &App) -> &Bounces {
+    app.world().resource::<Bounces>()
+}
+
+fn place_ball(app: &mut App, at: Vec2) {
+    let ball = ball(app);
+    app.world_mut()
+        .get_mut::<Transform>(ball)
+        .unwrap()
+        .translation = at.extend(0.0);
+}
+
+/// The wall whose centre is furthest along `direction`.
+fn wall(app: &mut App, direction: Vec2) -> Entity {
+    app.world_mut()
+        .query_filtered::<(Entity, &Transform), With<Wall>>()
+        .iter(app.world())
+        .max_by(|(_, a), (_, b)| {
+            let a = a.translation.truncate().dot(direction);
+            let b = b.translation.truncate().dot(direction);
+            a.total_cmp(&b)
+        })
+        .map(|(e, _)| e)
+        .unwrap()
+}
+
+fn assert_near(actual: Vec2, expected: Vec2) {
+    assert!(
+        actual.distance(expected) < 1e-3,
+        "{actual} is not {expected}"
+    );
+}
+
+#[test]
+fn a_wall_bounce_fires_at_the_contact_point() {
+    let mut app = app_recording_bounces();
+    let half_w = PLAYFIELD_WIDTH / 2.0;
+    let r = BALL_SIZE / 2.0;
+
+    place_ball(&mut app, Vec2::new(-half_w + r, 100.0));
+    let left = wall(&mut app, Vec2::NEG_X);
+    hit(&mut app, left);
+
+    place_ball(&mut app, Vec2::new(250.0, PLAYFIELD_HEIGHT / 2.0 - r));
+    let top = wall(&mut app, Vec2::Y);
+    hit(&mut app, top);
+
+    let seen = bounces(&app);
+    assert_eq!(seen.bounced.len(), 2);
+    assert_eq!(seen.bounced[0].1, BounceSurface::Wall);
+    assert_near(seen.bounced[0].0, Vec2::new(-half_w, 100.0));
+    assert_eq!(seen.bounced[1].1, BounceSurface::Wall);
+    assert_near(seen.bounced[1].0, Vec2::new(250.0, PLAYFIELD_HEIGHT / 2.0));
+    assert!(seen.paddle_hits.is_empty());
+}
+
+#[test]
+fn a_brick_bounce_fires_on_the_brick_edge_even_for_a_shield_deflect() {
+    let mut app = app_recording_bounces();
+    for class in [BrickClass::Titanium, BrickClass::Shield] {
+        let brick = brick_of(&mut app, class);
+        let centre = translation(&app, brick).truncate();
+        // Just under the brick, moving up: shield glass only flashes, but the
+        // ball still bounces.
+        let below = centre - Vec2::Y * (BRICK_HEIGHT / 2.0 + BALL_SIZE / 2.0);
+        place_ball(&mut app, below);
+        hit_moving(&mut app, brick, Vec2::new(0.0, BALL_SPEED));
+    }
+    let seen = bounces(&app);
+    assert_eq!(seen.bounced.len(), 2);
+    assert!(seen
+        .bounced
+        .iter()
+        .all(|(_, surface)| *surface == BounceSurface::Brick));
+    // On the titanium's bottom edge, straight above the ball.
+    let titanium = brick_of(&mut app, BrickClass::Titanium);
+    let centre = translation(&app, titanium).truncate();
+    assert_near(
+        bounces(&app).bounced[0].0,
+        centre - Vec2::Y * BRICK_HEIGHT / 2.0,
+    );
+}
+
+#[test]
+fn a_paddle_hit_fires_a_bounce_and_a_hit_on_the_top_edge() {
+    let mut app = app_recording_bounces();
+    let paddle = paddle(&mut app);
+    set_paddle_x(&mut app, 100.0);
+    let paddle_at = translation(&app, paddle).truncate();
+    let ball_at = Vec2::new(130.0, paddle_at.y + PADDLE_HEIGHT / 2.0 + BALL_SIZE / 2.0);
+    place_ball(&mut app, ball_at);
+    hit(&mut app, paddle);
+
+    let top = Vec2::new(130.0, paddle_at.y + PADDLE_HEIGHT / 2.0);
+    let seen = bounces(&app);
+    assert_eq!(seen.bounced.len(), 1);
+    assert_eq!(seen.bounced[0].1, BounceSurface::Paddle);
+    assert_near(seen.bounced[0].0, top);
+    assert_eq!(seen.paddle_hits.len(), 1);
+    assert_eq!(seen.paddle_hits[0].0, paddle);
+    assert_near(seen.paddle_hits[0].1, top);
+}
+
+#[test]
+fn the_paddle_hit_point_stays_on_the_paddle_and_follows_its_width() {
+    let paddle = Vec2::new(0.0, -400.0);
+    let top = paddle.y + PADDLE_HEIGHT / 2.0;
+    assert_eq!(
+        paddle_hit_point(30.0, paddle, PADDLE_WIDTH),
+        Vec2::new(30.0, top)
+    );
+    // Past the end (a corner hit) it clamps to the end.
+    let end = PADDLE_WIDTH / 2.0;
+    assert_eq!(
+        paddle_hit_point(500.0, paddle, PADDLE_WIDTH),
+        Vec2::new(end, top)
+    );
+    // A widened paddle (Super-Sizer) reaches further.
+    let wide = PADDLE_WIDTH * 2.0;
+    assert_eq!(
+        paddle_hit_point(500.0, paddle, wide),
+        Vec2::new(wide / 2.0, top)
     );
 }

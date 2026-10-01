@@ -8,6 +8,12 @@
 //! glass only takes damage from a ball that was moving down (read from
 //! [`crate::ball::BallApproach`]); anything else just flashes it.
 //!
+//! A second observer, [`on_ball_bounce`], turns every contact with a wall,
+//! brick or the paddle into [`BallBounced`] at the contact point, and a
+//! paddle contact into [`PaddleHit`] on the paddle's top edge. These exist
+//! for the VFX layer (`particles`), which observes them; gameplay doesn't
+//! react to them.
+//!
 //! [`BallCollisionSignals`] records what happened this frame (a brick broke,
 //! where the paddle was hit) for [`crate::ball::ball_movement`] to consume.
 
@@ -17,9 +23,44 @@ use bevy::prelude::*;
 use crate::ball::{Ball, BallApproach};
 use crate::bricks::grid::{Brick, BrickHealth};
 use crate::bricks::{self, BrickClass};
-use crate::paddle::Paddle;
+use crate::paddle::{Paddle, PADDLE_HEIGHT};
 use crate::run::Score;
 use crate::theme;
+use crate::world::Wall;
+
+/// What the ball bounced off.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum BounceSurface {
+    Wall,
+    Brick,
+    Paddle,
+}
+
+/// Fired by [`on_ball_collision`] for every ball contact with a wall, a brick
+/// (shield deflects and breaks included) or the paddle, at the contact point.
+#[derive(Event, Debug)]
+pub(crate) struct BallBounced {
+    pub(crate) position: Vec2,
+    pub(crate) surface: BounceSurface,
+}
+
+/// Fired by [`on_ball_collision`] when the ball hits the paddle, at the point
+/// on the paddle's top edge under the ball (clamped to the paddle's ends).
+#[derive(Event, Debug)]
+pub(crate) struct PaddleHit {
+    pub(crate) paddle: Entity,
+    pub(crate) position: Vec2,
+}
+
+/// Where the paddle's top edge is under a ball at `ball_x`: clamped to a
+/// paddle `width` wide centred at `paddle`.
+pub(crate) fn paddle_hit_point(ball_x: f32, paddle: Vec2, width: f32) -> Vec2 {
+    let half = width / 2.0;
+    Vec2::new(
+        ball_x.clamp(paddle.x - half, paddle.x + half),
+        paddle.y + PADDLE_HEIGHT / 2.0,
+    )
+}
 
 /// Fired by [`on_ball_collision`] when a brick takes its last hit, *before*
 /// the brick is despawned, so observers can still read its other components.
@@ -115,6 +156,52 @@ pub(crate) fn on_ball_collision(
         }
     } else if let Ok(paddle_transform) = paddle_query.get(other) {
         signals.paddle_hit_x = Some(paddle_transform.translation.x);
+    }
+}
+
+/// What [`on_ball_bounce`] reads off whatever the ball touched.
+type BounceSurfaceData = (
+    &'static Collider,
+    &'static Transform,
+    Has<Wall>,
+    Has<Brick>,
+    Option<&'static Paddle>,
+);
+
+/// Observes the same `CollisionStart` as [`on_ball_collision`] (see there for
+/// why an observer) and reports the bounce for the VFX layer: a
+/// [`BallBounced`] at the point on a wall's, brick's or the paddle's collider
+/// nearest the ball, plus a [`PaddleHit`] on the paddle's top edge for a
+/// paddle contact. Anything else the ball touches isn't a bounce. Gameplay
+/// doesn't depend on these, so they stay out of [`on_ball_collision`].
+pub(crate) fn on_ball_bounce(
+    on: On<CollisionStart>,
+    mut commands: Commands,
+    balls: Query<&Transform, With<Ball>>,
+    surfaces: Query<BounceSurfaceData>,
+) {
+    let Ok(ball) = balls.get(on.collider1) else {
+        return;
+    };
+    let ball = ball.translation.truncate();
+    let other = on.collider2;
+    let Ok((collider, transform, is_wall, is_brick, paddle)) = surfaces.get(other) else {
+        return;
+    };
+    let surface = match (is_wall, is_brick, paddle) {
+        (true, _, _) => BounceSurface::Wall,
+        (_, true, _) => BounceSurface::Brick,
+        (_, _, Some(_)) => BounceSurface::Paddle,
+        _ => return,
+    };
+    let at = transform.translation.truncate();
+    let (position, _) = collider.project_point(at, transform.rotation, ball, true);
+    commands.trigger(BallBounced { position, surface });
+    if let Some(paddle) = paddle {
+        commands.trigger(PaddleHit {
+            paddle: other,
+            position: paddle_hit_point(ball.x, at, paddle.width),
+        });
     }
 }
 
