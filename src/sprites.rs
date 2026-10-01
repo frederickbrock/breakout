@@ -14,8 +14,17 @@
 //!   [`GameSprites`] field plus a skin rule here.
 //!
 //! Bricks follow the same rule: each spawns as its class's flat colour and
-//! is skinned with its class's intact sprite ([`BrickSprite::of`]) once that
-//! image is loaded. A skinned brick's shield flash is then shown as a tint over
+//! is skinned with its class's plate ([`BrickSprite::of`]) once that image
+//! is loaded. The plate follows the damage ladder
+//! ([`crate::bricks::damage_look`]):
+//! - `<class>_intact.png` at full health
+//! - `<class>_cracked.png` (tungsten only)
+//! - `<class>_broken.png` once the next hit would destroy it
+//!
+//! It's recomputed every frame from `BrickHealth`, so a regen heal goes back
+//! to intact. A missing damage plate keeps the intact one, and a missing
+//! intact plate keeps the flat colour. Damage is never a tint (the smoke
+//! particles sit on top). A skinned brick's shield flash is then shown as a tint over
 //! the sprite ([`theme::brick_sprite_tint`]); damage is shown by particles.
 //!
 //! [`SpritesPlugin`] loads every handle once at `Startup` into the
@@ -26,11 +35,13 @@
 
 use crate::ball::{Ball, BALL_SIZE};
 use crate::bricks::grid::Brick;
-use crate::bricks::{BrickClass, ShieldFlash};
+use crate::bricks::grid::BrickHealth;
+use crate::bricks::{damage_look, BrickClass, DamageLook, ShieldFlash};
 use crate::paddle::{PaddleField, PaddleProng};
 use crate::powerups::PowerUp;
 use crate::theme;
 use crate::world::{PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH};
+use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 
 /// Paths relative to `assets/`.
@@ -78,6 +89,43 @@ impl BrickSprite {
         }
     }
 
+    /// A brick class drawing this sprite (explosives: any variant), for
+    /// asking the damage ladder which plates it can show.
+    fn class(self) -> BrickClass {
+        match self {
+            Self::Ceramic => BrickClass::Ceramic,
+            Self::Titanium => BrickClass::Titanium,
+            Self::Tungsten => BrickClass::Tungsten,
+            Self::Reactor => BrickClass::Reactor,
+            Self::Explosive => BrickClass::Explosive(crate::bricks::ExplosiveKind::Charge),
+            Self::Regen => BrickClass::Regen,
+            Self::Shield => BrickClass::Shield,
+        }
+    }
+
+    /// The damage plates this material's ladder can show (none for 1-hit
+    /// bricks, broken only for 2-hit, cracked and broken for tungsten).
+    pub fn damage_looks(self) -> Vec<DamageLook> {
+        let class = self.class();
+        let mut looks: Vec<DamageLook> = (1..class.max_hits())
+            .map(|hits_left| damage_look(class, hits_left))
+            .collect();
+        looks.dedup();
+        looks
+    }
+
+    /// The path of a damage plate, relative to `assets/`:
+    /// `sprites/bricks/<class>_cracked.png` / `_broken.png`.
+    pub fn damage_path(self, look: DamageLook) -> String {
+        let stem = self.path().trim_end_matches("_intact.png");
+        let suffix = match look {
+            DamageLook::Intact => "intact",
+            DamageLook::Cracked => "cracked",
+            DamageLook::Broken => "broken",
+        };
+        format!("{stem}_{suffix}.png")
+    }
+
     /// The intact sprite's path, relative to `assets/`.
     pub fn path(self) -> &'static str {
         match self {
@@ -109,12 +157,30 @@ pub struct GameSprites {
     pub power_up: Handle<Image>,
     /// Intact brick plates, in [`BrickSprite::ALL`] order.
     pub bricks: [Handle<Image>; 7],
+    /// The damage plates each material's ladder shows
+    /// ([`BrickSprite::damage_looks`]).
+    pub damaged: HashMap<(BrickSprite, DamageLook), Handle<Image>>,
 }
 
 impl GameSprites {
     pub fn brick(&self, sprite: BrickSprite) -> &Handle<Image> {
         // `ALL` lists the variants in declaration order.
         &self.bricks[sprite as usize]
+    }
+
+    /// The plate to draw for `look`, if it's loaded, else the intact plate
+    /// if that's loaded. `None` keeps the flat colour.
+    fn plate<'a>(
+        &'a self,
+        sprite: BrickSprite,
+        look: DamageLook,
+        images: &Assets<Image>,
+    ) -> Option<&'a Handle<Image>> {
+        let damaged = (look != DamageLook::Intact)
+            .then(|| self.damaged.get(&(sprite, look)))
+            .flatten()
+            .and_then(|image| loaded(image, images));
+        damaged.or_else(|| loaded(self.brick(sprite), images))
     }
 }
 
@@ -140,6 +206,16 @@ fn load_sprites(mut commands: Commands, assets: Res<AssetServer>) {
         paddle_field: assets.load(PADDLE_FIELD_PATH),
         power_up: assets.load(POWER_UP_PATH),
         bricks: BrickSprite::ALL.map(|sprite| assets.load(sprite.path())),
+        damaged: BrickSprite::ALL
+            .into_iter()
+            .flat_map(|sprite| {
+                sprite
+                    .damage_looks()
+                    .into_iter()
+                    .map(move |look| (sprite, look))
+            })
+            .map(|(sprite, look)| ((sprite, look), assets.load(sprite.damage_path(look))))
+            .collect(),
     });
 }
 
@@ -248,17 +324,35 @@ fn skin_power_ups(
     }
 }
 
-/// Each brick draws its class's intact plate once that image is loaded; a
-/// class whose file is missing keeps its flat colour.
+/// What [`skin_bricks`] reads and writes on each brick.
+type BrickPlate = (
+    Entity,
+    &'static BrickClass,
+    &'static BrickHealth,
+    &'static mut Sprite,
+    Has<Skinned>,
+);
+
+/// Each brick draws the plate its health calls for ([`damage_look`]) once
+/// that image is loaded, falling back to the intact plate, then to its flat
+/// colour. Checked every frame (cheap: it only writes on a change), so
+/// damage, regen heals and late-loading images all show without extra
+/// bookkeeping.
 fn skin_bricks(
     mut commands: Commands,
     sprites: Res<GameSprites>,
     images: Res<Assets<Image>>,
-    mut bricks: Query<(Entity, &BrickClass, &mut Sprite), Unskinned<Brick>>,
+    mut bricks: Query<BrickPlate, With<Brick>>,
 ) {
-    for (entity, &class, mut sprite) in &mut bricks {
-        if let Some(image) = loaded(sprites.brick(BrickSprite::of(class)), &images) {
+    for (entity, &class, health, mut sprite, skinned) in &mut bricks {
+        let look = damage_look(class, health.0);
+        let Some(image) = sprites.plate(BrickSprite::of(class), look, &images) else {
+            continue;
+        };
+        if sprite.image != *image {
             sprite.image = image.clone();
+        }
+        if !skinned {
             commands.entity(entity).insert(Skinned);
         }
     }
