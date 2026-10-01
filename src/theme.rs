@@ -95,6 +95,11 @@ pub const REGEN_GLOW: Color = hex(0x3dff7a);
 pub const SHIELD_GLOW: Color = hex(0x4fd8ff);
 /// Light smoke rising from a damaged brick.
 pub const SMOKE: Color = hex(0x8a9aab);
+/// The ball's fading trail while it's in flight: steel blue.
+pub const BALL_TRAIL: Color = hex(0xa9dcff);
+/// The small spark burst where the ball bounces off a wall, brick or the
+/// paddle.
+pub const BOUNCE_SPARK: Color = hex(0xdff4ff);
 
 /// A brick class's glow colour (its sparks).
 pub fn brick_glow(class: BrickClass) -> Color {
