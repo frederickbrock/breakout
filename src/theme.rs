@@ -40,10 +40,6 @@ pub const TUNGSTEN: Color = hex(0xd69a4e);
 pub const EXPLOSIVE: Color = hex(0xe0303a);
 pub const REGEN: Color = hex(0x3fcf6e);
 pub const SHIELD: Color = hex(0x5fe3f5);
-/// Brief flash on shield glass hit from below or the side.
-pub const SHIELD_FLASH: Color = INK;
-/// The placeholder burst where an explosive goes off (explosive glow).
-pub const BLAST_FLASH: Color = hex(0xff9a92);
 /// Reactor (power-up) bricks: reactor-core violet.
 pub const REACTOR: Color = hex(0xb58cff);
 
@@ -93,6 +89,14 @@ pub const REACTOR_GLOW: Color = hex(0xb58cff);
 pub const EXPLOSIVE_GLOW: Color = hex(0xff3b3b);
 pub const REGEN_GLOW: Color = hex(0x3dff7a);
 pub const SHIELD_GLOW: Color = hex(0x4fd8ff);
+/// Explosive blasts: red and orange sparks (all three variants).
+pub const BLAST_RED: Color = hex(0xff3b3b);
+pub const BLAST_ORANGE: Color = hex(0xffab4d);
+/// Demolition's heavy debris: dark scorched plate.
+pub const BLAST_DEBRIS: Color = hex(0x4a3a36);
+/// Glass glints thrown off shield glass that deflects the ball.
+pub const GLASS_GLINT: Color = hex(0x4fd8ff);
+pub const GLASS_GLINT_LIGHT: Color = hex(0xb8f6ff);
 /// Light smoke rising from a damaged brick.
 pub const SMOKE: Color = hex(0x8a9aab);
 
@@ -120,20 +124,6 @@ pub fn brick_color(class: BrickClass) -> Color {
         BrickClass::Explosive(_) => EXPLOSIVE,
         BrickClass::Regen => REGEN,
         BrickClass::Shield => SHIELD,
-    }
-}
-
-/// Shield glass's flash over its sprite: brightens the glass (a tint above
-/// 1 scales the image up; the flat-colour fallback uses [`SHIELD_FLASH`]).
-pub const SHIELD_FLASH_TINT: Color = Color::LinearRgba(LinearRgba::rgb(2.5, 2.5, 2.5));
-
-/// The tint over a brick drawn with its sprite: none, or bright while shield
-/// glass flashes. Damage never tints a brick; particles show it.
-pub fn brick_sprite_tint(flashing: bool) -> Color {
-    if flashing {
-        SHIELD_FLASH_TINT
-    } else {
-        UNTINTED
     }
 }
 

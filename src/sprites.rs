@@ -15,8 +15,8 @@
 //!
 //! Bricks follow the same rule: each spawns as its class's flat colour and
 //! is skinned with its class's intact sprite ([`BrickSprite::of`]) once that
-//! image is loaded. A skinned brick's shield flash is then shown as a tint over
-//! the sprite ([`theme::brick_sprite_tint`]); damage is shown by particles.
+//! image is loaded, untinted; damage and shield deflects are shown by
+//! particles.
 //!
 //! [`SpritesPlugin`] loads every handle once at `Startup` into the
 //! [`GameSprites`] resource (background, ball, paddle prongs and field,
@@ -26,7 +26,7 @@
 
 use crate::ball::{Ball, BALL_SIZE};
 use crate::bricks::grid::Brick;
-use crate::bricks::{BrickClass, ShieldFlash};
+use crate::bricks::BrickClass;
 use crate::paddle::{PaddleField, PaddleProng};
 use crate::powerups::PowerUp;
 use crate::theme;
@@ -158,12 +158,7 @@ impl Plugin for SkinPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             PostUpdate,
-            (
-                skin_ball,
-                skin_paddle,
-                skin_power_ups,
-                (skin_bricks, tint_skinned_bricks).chain(),
-            )
+            (skin_ball, skin_paddle, skin_power_ups, skin_bricks)
                 .run_if(resource_exists::<GameSprites>),
         );
     }
@@ -258,26 +253,8 @@ fn skin_bricks(
 ) {
     for (entity, &class, mut sprite) in &mut bricks {
         if let Some(image) = loaded(sprites.brick(BrickSprite::of(class)), &images) {
-            sprite.image = image.clone();
+            apply(&mut sprite, image);
             commands.entity(entity).insert(Skinned);
-        }
-    }
-}
-
-/// Whether a brick flashes, plus the sprite its tint goes on.
-type BrickLook = (Has<ShieldFlash>, &'static mut Sprite);
-type SkinnedBrick = (With<Brick>, With<Skinned>);
-
-/// Keeps a skinned brick's tint in step with its shield flash. Runs after
-/// gameplay has written the flat-colour look for the frame and replaces it,
-/// so the code that changes a brick's look (flashes) needs nothing
-/// sprite-specific.
-fn tint_skinned_bricks(mut bricks: Query<BrickLook, SkinnedBrick>) {
-    for (flashing, mut sprite) in &mut bricks {
-        let tint = theme::brick_sprite_tint(flashing);
-        // Reading through `Mut` doesn't mark the sprite changed.
-        if sprite.color != tint {
-            sprite.color = tint;
         }
     }
 }

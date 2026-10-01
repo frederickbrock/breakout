@@ -83,7 +83,7 @@ One line per file; each module's details live in its own `//!` doc comment.
   has usually already been reflected. `record_ball_approach` (`ball.rs`) copies it into the ball's
   `BallApproach` in `FixedPostUpdate` `PhysicsSystems::First`, just before each physics step.
   Shield glass takes damage only if `BallApproach.y < 0` (the ball was moving down at
-  contact); otherwise it only flashes (no damage, no score).
+  contact); otherwise it only deflects (no damage, no score; `ShieldDeflected` fires for the glass-glint VFX).
 - **Ball speed is deliberately kept at a controlled, constant magnitude**, not left to
   Avian's real momentum transfer — `ball_movement` (`ball.rs`) renormalizes `LinearVelocity` back to
   `BALL_SPEED` after every frame's bounce (with a minimum-vertical-component clamp to
