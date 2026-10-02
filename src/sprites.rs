@@ -230,8 +230,6 @@ fn load_sprites(mut commands: Commands, assets: Res<AssetServer>) {
     });
 }
 
-/// Entities with `T` still showing their shape look.
-type Unskinned<T> = (With<T>, Without<Skinned>);
 /// Falling power-ups and the time capsules' icons share the power-up image.
 type UnskinnedPowerUpIcon = (Or<(With<PowerUp>, With<CapsuleIcon>)>, Without<Skinned>);
 /// The paddle field still showing its shape look (disjoint from the prongs).
