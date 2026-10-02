@@ -33,6 +33,7 @@ One line per file; each module's details live in its own `//!` doc comment.
 
 - `src/main.rs` — entry point: engine plugins in `main()`, and `add_game` wiring every module in (wiring only).
 - `src/world.rs` — the 1920×1080 world, the centred playfield well, `GAME_SCALE` and the walls.
+- `src/frame.rs` — `FramePlugin`: the global steel frame in the two side panels (coded, skinned by `frame_left`/`frame_right`).
 - `src/view.rs` — `ViewPlugin`: the camera that fits the world to the window, and `UiScale`.
 - `src/game_state.rs` — `AppState` / `PlayState` state machine, `GameOutcome` and the physics clock.
 - `src/run.rs` — starting and ending a run, `Score` / `Lives`, `RestartGame` and the HUD.
@@ -40,7 +41,7 @@ One line per file; each module's details live in its own `//!` doc comment.
 - `src/ball.rs` — ball movement rules, the serve from the paddle and `BallApproach`.
 - `src/collision.rs` — `on_ball_collision`, scoring, `BrickDamaged` / `BrickDestroyed`; `BallBounced` / `PaddleHit` for VFX.
 - `src/controls.rs` — `ControlSettings` (Mouse/Keyboard) and the mouse side of paddle control.
-- `src/bricks/mod.rs` — `BrickClass`, `BrickCell`, `generate_board` and `BricksPlugin`.
+- `src/bricks/mod.rs` — `BrickClass`, `BrickCell`, `generate_board`, the `damage_look` ladder and `BricksPlugin`.
 - `src/bricks/grid.rs` — the `Brick` / `BrickHealth` entities, grid layout and `spawn_bricks`.
 - `src/bricks/regen.rs` — regen alloy: damaged bricks heal after a timer.
 - `src/bricks/explosive.rs` — explosive bricks and their chained blasts.
@@ -51,11 +52,12 @@ One line per file; each module's details live in its own `//!` doc comment.
 - `src/menu/pause.rs` — pause menu over the frozen game.
 - `src/menu/game_over.rs` — game-over / win screen with the final score.
 - `src/theme.rs` — the Steelbreak palette; every colour the game draws with.
-- `src/sprites.rs` — image assets: `GameSprites`, the background and sprite skinning.
-- `src/particles/mod.rs` — the bevy_enoki VFX layer: brick damage/breaks, ball trail, bounce sparks, paddle flare.
+- `src/sprites.rs` — image assets: `GameSprites`, the background and sprite skinning (brick damage plates included).
+- `src/particles/mod.rs` — the bevy_enoki VFX layer: per-class brick bursts and damage, ball trail, bounce sparks, paddle flare.
 - `src/spawner.rs` — `Spawner<T>`, a generic weighted registry of spawnable kinds.
 - `src/powerups/mod.rs` — the power-up framework: drops, pickup and `ActiveEffects`.
 - `src/powerups/super_sizer.rs` — Super-Sizer, and the pattern for adding a power-up.
+- `src/powerups/capsules.rs` — time capsules: each active power-up's time left, in the right panel.
 - `src/script_manager/mod.rs` — `ScriptPlugin`, Lua scripting (native only).
 - `src/test_support.rs` — shared headless test helpers (`app`, `tap`, `click`, `hit`, ...).
 
@@ -148,6 +150,13 @@ One line per file; each module's details live in its own `//!` doc comment.
   one per asset and 404s). Hot reload (bevy's `file_watcher` feature) is enabled only in the
   non-wasm target dependencies, so editing a PNG under `cargo run` updates it live and the
   wasm build doesn't pull the watcher in.
+- **Particles: per-class hit/break bursts.** Each brick material has
+  `assets/particles/<class>_hit.particle.ron`, `<class>_break.particle.ron` and a
+  4-frame 128×32 greyscale sheet `<class>.png`. `<class>` is `particles::material_slug`:
+  ceramic, titanium, tungsten, reactor, explosive (all variants), regen or shield.
+  Those effects colour themselves via `color_curve`. A missing sheet draws plain quads,
+  and a missing effect file falls back to the generic `brick_hit` / `brick_break`.
+  Effect files hot-reload under `cargo run`.
 - **Lua scripting is native-only.** `bevy_mod_scripting` (`lua54`, which compiles mlua's
   bundled Lua C sources) lives under the non-wasm target dependencies in Cargo.toml, so it
   isn't compiled for wasm at all. `src/script_manager/mod.rs` cfg-gates only the

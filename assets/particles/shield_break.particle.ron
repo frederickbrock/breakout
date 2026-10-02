@@ -1,0 +1,28 @@
+// Shield glass break: the pane bursts into spinning glass flecks.
+// Drawn with the class's 4-frame sheet (animated over each particle's
+// life) and coloured by color_curve (src/particles/; sim-rdl.7.8).
+(
+    spawn_rate: 0.05,
+    spawn_amount: 32,
+    emission_shape: Circle(30.0),
+    lifetime: (0.7, 0.3),
+    linear_speed: Some((340.0, 0.6)),
+    linear_acceleration: None,
+    direction: Some(((0.0, 1.0), 1.0)),
+    angular_speed: Some((8.0, 1.0)),
+    angular_acceleration: None,
+    scale: Some((12.0, 0.4)),
+    color: Some((red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0)),
+    gravity_direction: Some(((0.0, -1.0), 0.0)),
+    gravity_speed: Some((900.0, 0.2)),
+    linear_damp: Some((0.6, 0.2)),
+    angular_damp: None,
+    scale_curve: None,
+    color_curve: Some((points: [
+        ((red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0), 0.0, None),
+        ((red: 0.1144, green: 0.7682, blue: 0.9131, alpha: 1.0), 0.5, None),
+        ((red: 0.0782, green: 0.6867, blue: 1.0, alpha: 0.0), 1.0, None),
+    ])),
+    attractors: None,
+    relative_positioning: None,
+)

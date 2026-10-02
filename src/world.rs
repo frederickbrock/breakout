@@ -9,7 +9,9 @@
 //! The walls, laid out by the pure [`wall_specs`] and spawned by
 //! [`setup_level`] and marked [`Wall`], sit on the well's left, right and top edges; the ball is
 //! lost below its bottom edge. Every gameplay size and speed in the game is
-//! written as its old design value `x * GAME_SCALE` ([`GAME_SCALE`] = 1.5).
+//! written as its old design value `x * GAME_SCALE` ([`GAME_SCALE`] = 1.5),
+//! except the ball's speed, which has its own
+//! [`BALL_SPEED_SCALE`](crate::ball::BALL_SPEED_SCALE).
 //! [`setup_level`] also makes the ball's mesh and material
 //! ([`crate::ball::BallLook`]).
 
@@ -26,7 +28,8 @@ pub(crate) struct Wall;
 
 // Game constants
 /// Every gameplay size and speed is its old 900x650-window design value times
-/// this, so the game looks and plays the same in the bigger world.
+/// this, so the game looks and plays the same in the bigger world. The ball's
+/// speed is the exception: it uses `ball::BALL_SPEED_SCALE`.
 pub(crate) const GAME_SCALE: f32 = 1.5;
 /// The logical world the camera always shows in full (letterboxed to fit the
 /// window, see `view`).
@@ -37,7 +40,6 @@ pub(crate) const WORLD_HEIGHT: f32 = 1080.0;
 pub(crate) const PLAYFIELD_WIDTH: f32 = 1440.0;
 pub(crate) const PLAYFIELD_HEIGHT: f32 = WORLD_HEIGHT;
 /// The panel either side of the well (240), home of the HUD.
-#[cfg(test)]
 pub(crate) const SIDE_PANEL_WIDTH: f32 = (WORLD_WIDTH - PLAYFIELD_WIDTH) / 2.0;
 pub(crate) const WALL_THICKNESS: f32 = 40.0 * GAME_SCALE;
 

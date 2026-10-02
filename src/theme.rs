@@ -51,6 +51,16 @@ pub const REACTOR: Color = hex(0xb58cff);
 /// violet bricks they drop from.
 pub const POWER_UP: Color = EMITTER;
 
+/// The steel frame in the side panels (coded placeholder until the painted
+/// `frame_left`/`frame_right` art): the panel's plate fill...
+pub const FRAME_PANEL: Color = hex(0x141c26);
+/// ...the girder running down its playfield edge...
+pub const FRAME_GIRDER: Color = hex(0x34465a);
+/// ...the darker tie plates across the girder (the truss read)...
+pub const FRAME_TIE: Color = hex(0x1d2835);
+/// ...and the bright lip exactly on the wall line the ball bounces off.
+pub const FRAME_EDGE: Color = hex(0x7f93a8);
+
 /// A sprite's tint when it draws its own image unmodified.
 pub const UNTINTED: Color = Color::WHITE;
 
@@ -93,6 +103,12 @@ pub const REACTOR_GLOW: Color = hex(0xb58cff);
 pub const EXPLOSIVE_GLOW: Color = hex(0xff3b3b);
 pub const REGEN_GLOW: Color = hex(0x3dff7a);
 pub const SHIELD_GLOW: Color = hex(0x4fd8ff);
+/// Power-up time capsules (right panel): the gauge's dark pill, its thin
+/// light outline, the cyan fill, and the amber fill in the last seconds.
+pub const CAPSULE_PILL: Color = hex(0x16202c);
+pub const CAPSULE_OUTLINE: Color = hex(0xa9c4d6);
+pub const CAPSULE_FILL: Color = hex(0x4fd8ff);
+pub const CAPSULE_WARN: Color = hex(0xffab4d);
 /// Light smoke rising from a damaged brick.
 pub const SMOKE: Color = hex(0x8a9aab);
 /// The ball's fading trail while it's in flight: steel blue.

@@ -16,6 +16,7 @@ mod ball;
 mod bricks;
 mod collision;
 mod controls;
+mod frame;
 mod game_state;
 mod menu;
 mod paddle;
@@ -120,6 +121,7 @@ fn add_game(app: &mut App) {
         bricks::BricksPlugin,
         particles::VfxPlugin,
         view::ViewPlugin,
+        frame::FramePlugin,
     ))
     .insert_resource(Gravity(Vec2::new(0.0, 0.8 * GAME_SCALE)))
     .init_resource::<ButtonInput<MouseButton>>()
