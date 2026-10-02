@@ -22,7 +22,16 @@
     <meta name="twitter:image" content="https://frederickbrock.github.io/breakout/og.jpg" />
 
     <link data-trunk rel="icon" href="web/favicon.png" />
-    <link data-trunk rel="rust" data-wasm-opt="0" data-initializer="web/loader.js" />
+    <!-- Release builds use the size-tuned `wasm-release` cargo profile and
+         binaryen's size optimiser (dev builds skip both). -->
+    <link
+      data-trunk
+      rel="rust"
+      data-cargo-profile-release="wasm-release"
+      data-wasm-opt="z"
+      data-wasm-opt-params="--enable-bulk-memory --enable-nontrapping-float-to-int --enable-sign-ext --enable-mutable-globals"
+      data-initializer="web/loader.js"
+    />
     <link data-trunk rel="copy-dir" href="assets" />
     <link data-trunk rel="copy-file" href="web/splash.jpg" />
     <link data-trunk rel="copy-file" href="web/og.jpg" />

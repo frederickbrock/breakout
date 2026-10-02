@@ -37,3 +37,14 @@ web-sys = { version = "0.3", features = ["Window", "Event", "EventTarget"] }
 [dev-dependencies]
 # Tests parse the shipped assets/particles/*.particle.ron with the same RON version bevy_enoki uses.
 ron = "0.12"
+
+# Size-tuned profile for the web build only: index.html points trunk's
+# `--release` build at it (`data-cargo-profile-release`), so native
+# `cargo build --release` keeps the default release profile.
+[profile.wasm-release]
+inherits = "release"
+opt-level = "z"
+lto = "fat"
+codegen-units = 1
+debug = false
+strip = "symbols"
