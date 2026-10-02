@@ -79,10 +79,10 @@ fn the_brick_grid_is_centred_with_equal_side_channels() {
     // A full board uses exactly the minimum channel.
     let full_left = brick_x(0, bricks::BOARD_COLS) - BRICK_WIDTH / 2.0 + PLAYFIELD_WIDTH / 2.0;
     assert!((full_left - SIDE_CHANNEL).abs() < 1e-2);
-    // Rows step down from the top margin.
+    // Rows step down from the top offset.
     assert_eq!(
         brick_y(0) + BRICK_HEIGHT / 2.0,
-        PLAYFIELD_HEIGHT / 2.0 - BRICK_TOP_MARGIN
+        PLAYFIELD_HEIGHT / 2.0 - BRICK_TOP_OFFSET
     );
     assert!((brick_y(0) - brick_y(1) - (BRICK_HEIGHT + BRICK_GAP)).abs() < 1e-3);
 }
@@ -122,4 +122,23 @@ fn seven_rows_leave_room_above_the_paddle() {
         .y
         + PADDLE_HEIGHT / 2.0;
     assert!(lowest - BRICK_HEIGHT / 2.0 - paddle_top >= 250.0 * GAME_SCALE);
+}
+
+#[test]
+fn the_grid_sits_one_brick_height_lower_for_headroom() {
+    // The top of row 0 is 120 below the top wall (was 75).
+    let top_wall = PLAYFIELD_HEIGHT / 2.0;
+    let row0_top = brick_y(0) + BRICK_HEIGHT / 2.0;
+    assert!((top_wall - row0_top - 120.0).abs() < 1e-3);
+    assert_eq!(BRICK_HEADROOM, BRICK_HEIGHT);
+    // Every row moved down by exactly one brick height, spacing unchanged.
+    let old_y = |row: usize| {
+        top_wall - BRICK_TOP_MARGIN - BRICK_HEIGHT / 2.0 - row as f32 * (BRICK_HEIGHT + BRICK_GAP)
+    };
+    for row in 0..bricks::BOARD_ROWS {
+        assert!(
+            (old_y(row) - brick_y(row) - BRICK_HEIGHT).abs() < 1e-3,
+            "row {row}"
+        );
+    }
 }

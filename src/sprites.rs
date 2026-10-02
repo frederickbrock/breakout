@@ -24,19 +24,21 @@
 //! It's recomputed every frame from `BrickHealth`, so a regen heal goes back
 //! to intact. A missing damage plate keeps the intact one, and a missing
 //! intact plate keeps the flat colour. Damage is never a tint (the smoke
-//! particles sit on top). A skinned brick's shield flash is then shown as a tint over
-//! the sprite ([`theme::brick_sprite_tint`]); damage is shown by particles.
+//! particles sit on top). A skinned brick's shield flash is then shown as a
+//! tint over the sprite ([`theme::brick_sprite_tint`]).
 //!
 //! [`SpritesPlugin`] loads every handle once at `Startup` into the
 //! [`GameSprites`] resource (background, ball, paddle prongs and field,
-//! power-up icon, one image per brick material) and spawns the global
-//! [`Background`], sized to the playfield well (the side panels stay clear
-//! colour). A skinned entity is marked [`Skinned`].
+//! power-up icon, one image per brick material and its damage plates, the two
+//! frame panels) and spawns the global [`Background`], sized to the playfield well. The side panels hold the
+//! steel frame ([`crate::frame`]), skinned with `frame_left`/`frame_right`.
+//! A skinned entity is marked [`Skinned`].
 
 use crate::ball::{Ball, BALL_SIZE};
 use crate::bricks::grid::Brick;
 use crate::bricks::grid::BrickHealth;
 use crate::bricks::{damage_look, BrickClass, DamageLook, ShieldFlash};
+use crate::frame::{FramePanel, FramePiece};
 use crate::paddle::{PaddleField, PaddleProng};
 use crate::powerups::PowerUp;
 use crate::theme;
@@ -51,6 +53,8 @@ const PRONG_LEFT_PATH: &str = "sprites/paddle_prong_left.png";
 const PRONG_RIGHT_PATH: &str = "sprites/paddle_prong_right.png";
 const PADDLE_FIELD_PATH: &str = "sprites/paddle_field.png";
 const POWER_UP_PATH: &str = "sprites/powerup.png";
+const FRAME_LEFT_PATH: &str = "sprites/frame_left.png";
+const FRAME_RIGHT_PATH: &str = "sprites/frame_right.png";
 /// Which brick sprite a brick draws: one per material. The three explosive
 /// variants share one plate (their outlines tell them apart).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -160,6 +164,10 @@ pub struct GameSprites {
     /// The damage plates each material's ladder shows
     /// ([`BrickSprite::damage_looks`]).
     pub damaged: HashMap<(BrickSprite, DamageLook), Handle<Image>>,
+    /// The painted side-panel frame. Shipped at 2×, drawn at panel size;
+    /// the right one is already mirrored in the file.
+    pub frame_left: Handle<Image>,
+    pub frame_right: Handle<Image>,
 }
 
 impl GameSprites {
@@ -216,6 +224,8 @@ fn load_sprites(mut commands: Commands, assets: Res<AssetServer>) {
             })
             .map(|(sprite, look)| ((sprite, look), assets.load(sprite.damage_path(look))))
             .collect(),
+        frame_left: assets.load(FRAME_LEFT_PATH),
+        frame_right: assets.load(FRAME_RIGHT_PATH),
     });
 }
 
@@ -238,6 +248,7 @@ impl Plugin for SkinPlugin {
                 skin_ball,
                 skin_paddle,
                 skin_power_ups,
+                skin_frame,
                 (skin_bricks, tint_skinned_bricks).chain(),
             )
                 .run_if(resource_exists::<GameSprites>),
@@ -321,6 +332,35 @@ fn skin_power_ups(
     for (entity, mut sprite) in &mut power_ups {
         apply(&mut sprite, image);
         commands.entity(entity).insert(Skinned);
+    }
+}
+
+/// Each side panel draws its painted frame once that image is loaded, at the
+/// panel's size (so the 2× art is scaled down); its coded girder, ties and
+/// edge lip are hidden. A panel whose file is missing keeps the coded frame.
+fn skin_frame(
+    mut commands: Commands,
+    sprites: Res<GameSprites>,
+    images: Res<Assets<Image>>,
+    mut panels: Query<(Entity, &FramePanel, &mut Sprite, Option<&Children>), Without<Skinned>>,
+    pieces: Query<(), With<FramePiece>>,
+) {
+    for (entity, panel, mut sprite, children) in &mut panels {
+        let handle = if panel.side < 0.0 {
+            &sprites.frame_left
+        } else {
+            &sprites.frame_right
+        };
+        let Some(image) = loaded(handle, &images) else {
+            continue;
+        };
+        apply(&mut sprite, image);
+        commands.entity(entity).insert(Skinned);
+        for &child in children.into_iter().flatten() {
+            if pieces.contains(child) {
+                commands.entity(child).insert(Visibility::Hidden);
+            }
+        }
     }
 }
 

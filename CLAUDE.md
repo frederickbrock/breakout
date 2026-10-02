@@ -33,6 +33,7 @@ One line per file; each module's details live in its own `//!` doc comment.
 
 - `src/main.rs` — entry point: engine plugins in `main()`, and `add_game` wiring every module in (wiring only).
 - `src/world.rs` — the 1920×1080 world, the centred playfield well, `GAME_SCALE` and the walls.
+- `src/frame.rs` — `FramePlugin`: the global steel frame in the two side panels (coded, skinned by `frame_left`/`frame_right`).
 - `src/view.rs` — `ViewPlugin`: the camera that fits the world to the window, and `UiScale`.
 - `src/game_state.rs` — `AppState` / `PlayState` state machine, `GameOutcome` and the physics clock.
 - `src/run.rs` — starting and ending a run, `Score` / `Lives`, `RestartGame` and the HUD.

@@ -1,6 +1,7 @@
 use super::*;
 use crate::ball::{
-    BALL_ANCHOR_GAP, BALL_MIN_VERTICAL_FRACTION, BALL_SIZE, BALL_SPEED, PADDLE_STILL_SPEED,
+    BALL_ANCHOR_GAP, BALL_MIN_VERTICAL_FRACTION, BALL_SIZE, BALL_SPEED, BALL_SPEED_SCALE,
+    PADDLE_STILL_SPEED,
 };
 use crate::bricks::grid::{BRICK_GAP, BRICK_HEIGHT, BRICK_TOP_MARGIN};
 use crate::paddle::{
@@ -41,7 +42,6 @@ fn gameplay_sizes_are_the_old_design_times_game_scale() {
         (PADDLE_MARGIN_BOTTOM, 10.0),
         (PRONG_WIDTH, 27.0),
         (BALL_SIZE, 15.0),
-        (BALL_SPEED, 300.0),
         (BALL_ANCHOR_GAP, 2.0),
         (PADDLE_STILL_SPEED, 1.0),
         (BRICK_GAP, 5.0),
@@ -50,6 +50,9 @@ fn gameplay_sizes_are_the_old_design_times_game_scale() {
     ] {
         assert_eq!(scaled, design * GAME_SCALE);
     }
+    // The ball's speed is the exception: its own tunable scale.
+    assert_eq!(BALL_SPEED_SCALE, 1.8);
+    assert_eq!(BALL_SPEED, 300.0 * BALL_SPEED_SCALE);
     // Unit-free tuning stays put.
     assert_eq!(PADDLE_MASS, 3.0);
     assert_eq!(PADDLE_LINEAR_DAMPING, 4.0);
