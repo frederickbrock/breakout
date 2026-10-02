@@ -124,6 +124,22 @@ impl GameSprites {
         // `ALL` lists the variants in declaration order.
         &self.bricks[sprite as usize]
     }
+
+    /// Every handle, e.g. to wait for them all to load.
+    pub fn all(&self) -> impl Iterator<Item = &Handle<Image>> {
+        [
+            &self.background,
+            &self.ball,
+            &self.prong_left,
+            &self.prong_right,
+            &self.paddle_field,
+            &self.power_up,
+            &self.frame_left,
+            &self.frame_right,
+        ]
+        .into_iter()
+        .chain(&self.bricks)
+    }
 }
 
 /// The playfield-well background, sized to the well (the side panels stay
