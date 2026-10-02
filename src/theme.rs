@@ -107,6 +107,12 @@ pub const BLAST_DEBRIS: Color = hex(0x4a3a36);
 /// Glass glints thrown off shield glass that deflects the ball.
 pub const GLASS_GLINT: Color = hex(0x4fd8ff);
 pub const GLASS_GLINT_LIGHT: Color = hex(0xb8f6ff);
+/// Power-up time capsules (right panel): the gauge's dark pill, its thin
+/// light outline, the cyan fill, and the amber fill in the last seconds.
+pub const CAPSULE_PILL: Color = hex(0x16202c);
+pub const CAPSULE_OUTLINE: Color = hex(0xa9c4d6);
+pub const CAPSULE_FILL: Color = hex(0x4fd8ff);
+pub const CAPSULE_WARN: Color = hex(0xffab4d);
 /// Light smoke rising from a damaged brick.
 pub const SMOKE: Color = hex(0x8a9aab);
 

@@ -62,6 +62,14 @@ fn app_with_vfx() -> App {
         debris: Handle::default(),
         blast_smoke: Handle::default(),
         glint: Handle::default(),
+        class_hit: all_classes()
+            .into_iter()
+            .map(|c| (c, effect_handle(c, Burst::Hit)))
+            .collect(),
+        class_break: all_classes()
+            .into_iter()
+            .map(|c| (c, effect_handle(c, Burst::Break)))
+            .collect(),
     });
     let glow = all_classes()
         .into_iter()
@@ -80,8 +88,30 @@ fn app_with_vfx() -> App {
         debris: Handle::default(),
         glint: Handle::default(),
         glint_light: Handle::default(),
+        sheets: HashMap::default(),
+        plain: Handle::default(),
     });
     app
+}
+
+/// A distinct placeholder per class material and burst (variants share).
+fn effect_handle(class: BrickClass, which: Burst) -> Handle<Particle2dEffect> {
+    let slug = all_classes()
+        .iter()
+        .position(|c| material_slug(*c) == material_slug(class))
+        .unwrap() as u128;
+    let id = 1 + slug * 2 + matches!(which, Burst::Break) as u128;
+    Handle::Uuid(bevy::asset::uuid::Uuid::from_u128(id), Default::default())
+}
+
+/// The effect each one-shot brick burst plays (blasts and glass glints,
+/// which have their own markers, are left out).
+fn burst_effects(app: &mut App) -> Vec<Handle<Particle2dEffect>> {
+    app.world_mut()
+        .query_filtered::<&ParticleEffectHandle, (With<OneShot>, Without<BlastBurst>, Without<GlassGlint>)>()
+        .iter(app.world())
+        .map(|h| h.0.clone())
+        .collect()
 }
 
 type Spawners = With<ParticleSpawner<ColorParticle2dMaterial>>;
@@ -248,6 +278,37 @@ fn every_explosion_in_a_chain_plays_its_blast() {
     }
 }
 
+const CLASSES: [BrickClass; 7] = [
+    BrickClass::Ceramic,
+    BrickClass::Titanium,
+    BrickClass::Tungsten,
+    BrickClass::Reactor,
+    BrickClass::Explosive(crate::bricks::ExplosiveKind::Charge),
+    BrickClass::Regen,
+    BrickClass::Shield,
+];
+
+#[test]
+fn every_class_has_its_own_hit_break_and_sheet_files_on_disk() {
+    let slugs: std::collections::HashSet<_> = all_classes().map(material_slug).into();
+    assert_eq!(slugs.len(), 7, "explosive variants share one material");
+    for class in all_classes() {
+        for path in [class_hit_path(class), class_break_path(class)] {
+            let text = std::fs::read_to_string(format!("assets/{path}"))
+                .unwrap_or_else(|e| panic!("{path}: {e}"));
+            let effect: Particle2dEffect =
+                ron::de::from_str(&text).unwrap_or_else(|e| panic!("{path}: {e}"));
+            assert!(effect.spawn_amount > 0, "{path}");
+            assert!(effect.color_curve.is_some(), "{path} colours itself");
+        }
+        let sheet = class_sheet_path(class);
+        assert!(
+            std::path::Path::new(&format!("assets/{sheet}")).exists(),
+            "{sheet}"
+        );
+    }
+}
+
 #[test]
 fn shield_glass_glints_when_it_deflects_and_shatters_when_it_breaks() {
     let mut app = app_with_vfx();
@@ -260,6 +321,93 @@ fn shield_glass_glints_when_it_deflects_and_shatters_when_it_breaks() {
     assert!(app.world().get_entity(shield).is_err());
     assert_eq!(count::<With<GlassGlint>>(&mut app), 2, "no new glints");
     assert_eq!(bursts(&mut app), 3, "the glass shatter");
+}
+
+#[test]
+fn a_missing_sheet_falls_back_to_plain_quads_and_a_missing_effect_to_generic() {
+    assert_eq!(burst_look(false, true), BurstLook::Textured);
+    assert_eq!(burst_look(false, false), BurstLook::PlainQuads);
+    assert_eq!(burst_look(true, true), BurstLook::Generic);
+    assert_eq!(burst_look(true, false), BurstLook::Generic);
+}
+
+#[test]
+fn each_class_plays_its_own_hit_and_break() {
+    for class in CLASSES {
+        let mut app = app_with_vfx();
+        let brick = brick_of(&mut app, class);
+        let hits = class.max_hits();
+        for _ in 1..hits {
+            hit_moving(&mut app, brick, Vec2::new(0.0, -450.0));
+        }
+        hit_moving(&mut app, brick, Vec2::new(0.0, -450.0));
+        let played = burst_effects(&mut app);
+        // A brick that can survive a hit plays its hit burst first; the last
+        // hit plays its break. An explosive's blast may break (and so burst)
+        // others too, so look for this class's own.
+        if hits > 1 {
+            assert!(
+                played.contains(&effect_handle(class, Burst::Hit)),
+                "{class:?}"
+            );
+        }
+        assert!(
+            played.contains(&effect_handle(class, Burst::Break)),
+            "{class:?}"
+        );
+        assert!(
+            !played.contains(&Handle::default()),
+            "{class:?}: no generic"
+        );
+    }
+    let tungsten = effect_handle(BrickClass::Tungsten, Burst::Hit);
+    assert_ne!(tungsten, effect_handle(BrickClass::Titanium, Burst::Hit));
+}
+
+#[test]
+fn a_class_without_its_effect_file_plays_the_generic_burst() {
+    let mut app = app_with_vfx();
+    app.world_mut()
+        .resource_mut::<ParticleEffects>()
+        .class_break
+        .remove(&BrickClass::Ceramic);
+    let ceramic = brick_of(&mut app, BrickClass::Ceramic);
+    hit(&mut app, ceramic);
+    assert_eq!(burst_effects(&mut app), [Handle::default()]);
+}
+
+#[test]
+fn a_loaded_sheet_draws_the_burst_textured() {
+    type Textured = With<ParticleSpawner<SpriteParticle2dMaterial>>;
+    let mut app = app_with_vfx();
+    app.init_asset::<Image>()
+        .init_asset::<SpriteParticle2dMaterial>();
+    let image = app
+        .world_mut()
+        .resource_mut::<Assets<Image>>()
+        .add(Image::default());
+    let material = app
+        .world_mut()
+        .resource_mut::<Assets<SpriteParticle2dMaterial>>()
+        .add(SpriteParticle2dMaterial::new(
+            image.clone(),
+            SHEET_FRAMES,
+            1,
+        ));
+    app.world_mut()
+        .resource_mut::<ParticleMaterials>()
+        .sheets
+        .insert(BrickClass::Ceramic, ClassSheet { image, material });
+
+    let ceramic = brick_of(&mut app, BrickClass::Ceramic);
+    hit(&mut app, ceramic);
+    assert_eq!(count::<Textured>(&mut app), 1);
+    assert_eq!(bursts(&mut app), 0, "not a plain-quad burst");
+
+    // Torn down with the run like every other spawner.
+    tap(&mut app, KeyCode::Escape);
+    crate::menu::test_helpers::press(&mut app, "Main menu");
+    assert_eq!(count::<Textured>(&mut app), 0);
 }
 
 #[test]

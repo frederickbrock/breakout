@@ -122,3 +122,29 @@ fn the_fill_roughly_follows_the_weights() {
         share(shield)
     );
 }
+
+#[test]
+fn the_damage_ladder_for_every_class_and_hits_left() {
+    use DamageLook::*;
+    use ExplosiveKind::*;
+    let ladder = |class: BrickClass| -> Vec<DamageLook> {
+        (1..=class.max_hits())
+            .rev()
+            .map(|left| damage_look(class, left))
+            .collect()
+    };
+    // Full health first, down to one hit left.
+    assert_eq!(ladder(BrickClass::Tungsten), [Intact, Cracked, Broken]);
+    for class in [BrickClass::Titanium, BrickClass::Reactor, BrickClass::Regen] {
+        assert_eq!(ladder(class), [Intact, Broken], "{class:?}");
+    }
+    for class in [
+        BrickClass::Ceramic,
+        BrickClass::Shield,
+        BrickClass::Explosive(Charge),
+        BrickClass::Explosive(Breach),
+        BrickClass::Explosive(Demolition),
+    ] {
+        assert_eq!(ladder(class), [Intact], "{class:?}");
+    }
+}

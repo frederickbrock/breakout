@@ -18,7 +18,8 @@
 //! The brick entities themselves and the grid layout are in `grid`.
 //! Per-class behaviours are submodules composed into [`BricksPlugin`]
 //! (`regen`, `explosive`, and `outline` for the behaviour borders). Colours
-//! come from [`crate::theme::brick_color`].
+//! come from [`crate::theme::brick_color`]. [`damage_look`] is the
+//! damage-sprite ladder (`sprites` draws it).
 
 pub(crate) mod explosive;
 pub(crate) mod grid;
@@ -151,6 +152,29 @@ fn patch_board<R: Rng + ?Sized>(board: &mut Board, rng: &mut R) {
 
 fn count(board: &Board, class: BrickClass) -> usize {
     board.iter().flatten().filter(|&&c| c == class).count()
+}
+
+/// Which plate a damaged brick draws (sim-rdl.7.9). `Broken` always means
+/// the next hit destroys it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum DamageLook {
+    Intact,
+    Cracked,
+    Broken,
+}
+
+/// The damage ladder: a brick at full health is intact, one with a single
+/// hit left is broken, and anything in between (only tungsten's 2 of 3) is
+/// cracked. A 1-hit brick never shows damage.
+pub fn damage_look(class: BrickClass, hits_left: u8) -> DamageLook {
+    let max = class.max_hits();
+    if max <= 1 || hits_left >= max {
+        DamageLook::Intact
+    } else if hits_left <= 1 {
+        DamageLook::Broken
+    } else {
+        DamageLook::Cracked
+    }
 }
 
 pub struct BricksPlugin;
