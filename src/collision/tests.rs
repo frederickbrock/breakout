@@ -3,13 +3,14 @@ use crate::ball::BALL_SPEED;
 use crate::bricks::grid::{BRICK_COLS, BRICK_ROWS};
 use crate::game_state::{AppState, GameOutcome};
 use crate::test_support::*;
+use crate::theme;
 
 fn score(app: &App) -> i32 {
     app.world().resource::<Score>().0
 }
 
 fn classes() -> [BrickClass; 9] {
-    use bricks::ExplosiveKind::*;
+    use crate::bricks::ExplosiveKind::*;
     [
         BrickClass::Ceramic,
         BrickClass::Titanium,
@@ -100,61 +101,53 @@ fn clearing_every_brick_including_multi_hit_ones_wins() {
     );
 }
 
+#[derive(Resource, Default)]
+struct Deflects(Vec<Vec2>);
+
 #[test]
-fn shield_glass_hit_from_below_or_the_side_only_flashes() {
+fn shield_glass_hit_from_below_or_the_side_only_deflects() {
     let mut app = app();
+    app.init_resource::<Deflects>().add_observer(
+        |on: On<ShieldDeflected>, mut seen: ResMut<Deflects>| {
+            seen.0.push(on.position);
+        },
+    );
     let shield = brick_of(&mut app, BrickClass::Shield);
-    let color = |app: &App| app.world().get::<Sprite>(shield).unwrap().color;
+    let ball = ball(&mut app);
+    let ball_at = translation(&app, ball).truncate();
 
     hit_moving(&mut app, shield, Vec2::new(0.0, BALL_SPEED));
     assert_eq!(app.world().get::<BrickHealth>(shield).unwrap().0, 1);
     assert_eq!(score(&app), 0);
     assert!(!app.world().resource::<BallCollisionSignals>().broke_brick);
-    assert_eq!(color(&app), theme::SHIELD_FLASH);
-    assert!(app.world().entity(shield).contains::<bricks::ShieldFlash>());
-    app.update(); // 0.1 s
-    assert_eq!(color(&app), theme::SHIELD_FLASH);
-    app.update(); // 0.2 s
-    assert_eq!(color(&app), theme::SHIELD);
-    assert!(!app.world().entity(shield).contains::<bricks::ShieldFlash>());
+    // No flat flash any more: the glass keeps its colour.
+    assert_eq!(
+        app.world().get::<Sprite>(shield).unwrap().color,
+        theme::SHIELD
+    );
 
     // A flat side hit: no damage either.
     hit_moving(&mut app, shield, Vec2::new(BALL_SPEED, 0.0));
     assert!(app.world().get_entity(shield).is_ok());
     assert_eq!(score(&app), 0);
-    assert_eq!(color(&app), theme::SHIELD_FLASH);
+    // Each deflect is reported at the contact point (the ball).
+    assert_eq!(app.world().resource::<Deflects>().0, [ball_at, ball_at]);
 }
 
 #[test]
 fn shield_glass_hit_by_a_ball_moving_down_breaks() {
     let mut app = app();
+    app.init_resource::<Deflects>().add_observer(
+        |on: On<ShieldDeflected>, mut seen: ResMut<Deflects>| {
+            seen.0.push(on.position);
+        },
+    );
     let shield = brick_of(&mut app, BrickClass::Shield);
     hit_moving(&mut app, shield, FROM_ABOVE);
+    assert!(app.world().resource::<Deflects>().0.is_empty());
     assert!(app.world().get_entity(shield).is_err());
     assert_eq!(score(&app), 10);
     assert!(app.world().resource::<BallCollisionSignals>().broke_brick);
-}
-
-#[test]
-fn a_shield_flash_holds_while_paused() {
-    let mut app = app();
-    let shield = brick_of(&mut app, BrickClass::Shield);
-    hit_moving(&mut app, shield, Vec2::new(0.0, BALL_SPEED));
-    tap(&mut app, KeyCode::KeyP);
-    for _ in 0..5 {
-        app.update();
-    }
-    assert_eq!(
-        app.world().get::<Sprite>(shield).unwrap().color,
-        theme::SHIELD_FLASH
-    );
-    tap(&mut app, KeyCode::KeyP);
-    app.update();
-    app.update();
-    assert_eq!(
-        app.world().get::<Sprite>(shield).unwrap().color,
-        theme::SHIELD
-    );
 }
 
 #[test]
