@@ -9,7 +9,9 @@
 //! The walls, laid out by the pure [`wall_specs`] and spawned by
 //! [`setup_level`], sit on the well's left, right and top edges; the ball is
 //! lost below its bottom edge. Every gameplay size and speed in the game is
-//! written as its old design value `x * GAME_SCALE` ([`GAME_SCALE`] = 1.5).
+//! written as its old design value `x * GAME_SCALE` ([`GAME_SCALE`] = 1.5),
+//! except the ball's speed, which has its own
+//! [`BALL_SPEED_SCALE`](crate::ball::BALL_SPEED_SCALE).
 //! [`setup_level`] also makes the ball's mesh and material
 //! ([`crate::ball::BallLook`]).
 
@@ -21,7 +23,8 @@ use crate::theme;
 
 // Game constants
 /// Every gameplay size and speed is its old 900x650-window design value times
-/// this, so the game looks and plays the same in the bigger world.
+/// this, so the game looks and plays the same in the bigger world. The ball's
+/// speed is the exception: it uses `ball::BALL_SPEED_SCALE`.
 pub(crate) const GAME_SCALE: f32 = 1.5;
 /// The logical world the camera always shows in full (letterboxed to fit the
 /// window, see `view`).
