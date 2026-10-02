@@ -35,7 +35,6 @@ pub(crate) const WORLD_HEIGHT: f32 = 1080.0;
 pub(crate) const PLAYFIELD_WIDTH: f32 = 1440.0;
 pub(crate) const PLAYFIELD_HEIGHT: f32 = WORLD_HEIGHT;
 /// The panel either side of the well (240), home of the HUD.
-#[cfg(test)]
 pub(crate) const SIDE_PANEL_WIDTH: f32 = (WORLD_WIDTH - PLAYFIELD_WIDTH) / 2.0;
 pub(crate) const WALL_THICKNESS: f32 = 40.0 * GAME_SCALE;
 
