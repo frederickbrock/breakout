@@ -157,3 +157,43 @@ fn enough_random_cells_always_get_every_class() {
         }
     }
 }
+
+#[test]
+fn the_damage_ladder_for_every_class_and_hits_left() {
+    use DamageLook::*;
+    use ExplosiveKind::*;
+    let ladder = |class: BrickClass| -> Vec<DamageLook> {
+        (1..=class.max_hits())
+            .rev()
+            .map(|left| damage_look(class.max_hits(), left))
+            .collect()
+    };
+    // Full health first, down to one hit left.
+    assert_eq!(ladder(BrickClass::Tungsten), [Intact, Cracked, Broken]);
+    for class in [BrickClass::Titanium, BrickClass::Reactor, BrickClass::Regen] {
+        assert_eq!(ladder(class), [Intact, Broken], "{class:?}");
+    }
+    for class in [
+        BrickClass::Ceramic,
+        BrickClass::Shield,
+        BrickClass::Explosive(Charge),
+        BrickClass::Explosive(Breach),
+        BrickClass::Explosive(Demolition),
+    ] {
+        assert_eq!(ladder(class), [Intact], "{class:?}");
+    }
+}
+
+#[test]
+fn a_level_hits_override_shifts_the_damage_ladder() {
+    use DamageLook::*;
+    let ladder = |max: u8| -> Vec<DamageLook> {
+        (1..=max).rev().map(|left| damage_look(max, left)).collect()
+    };
+    // `tungsten hits=1`: undamaged, so intact (not tungsten's default broken).
+    assert_eq!(damage_look(1, 1), Intact);
+    // `titanium hits=4`: cracked through the middle, broken on the last hit.
+    assert_eq!(ladder(4), [Intact, Cracked, Cracked, Broken]);
+    // `ceramic hits=3`: now shows damage like tungsten.
+    assert_eq!(ladder(3), [Intact, Cracked, Broken]);
+}

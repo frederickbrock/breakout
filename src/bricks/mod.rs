@@ -20,7 +20,8 @@
 //! Per-class behaviours are submodules composed into [`BricksPlugin`]
 //! (`regen`, `explosive`, and `outline` for the behaviour borders), which
 //! also runs the shield-glass flash timer ([`ShieldFlash`], frozen while
-//! paused). Colours come from [`crate::theme::brick_color`].
+//! paused). Colours come from [`crate::theme::brick_color`]. [`damage_look`]
+//! is the damage-sprite ladder (`sprites` draws it).
 
 mod explosive;
 pub(crate) mod grid;
@@ -168,6 +169,30 @@ fn patch_classes<R: Rng + ?Sized>(classes: &mut [BrickClass], reactors: usize, r
 
 fn count(classes: &[BrickClass], class: BrickClass) -> usize {
     classes.iter().filter(|&&c| c == class).count()
+}
+
+/// Which plate a damaged brick draws (sim-rdl.7.9). `Broken` always means
+/// the next hit destroys it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum DamageLook {
+    Intact,
+    Cracked,
+    Broken,
+}
+
+/// The damage ladder for a brick of `max_hits` (its own `BrickMaxHits`: the
+/// class's `max_hits()` or a level's `hits=`): at full health it's intact,
+/// with a single hit left it's broken, and anything in between is cracked
+/// (by default only tungsten's 2 of 3). A 1-hit brick never shows damage.
+pub fn damage_look(max_hits: u8, hits_left: u8) -> DamageLook {
+    let max = max_hits;
+    if max <= 1 || hits_left >= max {
+        DamageLook::Intact
+    } else if hits_left <= 1 {
+        DamageLook::Broken
+    } else {
+        DamageLook::Cracked
+    }
 }
 
 /// How long shield glass flashes when hit from below or the side.
