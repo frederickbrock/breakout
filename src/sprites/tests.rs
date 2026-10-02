@@ -52,6 +52,11 @@ fn app_with_sprites(missing: &[&str]) -> App {
         paddle_field: image("paddle_field"),
         power_up: image("power_up"),
         bricks: BrickSprite::ALL.map(|b| image(b.path())),
+        damaged: BrickSprite::ALL
+            .into_iter()
+            .flat_map(|b| b.damage_looks().into_iter().map(move |l| (b, l)))
+            .map(|(b, l)| ((b, l), image(&b.damage_path(l))))
+            .collect(),
         frame_left: image("frame_left"),
         frame_right: image("frame_right"),
     };
@@ -205,17 +210,111 @@ fn a_missing_brick_sprite_keeps_that_class_flat() {
     assert!(app.world().entity(titanium).contains::<Skinned>());
 }
 
+/// The plate image a brick currently draws.
+fn plate(app: &App, brick: Entity) -> Handle<Image> {
+    brick_sprite(app, brick).image
+}
+
+fn damage_plate(app: &App, sprite: BrickSprite, look: DamageLook) -> Handle<Image> {
+    app.world().resource::<GameSprites>().damaged[&(sprite, look)].clone()
+}
+
+fn intact_plate(app: &App, sprite: BrickSprite) -> Handle<Image> {
+    app.world().resource::<GameSprites>().brick(sprite).clone()
+}
+
 #[test]
-fn a_damaged_brick_keeps_its_intact_sprite_untinted() {
+fn every_ladder_plate_exists_on_disk() {
+    for sprite in BrickSprite::ALL {
+        for look in sprite.damage_looks() {
+            let path = format!("assets/{}", sprite.damage_path(look));
+            assert!(std::path::Path::new(&path).exists(), "{path}");
+        }
+    }
+    assert_eq!(
+        BrickSprite::Tungsten.damage_path(DamageLook::Cracked),
+        "sprites/bricks/tungsten_cracked.png"
+    );
+    assert!(BrickSprite::Ceramic.damage_looks().is_empty());
+}
+
+#[test]
+fn tungsten_goes_intact_cracked_broken_then_breaks() {
     let mut app = app_with_sprites(&[]);
+    let tungsten = brick_of(&mut app, BrickClass::Tungsten);
+    assert_eq!(
+        plate(&app, tungsten),
+        intact_plate(&app, BrickSprite::Tungsten)
+    );
+    hit(&mut app, tungsten);
+    app.update();
+    let cracked = damage_plate(&app, BrickSprite::Tungsten, DamageLook::Cracked);
+    assert_eq!(plate(&app, tungsten), cracked);
+    hit(&mut app, tungsten);
+    app.update();
+    let broken = damage_plate(&app, BrickSprite::Tungsten, DamageLook::Broken);
+    assert_eq!(plate(&app, tungsten), broken);
+    assert_eq!(
+        brick_sprite(&app, tungsten).color,
+        theme::UNTINTED,
+        "never tinted"
+    );
+    hit(&mut app, tungsten);
+    assert!(
+        app.world().get_entity(tungsten).is_err(),
+        "broken means the next hit kills"
+    );
+}
+
+#[test]
+fn two_hit_bricks_go_straight_to_broken() {
+    for (class, sprite) in [
+        (BrickClass::Titanium, BrickSprite::Titanium),
+        (BrickClass::Reactor, BrickSprite::Reactor),
+        (BrickClass::Regen, BrickSprite::Regen),
+    ] {
+        let mut app = app_with_sprites(&[]);
+        let brick = brick_of(&mut app, class);
+        hit(&mut app, brick);
+        app.update();
+        assert_eq!(
+            plate(&app, brick),
+            damage_plate(&app, sprite, DamageLook::Broken),
+            "{class:?}"
+        );
+        assert_eq!(brick_sprite(&app, brick).color, theme::UNTINTED);
+    }
+}
+
+#[test]
+fn a_healed_regen_brick_is_intact_again() {
+    let mut app = app_with_sprites(&[]);
+    let regen = brick_of(&mut app, BrickClass::Regen);
+    hit(&mut app, regen);
+    app.update();
+    assert_eq!(
+        plate(&app, regen),
+        damage_plate(&app, BrickSprite::Regen, DamageLook::Broken)
+    );
+    for _ in 0..35 {
+        app.update(); // past the 3 s heal
+    }
+    assert_eq!(app.world().get::<BrickHealth>(regen).unwrap().0, 2);
+    assert_eq!(plate(&app, regen), intact_plate(&app, BrickSprite::Regen));
+}
+
+#[test]
+fn a_missing_damage_plate_keeps_the_intact_one() {
+    let missing = BrickSprite::Titanium.damage_path(DamageLook::Broken);
+    let mut app = app_with_sprites(&[missing.as_str()]);
     let titanium = brick_of(&mut app, BrickClass::Titanium);
-    let image = brick_sprite(&app, titanium).image;
     hit(&mut app, titanium);
     app.update();
     assert_eq!(app.world().get::<BrickHealth>(titanium).unwrap().0, 1);
-    let sprite = brick_sprite(&app, titanium);
-    assert_eq!(sprite.image, image, "no cracked sprite");
-    assert_eq!(sprite.color, theme::UNTINTED, "damage shows as particles");
+    assert_eq!(
+        plate(&app, titanium),
+        intact_plate(&app, BrickSprite::Titanium)
+    );
 }
 
 #[test]
