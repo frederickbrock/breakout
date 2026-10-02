@@ -40,6 +40,7 @@ use crate::bricks::grid::BrickHealth;
 use crate::bricks::{damage_look, BrickClass, DamageLook, ShieldFlash};
 use crate::frame::{FramePanel, FramePiece};
 use crate::paddle::{PaddleField, PaddleProng};
+use crate::powerups::capsules::CapsuleIcon;
 use crate::powerups::PowerUp;
 use crate::theme;
 use crate::world::{PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH};
@@ -231,6 +232,8 @@ fn load_sprites(mut commands: Commands, assets: Res<AssetServer>) {
 
 /// Entities with `T` still showing their shape look.
 type Unskinned<T> = (With<T>, Without<Skinned>);
+/// Falling power-ups and the time capsules' icons share the power-up image.
+type UnskinnedPowerUpIcon = (Or<(With<PowerUp>, With<CapsuleIcon>)>, Without<Skinned>);
 /// The paddle field still showing its shape look (disjoint from the prongs).
 type UnskinnedField = (With<PaddleField>, Without<Skinned>, Without<PaddleProng>);
 
@@ -324,7 +327,7 @@ fn skin_power_ups(
     mut commands: Commands,
     sprites: Res<GameSprites>,
     images: Res<Assets<Image>>,
-    mut power_ups: Query<(Entity, &mut Sprite), Unskinned<PowerUp>>,
+    mut power_ups: Query<(Entity, &mut Sprite), UnskinnedPowerUpIcon>,
 ) {
     let Some(image) = loaded(&sprites.power_up, &images) else {
         return;

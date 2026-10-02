@@ -57,6 +57,7 @@ One line per file; each module's details live in its own `//!` doc comment.
 - `src/spawner.rs` — `Spawner<T>`, a generic weighted registry of spawnable kinds.
 - `src/powerups/mod.rs` — the power-up framework: drops, pickup and `ActiveEffects`.
 - `src/powerups/super_sizer.rs` — Super-Sizer, and the pattern for adding a power-up.
+- `src/powerups/capsules.rs` — time capsules: each active power-up's time left, in the right panel.
 - `src/script_manager/mod.rs` — `ScriptPlugin`, Lua scripting (native only).
 - `src/test_support.rs` — shared headless test helpers (`app`, `tap`, `click`, `hit`, ...).
 

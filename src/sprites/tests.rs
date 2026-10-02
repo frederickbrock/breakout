@@ -140,6 +140,25 @@ fn falling_power_ups_get_the_icon_or_keep_their_colour() {
 }
 
 #[test]
+fn time_capsule_icons_use_the_power_up_image() {
+    use crate::powerups::capsules::CapsuleIcon;
+    let mut app = app_with_sprites(&[]);
+    app.world_mut().trigger(crate::powerups::PowerUpCollected {
+        kind: crate::powerups::PowerUpKind::SuperSizer,
+    });
+    app.update(); // the capsule spawns
+    app.update(); // and is skinned
+    let icon = app.world().resource::<GameSprites>().power_up.clone();
+    let images: Vec<_> = app
+        .world_mut()
+        .query_filtered::<&Sprite, With<CapsuleIcon>>()
+        .iter(app.world())
+        .map(|s| s.image.clone())
+        .collect();
+    assert_eq!(images, [icon]);
+}
+
+#[test]
 fn each_brick_class_picks_its_own_intact_sprite() {
     use crate::bricks::ExplosiveKind::*;
     let cases = [

@@ -12,8 +12,10 @@
 //! their derived values from it every frame, so an effect expiring needs no
 //! explicit revert step. [`TickActiveEffects`] is an ordering-only set for
 //! those consumers. Each concrete power-up is its own plugin (see
-//! [`super_sizer`]).
+//! [`super_sizer`]). [`capsules`] shows each active effect's time left in
+//! the right panel.
 
+pub(crate) mod capsules;
 mod super_sizer;
 
 use crate::bricks::grid::Brick;
@@ -36,7 +38,7 @@ pub type PowerUpSpawner = Spawner<PowerUpKind>;
 /// Every power-up type. Adding a new power-up: add a variant here, and a new
 /// file/module (see [`super_sizer`]) with its own `Plugin` that registers
 /// itself with [`PowerUpSpawner`] and reacts to [`PowerUpCollected`].
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PowerUpKind {
     SuperSizer,
 }
@@ -136,7 +138,7 @@ impl Plugin for PowerUpsPlugin {
                     .before(crate::paddle::PaddleMovementSet)
                     .run_if(in_state(PlayState::Playing)),
             )
-            .add_plugins(super_sizer::SuperSizerPlugin);
+            .add_plugins((super_sizer::SuperSizerPlugin, capsules::CapsulesPlugin));
     }
 }
 
