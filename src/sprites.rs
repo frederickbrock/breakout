@@ -20,13 +20,15 @@
 //!
 //! [`SpritesPlugin`] loads every handle once at `Startup` into the
 //! [`GameSprites`] resource (background, ball, paddle prongs and field,
-//! power-up icon, one image per brick material) and spawns the global
-//! [`Background`], sized to the playfield well (the side panels stay clear
-//! colour). A skinned entity is marked [`Skinned`].
+//! power-up icon, one image per brick material, the two frame panels) and spawns the global
+//! [`Background`], sized to the playfield well. The side panels hold the
+//! steel frame ([`crate::frame`]), skinned with `frame_left`/`frame_right`.
+//! A skinned entity is marked [`Skinned`].
 
 use crate::ball::{Ball, BALL_SIZE};
 use crate::bricks::grid::Brick;
 use crate::bricks::{BrickClass, ShieldFlash};
+use crate::frame::{FramePanel, FramePiece};
 use crate::paddle::{PaddleField, PaddleProng};
 use crate::powerups::PowerUp;
 use crate::theme;
@@ -40,6 +42,8 @@ const PRONG_LEFT_PATH: &str = "sprites/paddle_prong_left.png";
 const PRONG_RIGHT_PATH: &str = "sprites/paddle_prong_right.png";
 const PADDLE_FIELD_PATH: &str = "sprites/paddle_field.png";
 const POWER_UP_PATH: &str = "sprites/powerup.png";
+const FRAME_LEFT_PATH: &str = "sprites/frame_left.png";
+const FRAME_RIGHT_PATH: &str = "sprites/frame_right.png";
 /// Which brick sprite a brick draws: one per material. The three explosive
 /// variants share one plate (their outlines tell them apart).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -109,6 +113,10 @@ pub struct GameSprites {
     pub power_up: Handle<Image>,
     /// Intact brick plates, in [`BrickSprite::ALL`] order.
     pub bricks: [Handle<Image>; 7],
+    /// The painted side-panel frame. Shipped at 2×, drawn at panel size;
+    /// the right one is already mirrored in the file.
+    pub frame_left: Handle<Image>,
+    pub frame_right: Handle<Image>,
 }
 
 impl GameSprites {
@@ -140,6 +148,8 @@ fn load_sprites(mut commands: Commands, assets: Res<AssetServer>) {
         paddle_field: assets.load(PADDLE_FIELD_PATH),
         power_up: assets.load(POWER_UP_PATH),
         bricks: BrickSprite::ALL.map(|sprite| assets.load(sprite.path())),
+        frame_left: assets.load(FRAME_LEFT_PATH),
+        frame_right: assets.load(FRAME_RIGHT_PATH),
     });
 }
 
@@ -162,6 +172,7 @@ impl Plugin for SkinPlugin {
                 skin_ball,
                 skin_paddle,
                 skin_power_ups,
+                skin_frame,
                 (skin_bricks, tint_skinned_bricks).chain(),
             )
                 .run_if(resource_exists::<GameSprites>),
@@ -245,6 +256,35 @@ fn skin_power_ups(
     for (entity, mut sprite) in &mut power_ups {
         apply(&mut sprite, image);
         commands.entity(entity).insert(Skinned);
+    }
+}
+
+/// Each side panel draws its painted frame once that image is loaded, at the
+/// panel's size (so the 2× art is scaled down); its coded girder, ties and
+/// edge lip are hidden. A panel whose file is missing keeps the coded frame.
+fn skin_frame(
+    mut commands: Commands,
+    sprites: Res<GameSprites>,
+    images: Res<Assets<Image>>,
+    mut panels: Query<(Entity, &FramePanel, &mut Sprite, Option<&Children>), Without<Skinned>>,
+    pieces: Query<(), With<FramePiece>>,
+) {
+    for (entity, panel, mut sprite, children) in &mut panels {
+        let handle = if panel.side < 0.0 {
+            &sprites.frame_left
+        } else {
+            &sprites.frame_right
+        };
+        let Some(image) = loaded(handle, &images) else {
+            continue;
+        };
+        apply(&mut sprite, image);
+        commands.entity(entity).insert(Skinned);
+        for &child in children.into_iter().flatten() {
+            if pieces.contains(child) {
+                commands.entity(child).insert(Visibility::Hidden);
+            }
+        }
     }
 }
 
