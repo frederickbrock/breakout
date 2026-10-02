@@ -177,6 +177,23 @@ impl GameSprites {
         &self.bricks[sprite as usize]
     }
 
+    /// Every handle, e.g. to wait for them all to load.
+    pub fn all(&self) -> impl Iterator<Item = &Handle<Image>> {
+        [
+            &self.background,
+            &self.ball,
+            &self.prong_left,
+            &self.prong_right,
+            &self.paddle_field,
+            &self.power_up,
+            &self.frame_left,
+            &self.frame_right,
+        ]
+        .into_iter()
+        .chain(&self.bricks)
+        .chain(self.damaged.values())
+    }
+
     /// The plate to draw for `look`, if it's loaded, else the intact plate
     /// if that's loaded. `None` keeps the flat colour.
     fn plate<'a>(
@@ -230,8 +247,6 @@ fn load_sprites(mut commands: Commands, assets: Res<AssetServer>) {
     });
 }
 
-/// Entities with `T` still showing their shape look.
-type Unskinned<T> = (With<T>, Without<Skinned>);
 /// Falling power-ups and the time capsules' icons share the power-up image.
 type UnskinnedPowerUpIcon = (Or<(With<PowerUp>, With<CapsuleIcon>)>, Without<Skinned>);
 /// The paddle field still showing its shape look (disjoint from the prongs).
