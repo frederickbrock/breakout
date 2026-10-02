@@ -24,8 +24,7 @@
 //! It's recomputed every frame from `BrickHealth`, so a regen heal goes back
 //! to intact. A missing damage plate keeps the intact one, and a missing
 //! intact plate keeps the flat colour. Damage is never a tint (the smoke
-//! particles sit on top). A skinned brick's shield flash is then shown as a
-//! tint over the sprite ([`theme::brick_sprite_tint`]).
+//! particles sit on top), and shield deflects are shown by particles.
 //!
 //! [`SpritesPlugin`] loads every handle once at `Startup` into the
 //! [`GameSprites`] resource (background, ball, paddle prongs and field,
@@ -37,7 +36,7 @@
 use crate::ball::{Ball, BALL_SIZE};
 use crate::bricks::grid::Brick;
 use crate::bricks::grid::BrickHealth;
-use crate::bricks::{damage_look, BrickClass, DamageLook, ShieldFlash};
+use crate::bricks::{damage_look, BrickClass, DamageLook};
 use crate::frame::{FramePanel, FramePiece};
 use crate::paddle::{PaddleField, PaddleProng};
 use crate::powerups::capsules::CapsuleIcon;
@@ -177,6 +176,23 @@ impl GameSprites {
         &self.bricks[sprite as usize]
     }
 
+    /// Every handle, e.g. to wait for them all to load.
+    pub fn all(&self) -> impl Iterator<Item = &Handle<Image>> {
+        [
+            &self.background,
+            &self.ball,
+            &self.prong_left,
+            &self.prong_right,
+            &self.paddle_field,
+            &self.power_up,
+            &self.frame_left,
+            &self.frame_right,
+        ]
+        .into_iter()
+        .chain(&self.bricks)
+        .chain(self.damaged.values())
+    }
+
     /// The plate to draw for `look`, if it's loaded, else the intact plate
     /// if that's loaded. `None` keeps the flat colour.
     fn plate<'a>(
@@ -230,8 +246,6 @@ fn load_sprites(mut commands: Commands, assets: Res<AssetServer>) {
     });
 }
 
-/// Entities with `T` still showing their shape look.
-type Unskinned<T> = (With<T>, Without<Skinned>);
 /// Falling power-ups and the time capsules' icons share the power-up image.
 type UnskinnedPowerUpIcon = (Or<(With<PowerUp>, With<CapsuleIcon>)>, Without<Skinned>);
 /// The paddle field still showing its shape look (disjoint from the prongs).
@@ -252,7 +266,7 @@ impl Plugin for SkinPlugin {
                 skin_paddle,
                 skin_power_ups,
                 skin_frame,
-                (skin_bricks, tint_skinned_bricks).chain(),
+                skin_bricks,
             )
                 .run_if(resource_exists::<GameSprites>),
         );
@@ -392,29 +406,11 @@ fn skin_bricks(
         let Some(image) = sprites.plate(BrickSprite::of(class), look, &images) else {
             continue;
         };
-        if sprite.image != *image {
-            sprite.image = image.clone();
-        }
         if !skinned {
+            apply(&mut sprite, image);
             commands.entity(entity).insert(Skinned);
-        }
-    }
-}
-
-/// Whether a brick flashes, plus the sprite its tint goes on.
-type BrickLook = (Has<ShieldFlash>, &'static mut Sprite);
-type SkinnedBrick = (With<Brick>, With<Skinned>);
-
-/// Keeps a skinned brick's tint in step with its shield flash. Runs after
-/// gameplay has written the flat-colour look for the frame and replaces it,
-/// so the code that changes a brick's look (flashes) needs nothing
-/// sprite-specific.
-fn tint_skinned_bricks(mut bricks: Query<BrickLook, SkinnedBrick>) {
-    for (flashing, mut sprite) in &mut bricks {
-        let tint = theme::brick_sprite_tint(flashing);
-        // Reading through `Mut` doesn't mark the sprite changed.
-        if sprite.color != tint {
-            sprite.color = tint;
+        } else if sprite.image != *image {
+            sprite.image = image.clone();
         }
     }
 }

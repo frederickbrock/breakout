@@ -1,0 +1,28 @@
+// Shield-glass deflect: small glints thrown off at the contact point that
+// twinkle out. Played twice, tinted theme::GLASS_GLINT / GLASS_GLINT_LIGHT.
+(
+    spawn_rate: 0.05,
+    spawn_amount: 10,
+    emission_shape: Circle(6.0),
+    lifetime: (0.35, 0.3),
+    linear_speed: Some((260.0, 0.5)),
+    linear_acceleration: None,
+    direction: Some(((0.0, 1.0), 1.0)),
+    angular_speed: None,
+    angular_acceleration: None,
+    scale: Some((4.0, 0.5)),
+    color: Some((red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0)),
+    gravity_direction: None,
+    gravity_speed: None,
+    linear_damp: Some((5.0, 0.2)),
+    angular_damp: None,
+    scale_curve: None,
+    color_curve: Some((points: [
+        ((red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0), 0.0, None),
+        ((red: 1.0, green: 1.0, blue: 1.0, alpha: 0.3), 0.35, None),
+        ((red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0), 0.6, None),
+        ((red: 1.0, green: 1.0, blue: 1.0, alpha: 0.0), 1.0, None),
+    ])),
+    attractors: None,
+    relative_positioning: None,
+)

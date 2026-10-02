@@ -10,6 +10,8 @@
 //! | `BrickHealth` below max | child emitters: `brick_damage_smoke` + `brick_damage_sparks`, heavier with more damage | smoke grey / class glow |
 //! | `BrickHealth` back at max (regen heal) | those child emitters removed | — |
 //! | `BrickDestroyed` | the class's `<class>_break` burst at the brick's centre | its own `color_curve` |
+//! | `BrickExploded` | the variant's blast ([`blast_parts`]): charge round, breach a "+" of four jets, demolition big + debris + lingering smoke | `BLAST_RED` / `BLAST_ORANGE` / `BLAST_DEBRIS` / smoke |
+//! | `ShieldDeflected` | `glass_glint` burst at the contact point | `GLASS_GLINT` + `GLASS_GLINT_LIGHT` |
 //!
 //! **Per-class hit and break bursts** (sim-rdl.7.8). Each brick material has
 //! its own pair of effect files and its own particle sheet:
@@ -55,9 +57,10 @@
 //! clock. Headless tests insert placeholder `ParticleEffects` /
 //! `ParticleMaterials` and count spawner entities.
 
+use crate::bricks::explosive::BrickExploded;
 use crate::bricks::grid::{Brick, BrickHealth};
-use crate::bricks::BrickClass;
-use crate::collision::{BrickDamaged, BrickDestroyed};
+use crate::bricks::{BrickClass, ExplosiveKind};
+use crate::collision::{BrickDamaged, BrickDestroyed, ShieldDeflected};
 use crate::game_state::{AppState, PlayState};
 use crate::theme;
 use bevy::platform::collections::HashMap;
@@ -68,6 +71,12 @@ const HIT_PATH: &str = "particles/brick_hit.particle.ron";
 const SMOKE_PATH: &str = "particles/brick_damage_smoke.particle.ron";
 const SPARKS_PATH: &str = "particles/brick_damage_sparks.particle.ron";
 const BREAK_PATH: &str = "particles/brick_break.particle.ron";
+const CHARGE_PATH: &str = "particles/blast_charge.particle.ron";
+const BREACH_PATH: &str = "particles/blast_breach.particle.ron";
+const DEMOLITION_PATH: &str = "particles/blast_demolition.particle.ron";
+const DEBRIS_PATH: &str = "particles/blast_debris.particle.ron";
+const BLAST_SMOKE_PATH: &str = "particles/blast_smoke.particle.ron";
+const GLINT_PATH: &str = "particles/glass_glint.particle.ron";
 
 /// In front of bricks (z 0) and the HUD's backdrop, behind menus.
 const PARTICLE_Z: f32 = 0.6;
@@ -87,6 +96,12 @@ pub struct ParticleEffects {
     pub smoke: Handle<Particle2dEffect>,
     pub sparks: Handle<Particle2dEffect>,
     pub shatter: Handle<Particle2dEffect>,
+    pub charge: Handle<Particle2dEffect>,
+    pub breach: Handle<Particle2dEffect>,
+    pub demolition: Handle<Particle2dEffect>,
+    pub debris: Handle<Particle2dEffect>,
+    pub blast_smoke: Handle<Particle2dEffect>,
+    pub glint: Handle<Particle2dEffect>,
     /// Each class's own hit and break bursts (explosive variants share).
     pub class_hit: HashMap<BrickClass, Handle<Particle2dEffect>>,
     pub class_break: HashMap<BrickClass, Handle<Particle2dEffect>>,
@@ -99,12 +114,31 @@ pub struct ClassSheet {
     pub material: Handle<SpriteParticle2dMaterial>,
 }
 
-/// One tint material per brick class and role, plus the smoke's.
+impl ParticleEffects {
+    fn blast(&self, effect: BlastEffect) -> Handle<Particle2dEffect> {
+        match effect {
+            BlastEffect::Charge => &self.charge,
+            BlastEffect::Breach => &self.breach,
+            BlastEffect::Demolition => &self.demolition,
+            BlastEffect::Debris => &self.debris,
+            BlastEffect::Smoke => &self.blast_smoke,
+        }
+        .clone()
+    }
+}
+
+/// One tint material per brick class and role, plus the smoke's, the
+/// blasts' and the glass glints'.
 #[derive(Resource, Clone)]
 pub struct ParticleMaterials {
     pub glow: HashMap<BrickClass, Handle<ColorParticle2dMaterial>>,
     pub face: HashMap<BrickClass, Handle<ColorParticle2dMaterial>>,
     pub smoke: Handle<ColorParticle2dMaterial>,
+    pub blast_red: Handle<ColorParticle2dMaterial>,
+    pub blast_orange: Handle<ColorParticle2dMaterial>,
+    pub debris: Handle<ColorParticle2dMaterial>,
+    pub glint: Handle<ColorParticle2dMaterial>,
+    pub glint_light: Handle<ColorParticle2dMaterial>,
     /// Each class's particle sheet, for its own hit and break bursts.
     pub sheets: HashMap<BrickClass, ClassSheet>,
     /// White: a class burst whose sheet is missing, drawn as plain quads in
@@ -119,6 +153,16 @@ impl ParticleMaterials {
 
     fn face(&self, class: BrickClass) -> Handle<ColorParticle2dMaterial> {
         self.face.get(&class).cloned().unwrap_or_default()
+    }
+
+    fn blast(&self, tint: BlastTint) -> Handle<ColorParticle2dMaterial> {
+        match tint {
+            BlastTint::Red => &self.blast_red,
+            BlastTint::Orange => &self.blast_orange,
+            BlastTint::Debris => &self.debris,
+            BlastTint::Smoke => &self.smoke,
+        }
+        .clone()
     }
 }
 
@@ -218,6 +262,12 @@ fn load_effects(
         smoke: assets.load(SMOKE_PATH),
         sparks: assets.load(SPARKS_PATH),
         shatter: assets.load(BREAK_PATH),
+        charge: assets.load(CHARGE_PATH),
+        breach: assets.load(BREACH_PATH),
+        demolition: assets.load(DEMOLITION_PATH),
+        debris: assets.load(DEBRIS_PATH),
+        blast_smoke: assets.load(BLAST_SMOKE_PATH),
+        glint: assets.load(GLINT_PATH),
         class_hit: per_class(class_hit_path),
         class_break: per_class(class_break_path),
     });
@@ -246,6 +296,11 @@ fn load_effects(
         glow,
         face,
         smoke: tint(theme::SMOKE),
+        blast_red: tint(theme::BLAST_RED),
+        blast_orange: tint(theme::BLAST_ORANGE),
+        debris: tint(theme::BLAST_DEBRIS),
+        glint: tint(theme::GLASS_GLINT),
+        glint_light: tint(theme::GLASS_GLINT_LIGHT),
         sheets,
         plain: tint(theme::UNTINTED),
     });
@@ -300,6 +355,8 @@ impl Plugin for VfxPlugin {
     fn build(&self, app: &mut App) {
         app.add_observer(spark_on_damage)
             .add_observer(shatter_on_break)
+            .add_observer(blast_on_explosion)
+            .add_observer(glint_on_deflect)
             .add_systems(
                 Update,
                 (sync_damage_emitters, tune_damage_emitters)
@@ -315,11 +372,24 @@ fn burst<M: Particle2dMaterial>(
     effect: Handle<Particle2dEffect>,
     position: Vec2,
 ) -> impl Bundle {
+    burst_at(
+        material,
+        effect,
+        Transform::from_translation(position.extend(PARTICLE_Z)),
+    )
+}
+
+/// A one-shot burst placed (and turned) by `transform`.
+fn burst_at<M: Particle2dMaterial>(
+    material: Handle<M>,
+    effect: Handle<Particle2dEffect>,
+    transform: Transform,
+) -> impl Bundle {
     (
         ParticleSpawner(material),
         ParticleEffectHandle(effect),
         OneShot::Despawn,
-        Transform::from_translation(position.extend(PARTICLE_Z)),
+        transform,
         DespawnOnExit(AppState::InGame),
     )
 }
@@ -421,6 +491,102 @@ fn shatter_on_break(
         Burst::Break,
         position,
     );
+}
+
+/// The effect files a blast is built from.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BlastEffect {
+    Charge,
+    Breach,
+    Demolition,
+    Debris,
+    Smoke,
+}
+
+/// A blast part's tint.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BlastTint {
+    Red,
+    Orange,
+    Debris,
+    Smoke,
+}
+
+/// One spawner of a blast: its effect, its tint, and the angle (radians)
+/// it's turned to (the effect file's direction is rotated by it).
+pub type BlastPart = (BlastEffect, BlastTint, f32);
+
+/// A `kind` explosion's blast, shaped like its rule: charge a round
+/// red/orange burst over its 8 neighbours, breach four jets along the
+/// orthogonals (a "+"), demolition a big burst with debris and lingering
+/// smoke.
+pub fn blast_parts(kind: ExplosiveKind) -> Vec<BlastPart> {
+    use std::f32::consts::FRAC_PI_2;
+    use BlastEffect as E;
+    use BlastTint as T;
+    match kind {
+        ExplosiveKind::Charge => vec![(E::Charge, T::Red, 0.0), (E::Charge, T::Orange, 0.0)],
+        ExplosiveKind::Breach => (0..4)
+            .map(|quarter| {
+                let tint = if quarter % 2 == 0 { T::Red } else { T::Orange };
+                (E::Breach, tint, quarter as f32 * FRAC_PI_2)
+            })
+            .collect(),
+        ExplosiveKind::Demolition => vec![
+            (E::Demolition, T::Red, 0.0),
+            (E::Demolition, T::Orange, 0.0),
+            (E::Debris, T::Debris, 0.0),
+            (E::Smoke, T::Smoke, 0.0),
+        ],
+    }
+}
+
+/// Marks a blast spawner.
+#[derive(Component)]
+pub struct BlastBurst;
+
+/// Each explosion, the chain's included (one `BrickExploded` per exploding
+/// brick, in chain order), plays its variant's blast where it went off.
+fn blast_on_explosion(
+    on: On<BrickExploded>,
+    mut commands: Commands,
+    effects: Option<Res<ParticleEffects>>,
+    materials: Option<Res<ParticleMaterials>>,
+) {
+    let (Some(effects), Some(materials)) = (effects, materials) else {
+        return;
+    };
+    for (effect, tint, angle) in blast_parts(on.kind) {
+        let at = Transform::from_translation(on.position.extend(PARTICLE_Z))
+            .with_rotation(Quat::from_rotation_z(angle));
+        commands.spawn((
+            BlastBurst,
+            burst_at(materials.blast(tint), effects.blast(effect), at),
+        ));
+    }
+}
+
+/// Marks a glass-glint spawner.
+#[derive(Component)]
+pub struct GlassGlint;
+
+/// Shield glass deflected the ball: cyan glints at the contact point, in
+/// its two glass tones.
+fn glint_on_deflect(
+    on: On<ShieldDeflected>,
+    mut commands: Commands,
+    effects: Option<Res<ParticleEffects>>,
+    materials: Option<Res<ParticleMaterials>>,
+) {
+    let (Some(effects), Some(materials)) = (effects, materials) else {
+        return;
+    };
+    for material in [&materials.glint, &materials.glint_light] {
+        commands.spawn((
+            GlassGlint,
+            burst(material.clone(), effects.glint.clone(), on.position),
+        ));
+    }
 }
 
 /// Bricks whose health changed this frame.

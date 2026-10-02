@@ -17,18 +17,15 @@
 //!
 //! The brick entities themselves and the grid layout are in `grid`.
 //! Per-class behaviours are submodules composed into [`BricksPlugin`]
-//! (`regen`, `explosive`, and `outline` for the behaviour borders), which
-//! also runs the shield-glass flash timer ([`ShieldFlash`], frozen while
-//! paused). Colours come from [`crate::theme::brick_color`]. [`damage_look`]
-//! is the damage-sprite ladder (`sprites` draws it).
+//! (`regen`, `explosive`, and `outline` for the behaviour borders). Colours
+//! come from [`crate::theme::brick_color`]. [`damage_look`] is the
+//! damage-sprite ladder (`sprites` draws it).
 
-mod explosive;
+pub(crate) mod explosive;
 pub(crate) mod grid;
 mod outline;
 mod regen;
 
-use crate::game_state::PlayState;
-use crate::theme;
 use bevy::prelude::*;
 use rand::seq::SliceRandom;
 use rand::{Rng, RngExt};
@@ -180,21 +177,6 @@ pub fn damage_look(class: BrickClass, hits_left: u8) -> DamageLook {
     }
 }
 
-/// How long shield glass flashes when hit from below or the side.
-const SHIELD_FLASH_SECS: f32 = 0.15;
-
-/// Shield glass is flashing after a hit that did no damage;
-/// [`end_shield_flashes`] restores its face when the timer runs out.
-/// Re-inserting restarts it.
-#[derive(Component)]
-pub struct ShieldFlash(Timer);
-
-impl Default for ShieldFlash {
-    fn default() -> Self {
-        Self(Timer::from_seconds(SHIELD_FLASH_SECS, TimerMode::Once))
-    }
-}
-
 pub struct BricksPlugin;
 
 impl Plugin for BricksPlugin {
@@ -203,24 +185,7 @@ impl Plugin for BricksPlugin {
             regen::RegenPlugin,
             explosive::ExplosivePlugin,
             outline::OutlinePlugin,
-        ))
-        .add_systems(
-            Update,
-            end_shield_flashes.run_if(in_state(PlayState::Playing)),
-        );
-    }
-}
-
-fn end_shield_flashes(
-    mut commands: Commands,
-    time: Res<Time>,
-    mut flashes: Query<(Entity, &mut ShieldFlash, &BrickClass, &mut Sprite)>,
-) {
-    for (entity, mut flash, &class, mut sprite) in &mut flashes {
-        if flash.0.tick(time.delta()).is_finished() {
-            sprite.color = theme::brick_color(class);
-            commands.entity(entity).remove::<ShieldFlash>();
-        }
+        ));
     }
 }
 
