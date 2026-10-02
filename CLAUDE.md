@@ -150,6 +150,13 @@ One line per file; each module's details live in its own `//!` doc comment.
   one per asset and 404s). Hot reload (bevy's `file_watcher` feature) is enabled only in the
   non-wasm target dependencies, so editing a PNG under `cargo run` updates it live and the
   wasm build doesn't pull the watcher in.
+- **Particles: per-class hit/break bursts.** Each brick material has
+  `assets/particles/<class>_hit.particle.ron`, `<class>_break.particle.ron` and a
+  4-frame 128×32 greyscale sheet `<class>.png`. `<class>` is `particles::material_slug`:
+  ceramic, titanium, tungsten, reactor, explosive (all variants), regen or shield.
+  Those effects colour themselves via `color_curve`. A missing sheet draws plain quads,
+  and a missing effect file falls back to the generic `brick_hit` / `brick_break`.
+  Effect files hot-reload under `cargo run`.
 - **Lua scripting is native-only.** `bevy_mod_scripting` (`lua54`, which compiles mlua's
   bundled Lua C sources) lives under the non-wasm target dependencies in Cargo.toml, so it
   isn't compiled for wasm at all. `src/script_manager/mod.rs` cfg-gates only the
