@@ -42,7 +42,7 @@ One line per file; each module's details live in its own `//!` doc comment.
 - `src/ball.rs` — ball movement rules, the serve from the paddle and `BallApproach`.
 - `src/collision.rs` — `on_ball_collision`, scoring, `BrickDamaged` / `BrickDestroyed`.
 - `src/controls.rs` — `ControlSettings` (Mouse/Keyboard) and the mouse side of paddle control.
-- `src/bricks/mod.rs` — `BrickClass`, `BrickCell`, `generate_board` and `BricksPlugin`.
+- `src/bricks/mod.rs` — `BrickClass`, `BrickCell`, `generate_board`, the `damage_look` ladder and `BricksPlugin`.
 - `src/bricks/grid.rs` — the `Brick` / `BrickHealth` entities, grid layout and `spawn_bricks`.
 - `src/bricks/regen.rs` — regen alloy: damaged bricks heal after a timer.
 - `src/bricks/explosive.rs` — explosive bricks and their chained blasts.
@@ -53,11 +53,12 @@ One line per file; each module's details live in its own `//!` doc comment.
 - `src/menu/pause.rs` — pause menu over the frozen game.
 - `src/menu/game_over.rs` — game-over / win screen with the final score.
 - `src/theme.rs` — the Steelbreak palette; every colour the game draws with.
-- `src/sprites.rs` — image assets: `GameSprites`, the background and sprite skinning.
+- `src/sprites.rs` — image assets: `GameSprites`, the background and sprite skinning (brick damage plates included).
 - `src/particles/mod.rs` — the bevy_enoki VFX layer reacting to brick events.
 - `src/spawner.rs` — `Spawner<T>`, a generic weighted registry of spawnable kinds.
 - `src/powerups/mod.rs` — the power-up framework: drops, pickup and `ActiveEffects`.
 - `src/powerups/super_sizer.rs` — Super-Sizer, and the pattern for adding a power-up.
+- `src/powerups/capsules.rs` — time capsules: each active power-up's time left, in the right panel.
 - `src/script_manager/mod.rs` — `ScriptPlugin`, Lua scripting (native only).
 - `src/test_support.rs` — shared headless test helpers (`app`, `tap`, `click`, `hit`, ...).
 

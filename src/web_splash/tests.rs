@@ -1,5 +1,6 @@
 use super::*;
-use crate::sprites::GameSprites;
+use crate::bricks::DamageLook;
+use crate::sprites::{BrickSprite, GameSprites};
 use crate::test_support::launch;
 
 /// A `GameSprites` whose every handle is `handle`.
@@ -12,6 +13,7 @@ fn sprites_of(handle: Handle<Image>) -> GameSprites {
         paddle_field: handle.clone(),
         power_up: handle.clone(),
         bricks: std::array::from_fn(|_| handle.clone()),
+        damaged: [((BrickSprite::ALL[0], DamageLook::Cracked), handle.clone())].into(),
         frame_left: handle.clone(),
         frame_right: handle,
     }
