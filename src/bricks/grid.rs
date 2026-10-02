@@ -4,7 +4,9 @@
 //! [`BRICK_WIDTH`] is derived, not set: a full row fills the playfield well
 //! less a [`SIDE_CHANNEL`] each side, and [`SIDE_CHANNEL_BALLS`] (ball widths)
 //! is the one knob. The pure [`brick_x`] and [`brick_y`] centre the grid, so
-//! fewer columns just widen the equal channels. Each brick spawns at its
+//! fewer columns just widen the equal channels. Row 0's top sits
+//! [`BRICK_TOP_OFFSET`] (120) below the top wall: the original
+//! [`BRICK_TOP_MARGIN`] plus one brick height of [`BRICK_HEADROOM`]. Each brick spawns at its
 //! class's `max_hits()` with its [`crate::bricks::BrickCell`], scoped to the
 //! run.
 
@@ -23,9 +25,15 @@ pub(crate) const SIDE_CHANNEL_BALLS: f32 = 3.0;
 pub(crate) const SIDE_CHANNEL: f32 = SIDE_CHANNEL_BALLS * BALL_SIZE;
 /// Gap between neighbouring bricks, both ways.
 pub(crate) const BRICK_GAP: f32 = 5.0 * GAME_SCALE;
-/// Distance from the top wall to the top of the first brick row.
+/// The original gap from the top wall to the first brick row (design value).
 pub(crate) const BRICK_TOP_MARGIN: f32 = 50.0 * GAME_SCALE;
 pub(crate) const BRICK_HEIGHT: f32 = 30.0 * GAME_SCALE;
+/// Extra room above the grid, on top of [`BRICK_TOP_MARGIN`], so a ball that
+/// gets up a side channel can travel across the top of the bricks. The knob
+/// for how far down the whole grid sits.
+pub(crate) const BRICK_HEADROOM: f32 = BRICK_HEIGHT;
+/// Distance from the top wall to the top of the first brick row (120).
+pub(crate) const BRICK_TOP_OFFSET: f32 = BRICK_TOP_MARGIN + BRICK_HEADROOM;
 /// Derived so a full row fills the well less a [`SIDE_CHANNEL`] each side.
 pub(crate) const BRICK_WIDTH: f32 =
     (PLAYFIELD_WIDTH - 2.0 * SIDE_CHANNEL - (bricks::BOARD_COLS as f32 - 1.0) * BRICK_GAP)
@@ -85,11 +93,11 @@ pub(crate) fn brick_x(col: usize, cols: usize) -> f32 {
     -grid_width / 2.0 + BRICK_WIDTH / 2.0 + col as f32 * (BRICK_WIDTH + BRICK_GAP)
 }
 
-/// Centre y of row `row` (0 at the top), [`BRICK_TOP_MARGIN`] below the top
-/// wall.
+/// Centre y of row `row` (0 at the top); row 0's top is [`BRICK_TOP_OFFSET`]
+/// below the top wall.
 pub(crate) fn brick_y(row: usize) -> f32 {
     PLAYFIELD_HEIGHT / 2.0
-        - BRICK_TOP_MARGIN
+        - BRICK_TOP_OFFSET
         - BRICK_HEIGHT / 2.0
         - row as f32 * (BRICK_HEIGHT + BRICK_GAP)
 }
