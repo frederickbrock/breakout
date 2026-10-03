@@ -206,3 +206,18 @@ processing = [
   "field: cropped the straight middle of the source (x 300-1300, band rows only, dropping the rounded end caps) then artgen process --bg none --size 93x40 --fit stretch; stretches horizontally without end-cap seams",
   "composited on #0a0e15 at 5x and viewed",
 ]
+
+[[asset]]
+id = "graffiti_bricks"
+issue = "sim-usq.1"
+files = ["assets/sprites/bricks/{ceramic,explosive,reactor,regen,shield,titanium,tungsten}_{intact,cracked}.png", "assets/sprites/bricks/{titanium,tungsten,reactor,regen}_broken.png"]
+source = "intact: titanium/regen/shield=r3/v1 cells, ceramic/reactor=r2/v4 cells, tungsten=r4/v1, explosive=r4/v2; cracked: r4/v3-v9; broken: r4/v10-v13"
+model = "google/gemini-2.5-flash-image"
+prompt_file_r2 = "art/prompts/sim-usq.1-r2.txt"
+prompt_file_r3 = "art/prompts/sim-usq.1-r3.txt"
+prompt_file_r4 = "art/prompts/sim-usq.1-r4.txt"
+processing = [
+  "custom script around artgen: multi-brick sheets cut to the brick's cell; artgen process --bg flood --tolerance 40 on the sage-green background (not flat #00FF00); kept only the largest connected component (drops detached chips, e.g. titanium broken); trimmed to the plate and resized to 160x60 with Lanczos (sources are ~8:3, so near-uniform)",
+  "reactor_broken: extra green-keying of the enclosed background patches that flood fill could not reach; the chipped edge notches there are left transparent",
+  "verified each at 160x60 RGBA; composited on #0a0e15 and viewed as one 7-class montage",
+]
