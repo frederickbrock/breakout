@@ -5,10 +5,10 @@
 //! `BallSpeed` and builds the board from the campaign's first level
 //! ([`CampaignLevels`] via [`campaign_level`], else the built-in random
 //! board, read fresh each run so an edited level applies at the next Start),
-//! spawns the run's ball, paddle, bricks and HUD (all
-//! scoped to the run), and broadcasts
-//! [`RestartGame`]; every other subsystem with state to reset observes that
-//! instead of being reset from here. [`end_run`] inserts the `GameOutcome`
+//! resets `CurrentLevel` to 0, spawns the run's ball, paddle, bricks and HUD
+//! (all scoped to the run), and broadcasts [`RestartGame`] then
+//! `LevelStarted` for level 0; every other subsystem with state to reset
+//! observes those instead of being reset from here. [`end_run`] inserts the `GameOutcome`
 //! and switches to `GameOver`; [`restart_from_game_over`] makes R a shortcut
 //! for Play again.
 //!
@@ -24,11 +24,10 @@ use bevy::prelude::*;
 use bevy::sprite::Anchor;
 
 use crate::ball::{anchor_position, anchored, Ball, BallApproach, BallLook, BallSpeed, BALL_SIZE};
-use crate::bricks::grid::spawn_bricks;
-use crate::bricks::PlacedBrick;
+use crate::campaign::{spawn_board, CurrentLevel, LevelStarted};
 use crate::collision::BallCollisionSignals;
 use crate::game_state::{AppState, GameOutcome};
-use crate::levels::{build_board, campaign_level, CampaignLevels, LevelDef};
+use crate::levels::{campaign_level, CampaignLevels, LevelDef};
 use crate::paddle::{
     paddle_field, prong, Paddle, PADDLE_HEIGHT, PADDLE_LINEAR_DAMPING, PADDLE_MARGIN_BOTTOM,
     PADDLE_MASS, PADDLE_WIDTH,
@@ -76,15 +75,16 @@ pub(crate) struct Lives(pub(crate) i32);
 #[derive(Event)]
 pub(crate) struct RestartGame;
 
-/// Starts a fresh run: resets the counters this module owns, sets the ball
-/// speed and builds the board from the campaign's first level (via
-/// [`campaign_level`]: [`LevelDef::fallback`] when there is no campaign), spawns the run's entities
-/// (all scoped to [`AppState::InGame`], so leaving the run despawns them),
-/// and broadcasts [`RestartGame`] for every other subsystem.
+/// Starts a fresh run: resets the counters this module owns and
+/// [`CurrentLevel`] to the first level, spawns the run's entities and the
+/// first level's board (via [`campaign_level`]: [`LevelDef::fallback`] when
+/// there is no campaign; all scoped to [`AppState::InGame`], so leaving the
+/// run despawns them), then broadcasts [`RestartGame`] and
+/// [`LevelStarted`]` { index: 0 }` for every other subsystem.
 pub(crate) fn start_run(
     mut commands: Commands,
-    mut score: ResMut<Score>,
-    mut lives: ResMut<Lives>,
+    (mut score, mut lives): (ResMut<Score>, ResMut<Lives>),
+    mut current: ResMut<CurrentLevel>,
     mut signals: ResMut<BallCollisionSignals>,
     ball_look: Res<BallLook>,
     campaign: Option<Res<CampaignLevels>>,
@@ -92,20 +92,18 @@ pub(crate) fn start_run(
 ) {
     score.0 = 0;
     lives.0 = STARTING_LIVES;
+    current.0 = 0;
     *signals = BallCollisionSignals::default();
     let def = campaign_level(campaign.as_deref(), 0).unwrap_or_else(LevelDef::fallback);
-    *ball_speed = BallSpeed::for_level(&def);
-    let board = build_board(&def, &mut rand::rng());
-    spawn_run_entities(&mut commands, &ball_look, &board, def.cols());
+    spawn_run_entities(&mut commands, &ball_look);
+    spawn_board(&mut commands, &def, &mut ball_speed);
     commands.trigger(RestartGame);
+    commands.trigger(LevelStarted { index: 0 });
 }
 
-pub(crate) fn spawn_run_entities(
-    commands: &mut Commands,
-    ball_look: &BallLook,
-    board: &[PlacedBrick],
-    cols: usize,
-) {
+/// The run's paddle, ball and HUD (the board is spawned separately, per
+/// level).
+pub(crate) fn spawn_run_entities(commands: &mut Commands, ball_look: &BallLook) {
     let paddle_start = Vec3::new(
         0.0,
         -PLAYFIELD_HEIGHT / 2.0 + PADDLE_HEIGHT / 2.0 + PADDLE_MARGIN_BOTTOM,
@@ -145,8 +143,6 @@ pub(crate) fn spawn_run_entities(
         BallApproach::default(),
         DespawnOnExit(AppState::InGame),
     ));
-
-    spawn_bricks(commands, board, cols);
 
     spawn_hud_line(
         commands,

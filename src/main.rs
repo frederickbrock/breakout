@@ -15,6 +15,7 @@
 
 mod ball;
 mod bricks;
+mod campaign;
 mod collision;
 mod controls;
 mod frame;
@@ -37,7 +38,10 @@ mod web_splash;
 mod world;
 
 use avian2d::prelude::*;
-use ball::{ball_movement, follow_paddle, launch_ball, record_ball_approach, BallSpeed};
+use ball::{
+    ball_movement, follow_paddle, launch_ball, reanchor_ball_on_level_start, record_ball_approach,
+    BallSpeed,
+};
 use bevy::asset::AssetMetaCheck;
 use bevy::prelude::*;
 use collision::{on_ball_bounce, on_ball_collision, BallCollisionSignals};
@@ -138,7 +142,9 @@ fn add_game(app: &mut App) {
     .init_resource::<BallCollisionSignals>()
     .add_observer(on_ball_collision)
     .add_observer(on_ball_bounce)
+    .add_observer(reanchor_ball_on_level_start)
     .add_plugins(powerups::PowerUpsPlugin)
+    .add_plugins(campaign::CampaignPlugin)
     .add_systems(Startup, setup_level)
     .add_systems(OnEnter(AppState::InGame), start_run)
     .add_systems(

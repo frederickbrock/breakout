@@ -5,8 +5,10 @@
 //! (made in [`crate::world::setup_level`]). [`ball_movement`] reapplies the
 //! paddle-hit spin, keeps the speed at the run's constant [`BallSpeed`]
 //! (set from the level; default [`BALL_SPEED`]) with a minimum vertical
-//! component, ends the run on a win and takes a life when
-//! the ball falls out.
+//! component, reports a cleared level ([`LevelCleared`]; the campaign
+//! decides between the next level and a win) and takes a life when the ball
+//! falls out. [`reanchor_ball_on_level_start`] puts the ball back on the
+//! paddle when a new level starts.
 //!
 //! At the start of a run and after every lost life the ball is served from
 //! the paddle: it carries [`Anchored`] plus Avian's `RigidBodyDisabled` and
@@ -20,6 +22,7 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::bricks::grid::Brick;
+use crate::campaign::{LevelCleared, LevelStarted};
 use crate::collision::BallCollisionSignals;
 use crate::game_state::{AppState, GameOutcome};
 use crate::paddle::{Paddle, PADDLE_HEIGHT};
@@ -119,9 +122,10 @@ pub(crate) fn record_ball_approach(
 /// Avian resolves the actual collision physics (detection + bounce angle);
 /// this reacts to what [`on_ball_collision`](crate::collision::on_ball_collision) recorded (score, the paddle-hit
 /// "spin" feel) and keeps the ball's speed at a controlled, designed
-/// magnitude rather than letting raw momentum transfer drift it. Ends the
-/// run (switches to [`AppState::GameOver`]) on a win or on losing the last
-/// life; the physics clock stops with it, so nothing needs zeroing here.
+/// magnitude rather than letting raw momentum transfer drift it. Triggers
+/// [`LevelCleared`] when the last brick goes, and ends the run (switches to
+/// [`AppState::GameOver`]) on losing the last life; the physics clock stops
+/// with either, so nothing needs zeroing here.
 pub(crate) fn ball_movement(
     mut commands: Commands,
     mut next_state: ResMut<NextState<AppState>>,
@@ -170,10 +174,11 @@ pub(crate) fn ball_movement(
 
     // `on_ball_collision`'s despawn is already applied by now (Avian
     // triggers collisions from an exclusive system in FixedPostUpdate, whose
-    // commands flush before Update), so the run is won only once no brick is
-    // left at all, damaged multi-hit bricks included.
+    // commands flush before Update), so the level is cleared only once no
+    // brick is left at all, damaged multi-hit bricks included. The campaign
+    // decides whether that starts the next level or wins the run.
     if broke_brick && brick_query.is_empty() {
-        end_run(&mut commands, &mut next_state, GameOutcome::Won);
+        commands.trigger(LevelCleared);
         return;
     }
 
@@ -192,6 +197,24 @@ pub(crate) fn ball_movement(
             commands.entity(ball).insert(anchored());
         }
     }
+}
+
+/// A new level starts with the ball back on the paddle, waiting to be
+/// served (a no-op for a run's first level, whose ball spawns anchored).
+pub(crate) fn reanchor_ball_on_level_start(
+    _on: On<LevelStarted>,
+    mut commands: Commands,
+    paddle: Query<&Transform, (With<Paddle>, Without<Ball>)>,
+    mut ball: Query<(Entity, &mut Transform, &mut LinearVelocity), With<Ball>>,
+) {
+    let Ok((entity, mut transform, mut velocity)) = ball.single_mut() else {
+        return;
+    };
+    velocity.0 = Vec2::ZERO;
+    if let Ok(paddle) = paddle.single() {
+        transform.translation = anchor_position(paddle.translation);
+    }
+    commands.entity(entity).insert(anchored());
 }
 
 /// Components that take the ball out of the simulation while it waits on the
