@@ -74,6 +74,12 @@ impl BallSpeed {
     pub(crate) fn from_factor(factor: f32) -> Self {
         Self(Self::PER_FACTOR * factor)
     }
+
+    /// The speed for a level: its `speed_factor`, else [`BALL_SPEED_SCALE`].
+    /// The one place a level's ball speed is computed.
+    pub(crate) fn for_level(def: &crate::levels::LevelDef) -> Self {
+        Self::from_factor(def.speed_factor.unwrap_or(BALL_SPEED_SCALE))
+    }
 }
 
 /// The ball's velocity at the start of the current physics step, recorded

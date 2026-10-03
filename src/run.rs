@@ -23,9 +23,7 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
 
-use crate::ball::{
-    anchor_position, anchored, Ball, BallApproach, BallLook, BallSpeed, BALL_SIZE, BALL_SPEED_SCALE,
-};
+use crate::ball::{anchor_position, anchored, Ball, BallApproach, BallLook, BallSpeed, BALL_SIZE};
 use crate::bricks::grid::spawn_bricks;
 use crate::bricks::PlacedBrick;
 use crate::collision::BallCollisionSignals;
@@ -96,7 +94,7 @@ pub(crate) fn start_run(
     lives.0 = STARTING_LIVES;
     *signals = BallCollisionSignals::default();
     let def = campaign_level(campaign.as_deref(), 0).unwrap_or_else(LevelDef::fallback);
-    *ball_speed = BallSpeed::from_factor(def.speed_factor.unwrap_or(BALL_SPEED_SCALE));
+    *ball_speed = BallSpeed::for_level(&def);
     let board = build_board(&def, &mut rand::rng());
     spawn_run_entities(&mut commands, &ball_look, &board, def.cols());
     commands.trigger(RestartGame);
