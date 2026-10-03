@@ -11,7 +11,9 @@
 //! The HUD is two blocks in the left side panel at [`HUD_X`]: an uppercase
 //! `SCORE\n` / `LIVES\n` label line, with the value in a `TextSpan` child
 //! (the [`ScoreText`] / [`LivesText`] markers sit on the span), kept current
-//! by [`update_hud`].
+//! by [`update_hud`]. Each block sits on a dark backing plate
+//! ([`crate::plate`], sized by [`hud_plate_rect`] to fit a
+//! [`HUD_MAX_DIGITS`]-digit value) that comes and goes with the HUD.
 
 use avian2d::prelude::*;
 use bevy::prelude::*;
@@ -25,6 +27,7 @@ use crate::paddle::{
     paddle_field, prong, Paddle, PADDLE_HEIGHT, PADDLE_LINEAR_DAMPING, PADDLE_MARGIN_BOTTOM,
     PADDLE_MASS, PADDLE_WIDTH,
 };
+use crate::plate::{BackingPlate, PLATE_PADDING, PLATE_Z};
 use crate::theme;
 use crate::world::{GAME_SCALE, PLAYFIELD_HEIGHT, WORLD_WIDTH};
 
@@ -37,6 +40,15 @@ pub(crate) const HUD_MARGIN: f32 = 30.0;
 pub(crate) const HUD_BLOCK_SPACING: f32 = 120.0;
 /// Left edge of the HUD text, in the left side panel.
 pub(crate) const HUD_X: f32 = -WORLD_WIDTH / 2.0 + HUD_MARGIN;
+/// The HUD font's advance per character (the default FiraMono: 0.6 em) and
+/// its line height (Bevy's default 1.2 em).
+const HUD_CHAR_WIDTH: f32 = HUD_FONT_SIZE * 0.6;
+const HUD_LINE_HEIGHT: f32 = HUD_FONT_SIZE * 1.2;
+/// The widest value a HUD block's plate is sized for (a 6-digit score), so
+/// the plate doesn't change as the value grows.
+pub(crate) const HUD_MAX_DIGITS: usize = 6;
+/// Characters in a HUD label (`SCORE`, `LIVES`).
+const HUD_LABEL_CHARS: usize = 5;
 
 #[derive(Component)]
 pub(crate) struct ScoreText;
@@ -134,9 +146,24 @@ pub(crate) fn spawn_run_entities(commands: &mut Commands, ball_look: &BallLook) 
     );
 }
 
+/// The text area of the HUD block whose top-left is at ([`HUD_X`], `y`): the
+/// label line and the value line, as wide as the wider of the label and a
+/// [`HUD_MAX_DIGITS`]-digit value.
+pub(crate) fn hud_text_rect(y: f32) -> Rect {
+    let chars = HUD_LABEL_CHARS.max(HUD_MAX_DIGITS) as f32;
+    let size = Vec2::new(chars * HUD_CHAR_WIDTH, 2.0 * HUD_LINE_HEIGHT);
+    Rect::new(HUD_X, y - size.y, HUD_X + size.x, y)
+}
+
+/// The backing plate of the HUD block at `y`: its text area plus padding.
+pub(crate) fn hud_plate_rect(y: f32) -> Rect {
+    hud_text_rect(y).inflate(PLATE_PADDING)
+}
+
 /// A HUD block in the left side panel: an uppercase label line in the label
-/// colour with the value span in ink on the line below. Top-left anchored at
-/// [`HUD_X`], `y`. `marker` goes on the value span, which [`update_hud`] writes.
+/// colour with the value span in ink on the line below, on a dark backing
+/// plate ([`hud_plate_rect`]). Top-left anchored at [`HUD_X`], `y`. `marker`
+/// goes on the value span, which [`update_hud`] writes.
 pub(crate) fn spawn_hud_line(
     commands: &mut Commands,
     label: &str,
@@ -156,6 +183,12 @@ pub(crate) fn spawn_hud_line(
         Anchor::TOP_LEFT,
         Transform::from_xyz(HUD_X, y, 1.0),
         children![(TextSpan::new(value), font, TextColor(theme::INK), marker)],
+    ));
+    let plate = hud_plate_rect(y);
+    commands.spawn((
+        DespawnOnExit(AppState::InGame),
+        BackingPlate { size: plate.size() },
+        Transform::from_translation(plate.center().extend(PLATE_Z)),
     ));
 }
 

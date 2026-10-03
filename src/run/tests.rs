@@ -180,3 +180,74 @@ fn the_hud_sits_in_the_left_side_panel() {
     assert!(blocks[0].1 <= WORLD_HEIGHT / 2.0);
     assert!(blocks[0].1 - blocks[1].1 >= 2.0 * 1.2 * HUD_FONT_SIZE);
 }
+
+#[test]
+fn each_hud_plate_covers_its_text_and_stays_in_the_left_panel() {
+    use crate::frame::FRAME_Z;
+    use crate::plate::PLATE_Z;
+    let tops = [
+        PLAYFIELD_HEIGHT / 2.0 - HUD_MARGIN,
+        PLAYFIELD_HEIGHT / 2.0 - HUD_MARGIN - HUD_BLOCK_SPACING,
+    ];
+    for y in tops {
+        let text = hud_text_rect(y);
+        let plate = hud_plate_rect(y);
+        assert_eq!(plate.union(text), plate, "covers the text");
+        assert!(
+            plate.min.x < text.min.x && plate.max.y > text.max.y,
+            "padded"
+        );
+        // A 6-digit score fits (monospace ~0.6 em per glyph).
+        assert!(text.width() >= HUD_MAX_DIGITS as f32 * 0.6 * HUD_FONT_SIZE - 1e-3);
+        assert!(
+            text.height() >= 2.0 * HUD_FONT_SIZE,
+            "label and value lines"
+        );
+        assert!(plate.min.x > -WORLD_WIDTH / 2.0);
+        assert!(plate.max.x < -PLAYFIELD_WIDTH / 2.0);
+    }
+    let (score, lives) = (hud_plate_rect(tops[0]), hud_plate_rect(tops[1]));
+    assert!(score.intersect(lives).is_empty(), "plates don't overlap");
+    // Frame < plate < HUD text (z 1).
+    const { assert!(FRAME_Z < PLATE_Z && PLATE_Z < 1.0) };
+}
+
+/// Each HUD backing plate: (centre, size, has its mesh).
+fn hud_plates(app: &mut App) -> Vec<(Vec3, Vec2, bool)> {
+    let world = app.world_mut();
+    let mut plates: Vec<_> = world
+        .query::<(&crate::plate::BackingPlate, &Transform, Has<Mesh2d>)>()
+        .iter(world)
+        .map(|(p, t, mesh)| (t.translation, p.size, mesh))
+        .collect();
+    plates.sort_by(|a, b| b.0.y.total_cmp(&a.0.y));
+    plates
+}
+
+#[test]
+fn the_hud_sits_on_plates_that_come_and_go_with_the_run() {
+    let mut app = app();
+    app.update();
+    let plates = hud_plates(&mut app);
+    let tops = [
+        PLAYFIELD_HEIGHT / 2.0 - HUD_MARGIN,
+        PLAYFIELD_HEIGHT / 2.0 - HUD_MARGIN - HUD_BLOCK_SPACING,
+    ];
+    assert_eq!(plates.len(), 2, "SCORE and LIVES");
+    for ((centre, size, meshed), y) in plates.into_iter().zip(tops) {
+        let rect = hud_plate_rect(y);
+        assert_eq!(centre, rect.center().extend(crate::plate::PLATE_Z));
+        assert_eq!(size, rect.size());
+        assert!(meshed);
+    }
+
+    tap(&mut app, KeyCode::Escape);
+    crate::menu::test_helpers::press(&mut app, "Main menu");
+    assert!(hud_plates(&mut app).is_empty(), "gone with the run");
+    app.world_mut()
+        .resource_mut::<NextState<AppState>>()
+        .set(AppState::InGame);
+    app.update();
+    app.update();
+    assert_eq!(hud_plates(&mut app).len(), 2, "back on the next Start");
+}
