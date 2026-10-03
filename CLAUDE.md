@@ -40,7 +40,7 @@ One line per file; each module's details live in its own `//!` doc comment.
 - `src/run.rs` — starting and ending a run, `Score` / `Lives`, `RestartGame` and the HUD.
 - `src/paddle.rs` — the paddle, its movement and its prong/field pieces; `PaddleMovementSet`.
 - `src/ball.rs` — ball movement rules, the serve from the paddle and `BallApproach`.
-- `src/collision.rs` — `on_ball_collision`, scoring, `BrickDamaged` / `BrickDestroyed`.
+- `src/collision.rs` — `on_ball_collision`, scoring, `BrickDamaged` / `BrickDestroyed`; `BallBounced` / `PaddleHit` for VFX.
 - `src/controls.rs` — `ControlSettings` (Mouse/Keyboard) and the mouse side of paddle control.
 - `src/bricks/mod.rs` — `BrickClass`, `BrickCell`, `generate_board`, the `damage_look` ladder and `BricksPlugin`.
 - `src/bricks/grid.rs` — the `Brick` / `BrickHealth` entities, grid layout and `spawn_bricks`.
@@ -54,7 +54,7 @@ One line per file; each module's details live in its own `//!` doc comment.
 - `src/menu/game_over.rs` — game-over / win screen with the final score.
 - `src/theme.rs` — the Steelbreak palette; every colour the game draws with.
 - `src/sprites.rs` — image assets: `GameSprites`, the background and sprite skinning (brick damage plates included).
-- `src/particles/mod.rs` — the bevy_enoki VFX layer reacting to brick events.
+- `src/particles/mod.rs` — the bevy_enoki VFX layer: per-class brick bursts and damage, explosive blasts, glass glints, ball trail, bounce sparks, paddle flare.
 - `src/spawner.rs` — `Spawner<T>`, a generic weighted registry of spawnable kinds.
 - `src/powerups/mod.rs` — the power-up framework: drops, pickup and `ActiveEffects`.
 - `src/powerups/super_sizer.rs` — Super-Sizer, and the pattern for adding a power-up.

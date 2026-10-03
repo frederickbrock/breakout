@@ -33,6 +33,9 @@ fn the_shipped_effect_files_parse() {
         SMOKE_PATH,
         SPARKS_PATH,
         BREAK_PATH,
+        TRAIL_PATH,
+        BOUNCE_PATH,
+        FLARE_PATH,
         CHARGE_PATH,
         BREACH_PATH,
         DEMOLITION_PATH,
@@ -56,6 +59,9 @@ fn app_with_vfx() -> App {
         smoke: Handle::default(),
         sparks: Handle::default(),
         shatter: Handle::default(),
+        trail: Handle::default(),
+        bounce: bounce_handle(),
+        flare: Handle::default(),
         charge: Handle::default(),
         breach: Handle::default(),
         demolition: Handle::default(),
@@ -83,6 +89,9 @@ fn app_with_vfx() -> App {
         glow,
         face,
         smoke: Handle::default(),
+        trail: Handle::default(),
+        bounce: Handle::default(),
+        flare: Handle::default(),
         blast_red: Handle::default(),
         blast_orange: Handle::default(),
         debris: Handle::default(),
@@ -104,13 +113,21 @@ fn effect_handle(class: BrickClass, which: Burst) -> Handle<Particle2dEffect> {
     Handle::Uuid(bevy::asset::uuid::Uuid::from_u128(id), Default::default())
 }
 
-/// The effect each one-shot brick burst plays (blasts and glass glints,
-/// which have their own markers, are left out).
+/// The placeholder for the ball's bounce sparks, distinct from every brick
+/// burst (and from the generic ones' `Handle::default()`).
+fn bounce_handle() -> Handle<Particle2dEffect> {
+    Handle::Uuid(bevy::asset::uuid::Uuid::from_u128(1000), Default::default())
+}
+
+/// The effect each one-shot brick burst plays (the ball's bounce sparks,
+/// which every brick hit also fires, and blasts and glass glints, which
+/// have their own markers, are left out).
 fn burst_effects(app: &mut App) -> Vec<Handle<Particle2dEffect>> {
     app.world_mut()
         .query_filtered::<&ParticleEffectHandle, (With<OneShot>, Without<BlastBurst>, Without<GlassGlint>)>()
         .iter(app.world())
         .map(|h| h.0.clone())
+        .filter(|h| *h != bounce_handle())
         .collect()
 }
 
@@ -138,7 +155,7 @@ fn a_surviving_hit_fires_a_spark_burst_and_starts_smoking() {
     let mut app = app_with_vfx();
     let tungsten = brick_of(&mut app, BrickClass::Tungsten);
     hit(&mut app, tungsten);
-    assert_eq!(bursts(&mut app), 1, "spark burst");
+    assert_eq!(bursts(&mut app), 2, "class spark burst + bounce sparks");
     app.update();
     let emitters = damage_emitters_of(&mut app, tungsten);
     assert_eq!(emitters.len(), 2, "smoke + sparks");
@@ -170,7 +187,7 @@ fn breaking_a_brick_fires_a_shatter_burst() {
     let ceramic = brick_of(&mut app, BrickClass::Ceramic);
     hit(&mut app, ceramic);
     assert!(app.world().get_entity(ceramic).is_err());
-    assert_eq!(bursts(&mut app), 1, "shatter burst");
+    assert_eq!(bursts(&mut app), 2, "shatter burst + bounce sparks");
 }
 
 #[test]
@@ -206,6 +223,124 @@ fn leaving_the_run_leaves_no_particle_spawners() {
 fn effect_file(path: &str) -> Particle2dEffect {
     let text = std::fs::read_to_string(format!("assets/{path}")).unwrap();
     ron::de::from_str(&text).unwrap()
+}
+
+/// Whether each of the ball's trail emitters is active.
+fn trail_states(app: &mut App) -> Vec<bool> {
+    let ball = ball(app);
+    app.world_mut()
+        .query_filtered::<(&ParticleSpawnerState, &ChildOf), With<BallTrail>>()
+        .iter(app.world())
+        .filter(|(_, child_of)| child_of.parent() == ball)
+        .map(|(state, _)| state.active)
+        .collect()
+}
+
+#[test]
+fn the_ball_trails_only_while_in_flight() {
+    let mut app = app_with_vfx();
+    app.update();
+    assert_eq!(trail_states(&mut app), [false], "anchored: no trail");
+
+    tap(&mut app, KeyCode::Space);
+    assert_eq!(trail_states(&mut app), [true], "served: trailing");
+
+    // Lost the ball: back on the paddle, the trail stops (and isn't doubled).
+    move_ball_below_screen(&mut app);
+    app.update();
+    app.update();
+    assert_eq!(trail_states(&mut app), [false]);
+}
+
+#[test]
+fn a_wall_bounce_fires_a_spark_burst() {
+    let mut app = app_with_vfx();
+    let wall = app
+        .world_mut()
+        .query_filtered::<Entity, With<crate::world::Wall>>()
+        .iter(app.world())
+        .next()
+        .unwrap();
+    hit(&mut app, wall);
+    assert_eq!(bursts(&mut app), 1, "bounce sparks");
+}
+
+fn flares(app: &mut App) -> Vec<(Entity, Transform)> {
+    app.world_mut()
+        .query_filtered::<(&ChildOf, &Transform), With<PaddleFlare>>()
+        .iter(app.world())
+        .map(|(child_of, t)| (child_of.parent(), *t))
+        .collect()
+}
+
+#[test]
+fn a_paddle_hit_flares_both_ways_along_the_top_edge() {
+    let mut app = app_with_vfx();
+    let paddle = paddle(&mut app);
+    // The anchored ball sits over the paddle's centre.
+    hit(&mut app, paddle);
+    // Bounce sparks, plus a flare running to each end.
+    assert_eq!(
+        count::<(Spawners, With<OneShot>, Without<PaddleFlare>)>(&mut app),
+        1,
+        "bounce sparks"
+    );
+    let flares = flares(&mut app);
+    assert_eq!(flares.len(), 2);
+    for (parent, transform) in &flares {
+        assert_eq!(*parent, paddle, "rides with the paddle");
+        assert_eq!(transform.translation.y, PADDLE_HEIGHT / 2.0, "top edge");
+        assert!(transform.translation.x.abs() < 1e-3, "from the hit point");
+    }
+    let rightward: Vec<f32> = flares
+        .iter()
+        .map(|(_, t)| (t.rotation * Vec3::X).x.round())
+        .collect();
+    assert!(rightward.contains(&1.0) && rightward.contains(&-1.0));
+}
+
+#[test]
+fn a_hit_at_the_paddle_end_flares_one_way() {
+    let mut app = app_with_vfx();
+    let paddle = paddle(&mut app);
+    let ball = ball(&mut app);
+    app.world_mut()
+        .get_mut::<Transform>(ball)
+        .unwrap()
+        .translation
+        .x += crate::paddle::PADDLE_WIDTH;
+    hit(&mut app, paddle);
+    let flares = flares(&mut app);
+    assert_eq!(flares.len(), 1);
+    assert_eq!((flares[0].1.rotation * Vec3::X).x.round(), -1.0);
+}
+
+#[test]
+fn the_flare_reaches_each_end_of_a_widened_paddle() {
+    use crate::paddle::PADDLE_WIDTH;
+    assert_eq!(
+        flare_reaches(10.0, 0.0, PADDLE_WIDTH),
+        [
+            (-1.0, PADDLE_WIDTH / 2.0 + 10.0),
+            (1.0, PADDLE_WIDTH / 2.0 - 10.0)
+        ]
+    );
+    // Super-Sizer doubles the width: the flare runs twice as far.
+    let wide = PADDLE_WIDTH * 2.0;
+    assert_eq!(
+        flare_reaches(0.0, 0.0, wide),
+        [(-1.0, wide / 2.0), (1.0, wide / 2.0)]
+    );
+
+    let base = effect_file(FLARE_PATH);
+    let normal = tuned_flare(&base, PADDLE_WIDTH / 2.0);
+    let widened = tuned_flare(&base, PADDLE_WIDTH);
+    let speed = |e: &Particle2dEffect| e.linear_speed.as_ref().unwrap().0;
+    // The fastest particle (×2) covers the reach over the base lifetime.
+    assert!((speed(&normal) * 2.0 * base.lifetime.0 - PADDLE_WIDTH / 2.0).abs() < 1e-3);
+    assert!((speed(&widened) - 2.0 * speed(&normal)).abs() < 1e-3);
+    assert_eq!(normal.spawn_amount, base.spawn_amount);
+    assert_eq!(widened.spawn_amount, 2 * base.spawn_amount);
 }
 
 #[test]
@@ -315,12 +450,16 @@ fn shield_glass_glints_when_it_deflects_and_shatters_when_it_breaks() {
     let shield = brick_of(&mut app, BrickClass::Shield);
     hit_moving(&mut app, shield, Vec2::new(0.0, 450.0));
     assert_eq!(count::<With<GlassGlint>>(&mut app), 2, "glints, both tones");
-    assert_eq!(bursts(&mut app), 2, "nothing else");
+    assert_eq!(bursts(&mut app), 3, "plus the bounce sparks, nothing else");
 
     hit_moving(&mut app, shield, Vec2::new(0.0, -450.0));
     assert!(app.world().get_entity(shield).is_err());
     assert_eq!(count::<With<GlassGlint>>(&mut app), 2, "no new glints");
-    assert_eq!(bursts(&mut app), 3, "the glass shatter");
+    assert_eq!(
+        bursts(&mut app),
+        5,
+        "the glass shatter and its bounce sparks"
+    );
 }
 
 #[test]
@@ -402,7 +541,11 @@ fn a_loaded_sheet_draws_the_burst_textured() {
     let ceramic = brick_of(&mut app, BrickClass::Ceramic);
     hit(&mut app, ceramic);
     assert_eq!(count::<Textured>(&mut app), 1);
-    assert_eq!(bursts(&mut app), 0, "not a plain-quad burst");
+    assert_eq!(
+        bursts(&mut app),
+        1,
+        "no plain-quad brick burst, just the bounce sparks"
+    );
 
     // Torn down with the run like every other spawner.
     tap(&mut app, KeyCode::Escape);
@@ -415,6 +558,8 @@ fn without_the_vfx_resources_nothing_spawns() {
     let mut app = app();
     let tungsten = brick_of(&mut app, BrickClass::Tungsten);
     hit(&mut app, tungsten);
+    let paddle = paddle(&mut app);
+    hit(&mut app, paddle);
     let shield = brick_of(&mut app, BrickClass::Shield);
     hit_moving(&mut app, shield, Vec2::new(0.0, 450.0));
     let charge = brick_of(&mut app, BrickClass::Explosive(ExplosiveKind::Charge));

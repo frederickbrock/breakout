@@ -10,6 +10,9 @@
 //! | `BrickHealth` below max | child emitters: `brick_damage_smoke` + `brick_damage_sparks`, heavier with more damage | smoke grey / class glow |
 //! | `BrickHealth` back at max (regen heal) | those child emitters removed | — |
 //! | `BrickDestroyed` | the class's `<class>_break` burst at the brick's centre | its own `color_curve` |
+//! | the ball, while not `Anchored` | child emitter `ball_trail`, left behind in world space | `BALL_TRAIL` |
+//! | `BallBounced` | `ball_bounce` spark burst at the contact point | `BOUNCE_SPARK` (`EMITTER` off the paddle) |
+//! | `PaddleHit` | two `paddle_flare` spawners on the paddle, one running to each end | `EMITTER` |
 //! | `BrickExploded` | the variant's blast ([`blast_parts`]): charge round, breach a "+" of four jets, demolition big + debris + lingering smoke | `BLAST_RED` / `BLAST_ORANGE` / `BLAST_DEBRIS` / smoke |
 //! | `ShieldDeflected` | `glass_glint` burst at the contact point | `GLASS_GLINT` + `GLASS_GLINT_LIGHT` |
 //!
@@ -48,6 +51,11 @@
 //! particle budget ([`damage_emitter_interval`]) slows the continuous
 //! emitters when many bricks are damaged.
 //!
+//! The paddle flare reaches the paddle's end whatever its width
+//! (Super-Sizer): each hit adds a copy of the flare effect with its speed and
+//! particle count set from the distance to that end ([`flare_reaches`],
+//! [`tuned_flare`]); the copy is freed with its spawner.
+//!
 //! The budget is [`DAMAGE_PARTICLE_BUDGET`], applied by stretching the damage
 //! emitters' spawn interval rather than via `max_particles` (bevy_enoki stops
 //! *moving* a spawner's particles once it's at that cap). Effect files are in
@@ -57,11 +65,15 @@
 //! clock. Headless tests insert placeholder `ParticleEffects` /
 //! `ParticleMaterials` and count spawner entities.
 
+use crate::ball::{Anchored, Ball};
 use crate::bricks::explosive::BrickExploded;
 use crate::bricks::grid::{Brick, BrickHealth};
 use crate::bricks::{BrickClass, ExplosiveKind};
-use crate::collision::{BrickDamaged, BrickDestroyed, ShieldDeflected};
+use crate::collision::{
+    BallBounced, BounceSurface, BrickDamaged, BrickDestroyed, PaddleHit, ShieldDeflected,
+};
 use crate::game_state::{AppState, PlayState};
+use crate::paddle::{Paddle, PADDLE_HEIGHT};
 use crate::theme;
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
@@ -71,6 +83,9 @@ const HIT_PATH: &str = "particles/brick_hit.particle.ron";
 const SMOKE_PATH: &str = "particles/brick_damage_smoke.particle.ron";
 const SPARKS_PATH: &str = "particles/brick_damage_sparks.particle.ron";
 const BREAK_PATH: &str = "particles/brick_break.particle.ron";
+const TRAIL_PATH: &str = "particles/ball_trail.particle.ron";
+const BOUNCE_PATH: &str = "particles/ball_bounce.particle.ron";
+const FLARE_PATH: &str = "particles/paddle_flare.particle.ron";
 const CHARGE_PATH: &str = "particles/blast_charge.particle.ron";
 const BREACH_PATH: &str = "particles/blast_breach.particle.ron";
 const DEMOLITION_PATH: &str = "particles/blast_demolition.particle.ron";
@@ -88,6 +103,10 @@ pub const DAMAGE_PARTICLE_BUDGET: f32 = 1500.0;
 /// hit); lighter damage emits proportionally less often.
 const SMOKE_INTERVAL: f32 = 0.12;
 const SPARKS_INTERVAL: f32 = 0.5;
+/// Just behind the ball (local to it), so the trail never covers it.
+const TRAIL_Z: f32 = -0.1;
+/// A flare side shorter than this (the ball hit right at that end) is skipped.
+const MIN_FLARE_REACH: f32 = 1.0;
 
 /// Handles to the effect assets.
 #[derive(Resource, Clone)]
@@ -96,6 +115,9 @@ pub struct ParticleEffects {
     pub smoke: Handle<Particle2dEffect>,
     pub sparks: Handle<Particle2dEffect>,
     pub shatter: Handle<Particle2dEffect>,
+    pub trail: Handle<Particle2dEffect>,
+    pub bounce: Handle<Particle2dEffect>,
+    pub flare: Handle<Particle2dEffect>,
     pub charge: Handle<Particle2dEffect>,
     pub breach: Handle<Particle2dEffect>,
     pub demolition: Handle<Particle2dEffect>,
@@ -128,12 +150,15 @@ impl ParticleEffects {
 }
 
 /// One tint material per brick class and role, plus the smoke's, the
-/// blasts' and the glass glints'.
+/// blasts', the glass glints' and the ball/paddle effects'.
 #[derive(Resource, Clone)]
 pub struct ParticleMaterials {
     pub glow: HashMap<BrickClass, Handle<ColorParticle2dMaterial>>,
     pub face: HashMap<BrickClass, Handle<ColorParticle2dMaterial>>,
     pub smoke: Handle<ColorParticle2dMaterial>,
+    pub trail: Handle<ColorParticle2dMaterial>,
+    pub bounce: Handle<ColorParticle2dMaterial>,
+    pub flare: Handle<ColorParticle2dMaterial>,
     pub blast_red: Handle<ColorParticle2dMaterial>,
     pub blast_orange: Handle<ColorParticle2dMaterial>,
     pub debris: Handle<ColorParticle2dMaterial>,
@@ -262,6 +287,9 @@ fn load_effects(
         smoke: assets.load(SMOKE_PATH),
         sparks: assets.load(SPARKS_PATH),
         shatter: assets.load(BREAK_PATH),
+        trail: assets.load(TRAIL_PATH),
+        bounce: assets.load(BOUNCE_PATH),
+        flare: assets.load(FLARE_PATH),
         charge: assets.load(CHARGE_PATH),
         breach: assets.load(BREACH_PATH),
         demolition: assets.load(DEMOLITION_PATH),
@@ -296,6 +324,9 @@ fn load_effects(
         glow,
         face,
         smoke: tint(theme::SMOKE),
+        trail: tint(theme::BALL_TRAIL),
+        bounce: tint(theme::BOUNCE_SPARK),
+        flare: tint(theme::EMITTER),
         blast_red: tint(theme::BLAST_RED),
         blast_orange: tint(theme::BLAST_ORANGE),
         debris: tint(theme::BLAST_DEBRIS),
@@ -355,15 +386,20 @@ impl Plugin for VfxPlugin {
     fn build(&self, app: &mut App) {
         app.add_observer(spark_on_damage)
             .add_observer(shatter_on_break)
+            .add_observer(spark_on_bounce)
+            .add_observer(flare_on_paddle_hit)
             .add_observer(blast_on_explosion)
             .add_observer(glint_on_deflect)
             .add_systems(
                 Update,
-                (sync_damage_emitters, tune_damage_emitters)
-                    .chain()
+                (
+                    (sync_damage_emitters, tune_damage_emitters).chain(),
+                    attach_ball_trail,
+                )
                     .run_if(resource_exists::<ParticleEffects>)
                     .run_if(resource_exists::<ParticleMaterials>),
-            );
+            )
+            .add_systems(Update, sync_ball_trail.after(attach_ball_trail));
     }
 }
 
@@ -491,6 +527,146 @@ fn shatter_on_break(
         Burst::Break,
         position,
     );
+}
+
+fn spark_on_bounce(
+    on: On<BallBounced>,
+    mut commands: Commands,
+    effects: Option<Res<ParticleEffects>>,
+    materials: Option<Res<ParticleMaterials>>,
+) {
+    let (Some(effects), Some(materials)) = (effects, materials) else {
+        return;
+    };
+    // Off the paddle the sparks take its cyan, to sit with the flare.
+    let material = match on.surface {
+        BounceSurface::Paddle => materials.flare.clone(),
+        BounceSurface::Wall | BounceSurface::Brick => materials.bounce.clone(),
+    };
+    commands.spawn(burst(material, effects.bounce.clone(), on.position));
+}
+
+/// Marks the ball's trail emitter (a child of the ball).
+#[derive(Component)]
+pub struct BallTrail;
+
+/// The ball already has its [`BallTrail`].
+#[derive(Component)]
+struct HasTrail;
+
+/// Gives a ball without one its trail emitter, starting inactive;
+/// [`sync_ball_trail`] turns it on while the ball is in flight.
+fn attach_ball_trail(
+    mut commands: Commands,
+    effects: Res<ParticleEffects>,
+    materials: Res<ParticleMaterials>,
+    balls: Query<Entity, (With<Ball>, Without<HasTrail>)>,
+) {
+    for ball in &balls {
+        commands.entity(ball).insert(HasTrail).with_child((
+            BallTrail,
+            ParticleSpawner(materials.trail.clone()),
+            ParticleEffectHandle(effects.trail.clone()),
+            ParticleSpawnerState {
+                active: false,
+                ..default()
+            },
+            Transform::from_xyz(0.0, 0.0, TRAIL_Z),
+        ));
+    }
+}
+
+/// The trail emits only while its ball is in flight (not `Anchored`). Its
+/// particles live in world space, so they fade where they were left.
+fn sync_ball_trail(
+    mut trails: Query<(&mut ParticleSpawnerState, &ChildOf), With<BallTrail>>,
+    balls: Query<Has<Anchored>, With<Ball>>,
+) {
+    for (mut state, child_of) in &mut trails {
+        let Ok(anchored) = balls.get(child_of.parent()) else {
+            continue;
+        };
+        if state.active == anchored {
+            state.active = !anchored;
+        }
+    }
+}
+
+/// One side of a paddle flare (a child of the paddle); the left one is
+/// rotated half a turn.
+#[derive(Component)]
+pub struct PaddleFlare;
+
+/// How far a flare from `hit_x` runs to each end of a paddle `width` wide
+/// centred at `paddle_x`, as `(side, reach)` for the left and right.
+pub fn flare_reaches(hit_x: f32, paddle_x: f32, width: f32) -> [(f32, f32); 2] {
+    let half = width / 2.0;
+    [
+        (-1.0, (hit_x - (paddle_x - half)).clamp(0.0, width)),
+        (1.0, ((paddle_x + half) - hit_x).clamp(0.0, width)),
+    ]
+}
+
+/// The flare effect tuned to run `reach` along the paddle: particles spread
+/// evenly from the hit point out to `reach` (speed ×(1 ± randomness) over
+/// the lifetime), with a count in proportion to the distance relative to
+/// the half-paddle the file is drawn for.
+pub fn tuned_flare(base: &Particle2dEffect, reach: f32) -> Particle2dEffect {
+    let mut effect = base.clone();
+    let lifetime = effect.lifetime.0.max(f32::EPSILON);
+    // Rval speed is v·(1 ± r); with r ≈ 1 the fastest particle travels 2v.
+    effect.linear_speed = Some(Rval(reach / (2.0 * lifetime), 0.95));
+    let share = reach / (crate::paddle::PADDLE_WIDTH / 2.0);
+    effect.spawn_amount = ((base.spawn_amount as f32 * share).round() as u32).max(2);
+    effect
+}
+
+/// The ball hit the paddle: a cyan flare runs from the hit point to each end
+/// of the paddle's top edge, riding along with the paddle.
+fn flare_on_paddle_hit(
+    on: On<PaddleHit>,
+    mut commands: Commands,
+    effects: Option<Res<ParticleEffects>>,
+    materials: Option<Res<ParticleMaterials>>,
+    mut assets: Option<ResMut<Assets<Particle2dEffect>>>,
+    paddles: Query<(&Transform, &Paddle)>,
+) {
+    let (Some(effects), Some(materials)) = (effects, materials) else {
+        return;
+    };
+    let Ok((transform, paddle)) = paddles.get(on.paddle) else {
+        return;
+    };
+    let centre = transform.translation;
+    for (side, reach) in flare_reaches(on.position.x, centre.x, paddle.width) {
+        if reach < MIN_FLARE_REACH {
+            continue;
+        }
+        // A copy of the effect tuned to this reach; without the loaded asset
+        // (headless tests, or still loading) the file's own speed is used.
+        let handle = match assets.as_deref_mut() {
+            Some(assets) => match assets.get(&effects.flare).cloned() {
+                Some(base) => assets.add(tuned_flare(&base, reach)),
+                None => effects.flare.clone(),
+            },
+            None => effects.flare.clone(),
+        };
+        // Local to the paddle, on its top edge; the left side is turned
+        // round so the file's rightward direction runs left.
+        let local = Vec3::new(on.position.x - centre.x, PADDLE_HEIGHT / 2.0, PARTICLE_Z);
+        let facing = if side < 0.0 {
+            Quat::from_rotation_z(std::f32::consts::PI)
+        } else {
+            Quat::IDENTITY
+        };
+        commands.entity(on.paddle).with_child((
+            PaddleFlare,
+            ParticleSpawner(materials.flare.clone()),
+            ParticleEffectHandle(handle),
+            OneShot::Despawn,
+            Transform::from_translation(local).with_rotation(facing),
+        ));
+    }
 }
 
 /// The effect files a blast is built from.
