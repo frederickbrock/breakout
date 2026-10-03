@@ -235,3 +235,17 @@ processing = [
   "charge: then artgen recolor --color #ff9a3d (red-orange to warm orange, distinct from breach); reactor: artgen recolor --color #b58cff (magenta to reactor violet)",
   "verified 168x68 RGBA, transparent centre and corners; composited on #0a0e15 and viewed",
 ]
+
+[[asset]]
+id = "graffiti_particles"
+issue = "sim-usq.4"
+files = ["assets/particles/ceramic.png", "assets/particles/titanium.png", "assets/particles/tungsten.png", "assets/particles/reactor.png", "assets/particles/explosive.png", "assets/particles/regen.png", "assets/particles/shield.png", "assets/particles/outline_explosive.png", "assets/particles/outline_reactor.png", "assets/particles/outline_regen.png", "assets/particles/outline_shield.png"]
+source = "ceramic=r1/v1, titanium=r1/v3, tungsten=r1/v6, reactor=r1/v7, explosive=r1/v10, regen=r1/v12, shield=r1/v14, outline_explosive=r1/v15, outline_reactor=r1/v18, outline_regen=r2/v3, outline_shield=r2/v6"
+model = "google/gemini-2.5-flash-image"
+prompt_file_r1 = "art/prompts/sim-usq.4-r1.txt"
+prompt_file_r2 = "art/prompts/sim-usq.4-r2.txt"
+processing = [
+  "custom PIL script: each 1632x640 strip on a sage-green background (#709e63-ish, not flat #00FF00) was keyed by colour distance to alpha (light pixels unmixed against white, dark against near-black), split into its 4 frames by column projection (equal quarters where two frames touched: reactor, explosive), one uniform scale per sheet so the largest frame fits 30 px, each frame centred in its 32x32 cell, premultiplied Lanczos resize, joined into 128x32",
+  "greyscale: outline_explosive's orange tint is desaturated (luminance only); frame 4 (the faint fade-out) has its grey lifted to >=170 and alpha boosted 1.5x with noise below 40/255 dropped so it stays visible at 32 px",
+  "verified each at 128x32 with alpha and viewed composited on #0a0e15 at 4x",
+]
