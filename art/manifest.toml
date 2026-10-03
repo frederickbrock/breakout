@@ -176,3 +176,17 @@ processing = [
   "quantized to a 256-colour palette (median cut, Floyd-Steinberg) to fit the 1 MB web budget (from 1.2 MB)",
   "frame_right.png = frame_left.png mirrored horizontally (same palette, pixel-exact)",
 ]
+
+[[asset]]
+id = "outline_particles"
+issue = "sim-rdl.7.7"
+files = ["assets/particles/outline_explosive.png", "assets/particles/outline_regen.png", "assets/particles/outline_shield.png", "assets/particles/outline_reactor.png", "assets/sprites/bricks/outline_reactor.png"]
+source = "particles=r2/v3, outline_reactor=r3/v3"
+model = "google/gemini-2.5-flash-image"
+prompt_file_r2 = "art/prompts/sim-rdl.7.7-r2.txt"
+prompt_file_r3 = "art/prompts/sim-rdl.7.7-r3.txt"
+processing = [
+  "particles: custom PIL script — the 1024x1024 white-on-black 4x4 grid was cut into 4 rows (one per class) of 4 192px cells centred on each sprite, resized to 32x32 (Lanczos), luminance used as alpha (black->alpha) with RGB white so the sheet tints in code, and the 4 cells joined into a 128x32 strip",
+  "outline_reactor: artgen process --bg key --key-color #85a257 --tolerance 45 --trim --size 168x68 --fit stretch (source was 1632x640, ~4:3 off from 168:68, so stretched slightly)",
+  "verified all at exact size with alpha; composited on #0a0e15 and viewed",
+]
