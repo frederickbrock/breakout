@@ -1,13 +1,15 @@
 //! The power-up framework: the [`PowerUp`] component, the
 //! [`PowerUpCollected`] event, and the drop, fall and paddle-pickup systems.
 //!
-//! A power-up only ever appears when a power-up brick breaks: each run,
-//! `attach_reactor_power_ups` (a [`crate::run::RestartGame`] observer) gives
-//! every reactor-class brick, and every brick a level flagged `powerup`
-//! (`CarriesPowerUp`), a [`PowerUpBrick`] with a kind picked from
+//! A power-up only ever appears when a power-up brick breaks: each level,
+//! `attach_reactor_power_ups` (a [`crate::campaign::LevelStarted`] observer)
+//! gives every reactor-class brick, and every brick a level flagged
+//! `powerup` (`CarriesPowerUp`), a [`PowerUpBrick`] with a kind picked from
 //! [`PowerUpSpawner`], and `drop_power_up` observes
 //! [`crate::collision::BrickDestroyed`] and spawns it at the brick's position
-//! (no timed drops). `reset_on_restart` clears drops and effects.
+//! (no timed drops). `reset_on_level_start` clears active effects and falling
+//! power-ups at every level start; `reset_on_restart` (on
+//! [`crate::run::RestartGame`]) resets the drop count, which is per run.
 //!
 //! [`ActiveEffects`] is where collected effects land. Consumers recompute
 //! their derived values from it every frame, so an effect expiring needs no
@@ -21,6 +23,7 @@ mod super_sizer;
 
 use crate::bricks::grid::{Brick, CarriesPowerUp};
 use crate::bricks::BrickClass;
+use crate::campaign::LevelStarted;
 use crate::collision::BrickDestroyed;
 use crate::game_state::{AppState, PlayState};
 use crate::paddle::{Paddle, PADDLE_HEIGHT};
@@ -121,6 +124,7 @@ impl Plugin for PowerUpsPlugin {
             .init_resource::<PowerUpDrops>()
             .init_resource::<ActiveEffects>()
             .add_observer(reset_on_restart)
+            .add_observer(reset_on_level_start)
             .add_observer(attach_reactor_power_ups)
             .add_observer(drop_power_up)
             // Everything that moves power-ups or counts down their timers
@@ -146,13 +150,14 @@ impl Plugin for PowerUpsPlugin {
 /// A brick that doesn't carry a power-up yet.
 type UnequippedBrick = (With<Brick>, Without<PowerUpBrick>);
 
-/// At the start of every run, gives each reactor-class brick and each brick
-/// a level flagged `powerup` ([`CarriesPowerUp`]) a weighted-random power-up
-/// from [`PowerUpSpawner`]. Runs on [`RestartGame`], which `start_run`
-/// triggers after queuing the brick spawns, so the new run's bricks already
-/// exist. Health and colour stay the class's.
+/// At the start of every level, gives each reactor-class brick and each
+/// brick a level flagged `powerup` ([`CarriesPowerUp`]) a weighted-random
+/// power-up from [`PowerUpSpawner`]. Runs on [`LevelStarted`], which is
+/// triggered after the board's spawns are queued, so each level's bricks
+/// already exist. Bricks already equipped are skipped. Health and colour stay
+/// the class's.
 fn attach_reactor_power_ups(
-    _restart: On<RestartGame>,
+    _level: On<LevelStarted>,
     mut commands: Commands,
     spawner: Res<PowerUpSpawner>,
     bricks: Query<(Entity, &BrickClass, Has<CarriesPowerUp>), UnequippedBrick>,
@@ -248,16 +253,20 @@ fn tick_active_effects(time: Res<Time>, mut active: ResMut<ActiveEffects>) {
         .retain_mut(|effect| !effect.timer.tick(dt).is_finished());
 }
 
-fn reset_on_restart(
-    _restart: On<RestartGame>,
-    mut commands: Commands,
-    mut drops: ResMut<PowerUpDrops>,
-    mut active: ResMut<ActiveEffects>,
-    power_up_query: Query<Entity, With<PowerUp>>,
-) {
+/// The drop-gravity ramp is per run: a new run starts it over.
+fn reset_on_restart(_restart: On<RestartGame>, mut drops: ResMut<PowerUpDrops>) {
     drops.0 = 0;
+}
+
+/// Each level starts clean: no active effects and no falling power-ups.
+fn reset_on_level_start(
+    _level: On<LevelStarted>,
+    mut commands: Commands,
+    mut active: ResMut<ActiveEffects>,
+    power_ups: Query<Entity, With<PowerUp>>,
+) {
     active.clear();
-    for entity in &power_up_query {
+    for entity in &power_ups {
         commands.entity(entity).despawn();
     }
 }

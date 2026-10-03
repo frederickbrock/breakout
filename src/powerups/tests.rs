@@ -310,7 +310,7 @@ fn flagged_and_reactor_bricks_are_equipped_once() {
     };
     let before = kinds(&mut app);
     // A second equip pass skips bricks that already carry a power-up.
-    app.world_mut().trigger(RestartGame);
+    app.world_mut().trigger(LevelStarted { index: 0 });
     app.world_mut().flush();
     app.update();
     assert!(before == kinds(&mut app));
