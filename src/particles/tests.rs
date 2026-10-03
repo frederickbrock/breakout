@@ -197,8 +197,9 @@ fn a_healed_regen_brick_stops_smoking() {
     hit(&mut app, regen);
     app.update();
     assert_eq!(damage_emitters_of(&mut app, regen).len(), 2);
-    for _ in 0..35 {
-        app.update(); // past the 3 s heal
+    // Past the heal (100 ms frames).
+    for _ in 0..(crate::bricks::regen::HEAL_SECS * 10.0).round() as usize + 5 {
+        app.update();
     }
     assert_eq!(app.world().get::<BrickHealth>(regen).unwrap().0, 2);
     assert!(damage_emitters_of(&mut app, regen).is_empty());

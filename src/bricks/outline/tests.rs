@@ -240,7 +240,9 @@ fn a_damaged_regen_outline_speeds_up_until_it_heals() {
     });
     app.world_mut().flush();
     let early = step(&mut app);
-    for _ in 0..20 {
+    // The heal takes this many 100 ms frames.
+    let heal_frames = (crate::bricks::regen::HEAL_SECS * 10.0).round() as usize;
+    for _ in 0..heal_frames * 2 / 3 {
         app.update();
     }
     let late = step(&mut app);
@@ -249,7 +251,7 @@ fn a_damaged_regen_outline_speeds_up_until_it_heals() {
         "{breathing} {early} {late}"
     );
     // Healed: back to breathing.
-    for _ in 0..10 {
+    for _ in 0..heal_frames / 3 + 5 {
         app.update();
     }
     assert!(!app.world().entity(regen).contains::<RegenTimer>());

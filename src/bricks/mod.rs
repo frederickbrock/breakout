@@ -24,7 +24,7 @@
 pub(crate) mod explosive;
 pub(crate) mod grid;
 mod outline;
-mod regen;
+pub(crate) mod regen;
 
 use bevy::prelude::*;
 use rand::seq::SliceRandom;

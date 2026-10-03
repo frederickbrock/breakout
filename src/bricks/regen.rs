@@ -16,7 +16,7 @@ use crate::game_state::PlayState;
 use bevy::prelude::*;
 
 /// How long a damaged regen brick waits before healing to full.
-const HEAL_SECS: f32 = 6.0;
+pub(crate) const HEAL_SECS: f32 = 6.0;
 
 /// A damaged regen brick's countdown to healing.
 #[derive(Component)]
