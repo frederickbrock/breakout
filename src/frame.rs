@@ -15,7 +15,13 @@
 //! Painted art replaces it through the usual sprite rule
 //! ([`crate::sprites`]): once `frame_left.png` / `frame_right.png` load, the
 //! panel draws that image at panel size (the art ships at 2×) and its coded
-//! pieces are hidden. A missing or broken file keeps the coded frame.
+//! pieces are hidden. A missing or broken file keeps the coded frame. The
+//! art ships at exactly 2× the panel, right panel the mirror of the left,
+//! and is opaque up to its playfield-facing edge, which is the wall line.
+//!
+//! The HUD (left) and the power-up capsules (right) sit on dark backing
+//! plates ([`crate::plate`]) between the frame and their text, so they read
+//! over the art's linework.
 
 use bevy::prelude::*;
 
