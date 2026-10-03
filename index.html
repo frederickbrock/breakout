@@ -3,7 +3,25 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Breakout</title>
+    <title>Steelbreak</title>
+    <meta name="description" content="Steelbreak: break machined steel and ceramic bricks with a polished steel ball in a deep-space hangar. Plays in your browser." />
+    <meta name="theme-color" content="#080b0f" />
+    <!-- Link previews. og:image must be absolute: the GitHub Pages URL. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Steelbreak" />
+    <meta property="og:title" content="Steelbreak" />
+    <meta property="og:description" content="Break machined steel and ceramic bricks with a polished steel ball in a deep-space hangar. Plays in your browser." />
+    <meta property="og:url" content="https://frederickbrock.github.io/breakout/" />
+    <meta property="og:image" content="https://frederickbrock.github.io/breakout/og.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Steelbreak key art: a steel ball arcing toward rows of metal bricks in a hangar" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Steelbreak" />
+    <meta name="twitter:description" content="Break machined steel and ceramic bricks with a polished steel ball in a deep-space hangar. Plays in your browser." />
+    <meta name="twitter:image" content="https://frederickbrock.github.io/breakout/og.jpg" />
+
+    <link data-trunk rel="icon" href="web/favicon.png" />
     <!-- Release builds use the size-tuned `wasm-release` cargo profile and
          binaryen's size optimiser (dev builds skip both). -->
     <link
@@ -12,12 +30,81 @@
       data-cargo-profile-release="wasm-release"
       data-wasm-opt="z"
       data-wasm-opt-params="--enable-bulk-memory --enable-nontrapping-float-to-int --enable-sign-ext --enable-mutable-globals"
+      data-initializer="web/loader.js"
     />
     <link data-trunk rel="copy-dir" href="assets" />
+    <link data-trunk rel="copy-file" href="web/splash.jpg" />
+    <link data-trunk rel="copy-file" href="web/og.jpg" />
     <style>
       html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #080b0f; }
       canvas { display: block; width: 100%; height: 100%; outline: none; }
+
+      /* Loading splash: painted with the page, covers the canvas until the
+         game dispatches `steelbreak-ready` (web/loader.js). */
+      #splash {
+        position: fixed; inset: 0; z-index: 10;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 18px; padding: 24px; box-sizing: border-box;
+        background: #080b0f; color: #a9bacd;
+        font: 15px/1.4 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+        text-align: center;
+        transition: opacity 0.5s ease;
+      }
+      #splash.done { opacity: 0; pointer-events: none; }
+      #splash-art {
+        position: absolute; inset: 0; width: 100%; height: 100%;
+        object-fit: cover; opacity: 0.35; z-index: -1;
+      }
+      #splash h1 {
+        margin: 0; color: #eef6ff;
+        font: 700 clamp(40px, 9vw, 104px)/1 system-ui, "Segoe UI", sans-serif;
+        letter-spacing: 0.18em; padding-left: 0.18em; /* recentre the tracking */
+        text-shadow: 0 0 24px rgba(79, 216, 255, 0.45), 0 2px 0 #000;
+      }
+      #splash-bar {
+        position: relative; overflow: hidden;
+        width: min(420px, 80vw); height: 8px; border-radius: 4px;
+        background: rgba(22, 32, 44, 0.9); box-shadow: inset 0 0 0 1px #2f3c4a;
+      }
+      #splash-fill {
+        width: 0; height: 100%; border-radius: 4px;
+        background: #4fd8ff; box-shadow: 0 0 10px #4fd8ff;
+        transition: width 0.2s linear;
+      }
+      #splash-bar.indeterminate #splash-fill {
+        position: absolute; width: 30%; transition: none;
+        animation: splash-sweep 1.2s ease-in-out infinite;
+      }
+      @keyframes splash-sweep { from { left: -30%; } to { left: 100%; } }
+      #splash-amount { min-height: 1.4em; color: #eef6ff; font-variant-numeric: tabular-nums; }
+      #splash-status { min-height: 1.4em; }
+      #splash-hint { position: absolute; bottom: 24px; left: 24px; right: 24px; color: #9fb5ca; font-size: 13px; }
+      #splash.failed #splash-bar, #splash.failed #splash-amount, #splash.failed #splash-status { display: none; }
+      #splash-error p { margin: 0 0 14px; color: #ffab4d; max-width: 36em; }
+      #splash-error button {
+        font: inherit; color: #080b0f; background: #4fd8ff; border: 0; border-radius: 4px;
+        padding: 8px 22px; cursor: pointer;
+      }
+      #splash-error button:focus-visible { outline: 2px solid #eef6ff; outline-offset: 2px; }
+      @media (prefers-reduced-motion: reduce) {
+        #splash, #splash-fill { transition: none; }
+        #splash-bar.indeterminate #splash-fill { animation-duration: 3s; }
+      }
     </style>
   </head>
-  <body></body>
+  <body>
+    <div id="splash" role="status" aria-live="polite">
+      <img id="splash-art" src="splash.jpg" alt="" fetchpriority="high" />
+      <h1>STEELBREAK</h1>
+      <div id="splash-bar"><div id="splash-fill"></div></div>
+      <div id="splash-amount"></div>
+      <div id="splash-status">Loading…</div>
+      <div id="splash-error" hidden>
+        <p id="splash-error-text"></p>
+        <button id="splash-reload" type="button">Reload</button>
+      </div>
+      <noscript><p>Steelbreak needs JavaScript and WebAssembly.</p></noscript>
+      <div id="splash-hint">Mouse or ← → to move · Click / Space to launch · P to pause</div>
+    </div>
+  </body>
 </html>

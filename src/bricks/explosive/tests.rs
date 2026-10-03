@@ -191,9 +191,10 @@ mod in_game {
     use crate::bricks::grid::BrickMaxHits;
     use crate::bricks::regen::RegenTimer;
     use crate::bricks::ExplosiveKind::*;
-    use crate::game_state::GameOutcome;
+    use crate::game_state::{AppState, GameOutcome};
     use crate::powerups::{PowerUp, PowerUpBrick};
     use crate::test_support::*;
+    use crate::theme;
 
     const FROM_ABOVE: Vec2 = Vec2::new(60.0, -300.0);
 
@@ -399,21 +400,5 @@ mod in_game {
         let seen = &app.world().resource::<Exploded>().0;
         assert_eq!(seen.len(), 1);
         assert_eq!(seen[0].kind, Demolition);
-    }
-
-    #[test]
-    fn each_explosion_flashes_briefly() {
-        let mut app = app();
-        isolate(&mut app, 3, 4);
-        isolate(&mut app, 3, 5);
-        let charge = set(&mut app, 3, 4, BrickClass::Explosive(Charge));
-        set(&mut app, 3, 5, BrickClass::Explosive(Breach));
-        detonate(&mut app, charge);
-        app.world_mut().flush();
-        assert_eq!(count::<With<BlastFlash>>(&mut app), 2, "one per explosion");
-        for _ in 0..3 {
-            app.update();
-        }
-        assert_eq!(count::<With<BlastFlash>>(&mut app), 0);
     }
 }

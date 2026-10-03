@@ -16,15 +16,13 @@
 //! ignore shield glass's "from above" rule.
 //!
 //! After the chain is applied, [`BrickExploded`] is triggered once per
-//! explosion (origin first, then each chained one) for visuals to observe;
-//! the placeholder [`BlastFlash`] is one such observer.
+//! explosion (origin first, then each chained one) for visuals to observe
+//! (`particles` plays each variant's blast).
 
-use super::grid::{Brick, BrickHealth, BRICK_HEIGHT, BRICK_WIDTH};
+use super::grid::{Brick, BrickHealth};
 use super::{BrickCell, BrickClass, ExplosiveKind};
 use crate::collision::{BallCollisionSignals, BrickDamaged, BrickDestroyed};
-use crate::game_state::{AppState, PlayState};
 use crate::run::Score;
-use crate::theme;
 use bevy::prelude::*;
 use std::collections::{BTreeMap, VecDeque};
 
@@ -128,8 +126,8 @@ type BlastTarget = (
 );
 
 /// Fired once per explosion: the ball-destroyed origin, then every explosive
-/// its chain sets off, in order. Visuals (the placeholder flash here, later
-/// the particles epic) observe this; gameplay effects are already applied.
+/// its chain sets off, in order. Visuals (`particles`) observe this;
+/// gameplay effects are already applied.
 #[derive(Event, Debug, Clone, Copy, PartialEq)]
 pub struct BrickExploded {
     pub cell: BrickCell,
@@ -137,24 +135,11 @@ pub struct BrickExploded {
     pub kind: ExplosiveKind,
 }
 
-/// How long the placeholder burst lasts, and how far it grows.
-const FLASH_SECS: f32 = 0.2;
-const FLASH_GROWTH: f32 = 1.5;
-
-/// A quick expanding, fading flash where an explosive went off.
-#[derive(Component)]
-pub struct BlastFlash(Timer);
-
 pub struct ExplosivePlugin;
 
 impl Plugin for ExplosivePlugin {
     fn build(&self, app: &mut App) {
-        app.add_observer(explode)
-            .add_observer(flash_on_explosion)
-            .add_systems(
-                Update,
-                fade_blast_flashes.run_if(in_state(PlayState::Playing)),
-            );
+        app.add_observer(explode);
     }
 }
 
@@ -225,33 +210,6 @@ fn explode(
                 kind,
             });
         }
-    }
-}
-
-/// Placeholder burst for each explosion; the particles epic's explosions
-/// task replaces it by observing [`BrickExploded`] too.
-fn flash_on_explosion(on: On<BrickExploded>, mut commands: Commands) {
-    commands.spawn((
-        BlastFlash(Timer::from_seconds(FLASH_SECS, TimerMode::Once)),
-        Sprite::from_color(theme::BLAST_FLASH, Vec2::new(BRICK_WIDTH, BRICK_HEIGHT)),
-        Transform::from_translation(on.position.extend(0.8)),
-        DespawnOnExit(AppState::InGame),
-    ));
-}
-
-fn fade_blast_flashes(
-    mut commands: Commands,
-    time: Res<Time>,
-    mut flashes: Query<(Entity, &mut BlastFlash, &mut Transform, &mut Sprite)>,
-) {
-    for (entity, mut flash, mut transform, mut sprite) in &mut flashes {
-        if flash.0.tick(time.delta()).is_finished() {
-            commands.entity(entity).despawn();
-            continue;
-        }
-        let t = flash.0.fraction();
-        transform.scale = Vec3::splat(1.0 + t * FLASH_GROWTH);
-        sprite.color = theme::BLAST_FLASH.with_alpha(1.0 - t);
     }
 }
 

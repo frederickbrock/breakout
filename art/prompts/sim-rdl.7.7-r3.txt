@@ -1,0 +1,9 @@
+Sci-fi industrial game art, clean hard-surface rendering: machined steel, bevelled
+metal plates, bolts and seams, crisp specular edges, subtle glossy highlights.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+A thin rectangular outline FRAME for a game brick, aspect ratio 168:68 (about 2.5:1), hollow in the centre: only the border ring is drawn, machined bevelled steel rim with small bolts and seams, with a glowing reactor-core violet (#b58cff) energy seam running along the inner edge, lit violet. Keep the same construction as the reference frame (same rim thickness, corner treatment, proportions) but violet instead of its colour. The centre inside the frame and everything outside the frame is plain flat solid #00FF00 green. Single isolated object, centred, whole frame inside the image, orthographic front view, no shadow, no scenery, no text.

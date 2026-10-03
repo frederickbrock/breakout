@@ -35,11 +35,12 @@ One line per file; each module's details live in its own `//!` doc comment.
 - `src/world.rs` — the 1920×1080 world, the centred playfield well, `GAME_SCALE` and the walls.
 - `src/frame.rs` — `FramePlugin`: the global steel frame in the two side panels (coded, skinned by `frame_left`/`frame_right`).
 - `src/view.rs` — `ViewPlugin`: the camera that fits the world to the window, and `UiScale`.
+- `src/web_splash.rs` — `WebSplashPlugin`: tells the web page's loading splash (`index.html`, `web/loader.js`) the menu is drawn.
 - `src/game_state.rs` — `AppState` / `PlayState` state machine, `GameOutcome` and the physics clock.
 - `src/run.rs` — starting and ending a run, `Score` / `Lives`, `RestartGame` and the HUD.
 - `src/paddle.rs` — the paddle, its movement and its prong/field pieces; `PaddleMovementSet`.
 - `src/ball.rs` — ball movement rules, the serve, `BallApproach`, `BallSpeed` and `BALL_SPEED_SCALE`.
-- `src/collision.rs` — `on_ball_collision`, scoring, `BrickDamaged` / `BrickDestroyed`.
+- `src/collision.rs` — `on_ball_collision`, scoring, `BrickDamaged` / `BrickDestroyed`; `BallBounced` / `PaddleHit` for VFX.
 - `src/controls.rs` — `ControlSettings` (Mouse/Keyboard) and the mouse side of paddle control.
 - `src/bricks/mod.rs` — `BrickClass`, `BrickCell`, `PlacedBrick`, `random_classes`, the `damage_look` ladder and `BricksPlugin`.
 - `src/bricks/grid.rs` — the `Brick` / `BrickHealth` / `BrickMaxHits` entities, grid layout and `spawn_bricks`.
@@ -54,7 +55,7 @@ One line per file; each module's details live in its own `//!` doc comment.
 - `src/menu/game_over.rs` — game-over / win screen with the final score.
 - `src/theme.rs` — the Steelbreak palette; every colour the game draws with.
 - `src/sprites.rs` — image assets: `GameSprites`, the background and sprite skinning (brick damage plates included).
-- `src/particles/mod.rs` — the bevy_enoki VFX layer reacting to brick events.
+- `src/particles/mod.rs` — the bevy_enoki VFX layer: per-class brick bursts and damage, explosive blasts, glass glints, ball trail, bounce sparks, paddle flare.
 - `src/spawner.rs` — `Spawner<T>`, a generic weighted registry of spawnable kinds.
 - `src/powerups/mod.rs` — the power-up framework: drops, pickup and `ActiveEffects`.
 - `src/powerups/super_sizer.rs` — Super-Sizer, and the pattern for adding a power-up.
@@ -86,7 +87,7 @@ One line per file; each module's details live in its own `//!` doc comment.
   has usually already been reflected. `record_ball_approach` (`ball.rs`) copies it into the ball's
   `BallApproach` in `FixedPostUpdate` `PhysicsSystems::First`, just before each physics step.
   Shield glass takes damage only if `BallApproach.y < 0` (the ball was moving down at
-  contact); otherwise it only flashes (no damage, no score).
+  contact); otherwise it only deflects (no damage, no score; `ShieldDeflected` fires for the glass-glint VFX).
 - **Ball speed is deliberately kept at a controlled, constant magnitude**, not left to
   Avian's real momentum transfer — `ball_movement` (`ball.rs`) renormalizes `LinearVelocity` back to
   the run's `BallSpeed` (a resource set from the level each run) after every frame's bounce (with a minimum-vertical-component clamp to

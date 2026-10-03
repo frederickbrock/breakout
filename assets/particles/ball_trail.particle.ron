@@ -1,0 +1,27 @@
+// The ball's trail while in flight: a continuous emitter on the ball that
+// leaves particles behind in world space, fading over ~0.25 s. White: the
+// spawner's material tints it steel blue (theme::BALL_TRAIL).
+(
+    spawn_rate: 0.016,
+    spawn_amount: 2,
+    emission_shape: Circle(4.5),
+    lifetime: (0.25, 0.2),
+    linear_speed: Some((12.0, 0.5)),
+    linear_acceleration: None,
+    direction: Some(((0.0, 1.0), 1.0)),
+    angular_speed: None,
+    angular_acceleration: None,
+    scale: Some((10.0, 0.25)),
+    color: Some((red: 1.0, green: 1.0, blue: 1.0, alpha: 0.8)),
+    gravity_direction: None,
+    gravity_speed: None,
+    linear_damp: None,
+    angular_damp: None,
+    scale_curve: Some((points: [(1.0, 0.0, None), (0.2, 1.0, None)])),
+    color_curve: Some((points: [
+        ((red: 1.0, green: 1.0, blue: 1.0, alpha: 0.8), 0.0, None),
+        ((red: 1.0, green: 1.0, blue: 1.0, alpha: 0.0), 1.0, None),
+    ])),
+    attractors: None,
+    relative_positioning: None,
+)

@@ -1,0 +1,6 @@
+Game VFX particle sprite sheet for a sci-fi brick-breaker. Output ONE square image, a strict 4 columns x 4 rows grid of equal square cells, on a plain flat solid pure black (#000000) background, no grid lines, no cell backgrounds. Drawn in PURE WHITE and light grey only (strictly greyscale, no colour, so it can be tinted in code), soft glow, crisp small shapes, centred in each cell with wide margin, nothing touching cell edges. Each ROW is one particle type; the 4 columns are its lifetime frames left to right: 1 appear (small, dim), 2 peak (largest, brightest), 3 bright but shrinking, 4 fade (small, dim, translucent).
+Row 1: fuse sparks / glowing embers: bright core with tiny radiating spark streaks.
+Row 2: small plus/cross shaped healing mote with soft glow, same plus shape in all four frames.
+Row 3: hexagonal glass glint: a single hexagon facet with a bright specular star point, same hexagon in all four frames (no shattering).
+Row 4: round energy orb with a small branching electric arc crackle.
+The four row shapes must be clearly distinguishable at 32x32 pixels. Absolutely no text, letters, numbers, labels, scenery, machinery, borders or UI.

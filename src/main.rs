@@ -32,13 +32,14 @@ mod sprites;
 pub(crate) mod test_support;
 mod theme;
 mod view;
+mod web_splash;
 mod world;
 
 use avian2d::prelude::*;
 use ball::{ball_movement, follow_paddle, launch_ball, record_ball_approach, BallSpeed};
 use bevy::asset::AssetMetaCheck;
 use bevy::prelude::*;
-use collision::{on_ball_collision, BallCollisionSignals};
+use collision::{on_ball_bounce, on_ball_collision, BallCollisionSignals};
 use game_state::{AppState, GameStatePlugin, PlayState};
 use paddle::{paddle_movement, place_paddle_pieces, PaddleMovementSet};
 use run::{restart_from_game_over, start_run, update_hud, Lives, Score, STARTING_LIVES};
@@ -125,6 +126,7 @@ fn add_game(app: &mut App) {
         particles::VfxPlugin,
         view::ViewPlugin,
         frame::FramePlugin,
+        web_splash::WebSplashPlugin,
     ))
     .insert_resource(Gravity(Vec2::new(0.0, 0.8 * GAME_SCALE)))
     .init_resource::<ButtonInput<MouseButton>>()
@@ -133,6 +135,7 @@ fn add_game(app: &mut App) {
     .insert_resource(Lives(STARTING_LIVES))
     .init_resource::<BallCollisionSignals>()
     .add_observer(on_ball_collision)
+    .add_observer(on_ball_bounce)
     .add_plugins(powerups::PowerUpsPlugin)
     .add_systems(Startup, setup_level)
     .add_systems(OnEnter(AppState::InGame), start_run)

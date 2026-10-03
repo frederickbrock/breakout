@@ -1,0 +1,30 @@
+// The emitter-field flare when the ball hits the paddle: one of these runs
+// each way along the paddle's top edge from the hit point (the spawner is
+// rotated for the left side). linear_speed is overridden per hit so the
+// flare reaches that end of the paddle (src/particles/, flare_speed), and
+// spawn_amount scales with that reach. relative_positioning keeps it riding
+// with the paddle. White: tinted cyan (theme::EMITTER).
+(
+    spawn_rate: 0.05,
+    spawn_amount: 12,
+    emission_shape: Point,
+    lifetime: (0.3, 0.1),
+    linear_speed: Some((150.0, 0.95)),
+    linear_acceleration: None,
+    direction: Some(((1.0, 0.0), 0.01)),
+    angular_speed: None,
+    angular_acceleration: None,
+    scale: Some((6.0, 0.3)),
+    color: Some((red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0)),
+    gravity_direction: None,
+    gravity_speed: None,
+    linear_damp: None,
+    angular_damp: None,
+    scale_curve: Some((points: [(1.0, 0.0, None), (0.4, 1.0, None)])),
+    color_curve: Some((points: [
+        ((red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0), 0.0, None),
+        ((red: 1.0, green: 1.0, blue: 1.0, alpha: 0.0), 1.0, None),
+    ])),
+    attractors: None,
+    relative_positioning: Some(true),
+)

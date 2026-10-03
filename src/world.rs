@@ -7,7 +7,7 @@
 //! side; the HUD sits in the left one.
 //!
 //! The walls, laid out by the pure [`wall_specs`] and spawned by
-//! [`setup_level`], sit on the well's left, right and top edges; the ball is
+//! [`setup_level`] and marked [`Wall`], sit on the well's left, right and top edges; the ball is
 //! lost below its bottom edge. Every gameplay size and speed in the game is
 //! written as its old design value `x * GAME_SCALE` ([`GAME_SCALE`] = 1.5),
 //! except the ball's speed, which has its own
@@ -20,6 +20,11 @@ use bevy::prelude::*;
 
 use crate::ball::{BallLook, BALL_SIZE};
 use crate::theme;
+
+/// One of the static walls (left, right, top), so collisions can tell a wall
+/// bounce apart from other contacts.
+#[derive(Component)]
+pub(crate) struct Wall;
 
 // Game constants
 /// Every gameplay size and speed is its old 900x650-window design value times
@@ -53,6 +58,7 @@ pub(crate) fn setup_level(
     // is a life lost, checked separately from physics.
     for (centre, size) in wall_specs() {
         commands.spawn((
+            Wall,
             RigidBody::Static,
             Collider::rectangle(size.x, size.y),
             Transform::from_translation(centre.extend(0.0)),
