@@ -314,6 +314,21 @@ fn the_brick_asset_contract_holds() {
 }
 
 #[test]
+fn the_ball_paddle_and_power_up_asset_contract_holds() {
+    // 2× art: drawn at BALL_SIZE, the prong/field size (the field stretched
+    // to the paddle's width) and the power-up/capsule icon size.
+    for (path, size) in [
+        (BALL_PATH, (60, 60)),
+        (PRONG_LEFT_PATH, (54, 40)),
+        (PRONG_RIGHT_PATH, (54, 40)),
+        (PADDLE_FIELD_PATH, (93, 40)),
+        (POWER_UP_PATH, (48, 48)),
+    ] {
+        assert_eq!(png_size(path), size, "{path}");
+    }
+}
+
+#[test]
 fn tungsten_goes_intact_cracked_broken_then_breaks() {
     let mut app = app_with_sprites(&[]);
     let tungsten = brick_of(&mut app, BrickClass::Tungsten);
