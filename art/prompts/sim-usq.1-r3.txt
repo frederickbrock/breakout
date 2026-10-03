@@ -1,0 +1,25 @@
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Subject: a concept sheet of game bricks as a table on a plain flat solid #00FF00 green background: 7 rows (one per class, top to bottom) and 3 columns (left INTACT, middle CRACKED, right BROKEN). Generous equal spacing, every cell the same size. All plates use EXACTLY the plate of the first reference image (titanium base) and the class look of the second reference: identical wide 8:3 rounded-rectangle silhouette with perfectly smooth, clean, unchipped outer edges, same thick dark keyline, off-white inner outline, four corner bolts, centre seam, hard highlight streak, same line weight, flat cel colour blocks.
+Rows:
+1 titanium alloy: pale brushed steel-blue (#eef6ff to #9fb5ca to #2f3c4a).
+2 fired ceramic: glazed salmon-orange (#ffdcc8 to #ff7d58 to #79261a) with faint tile grid.
+3 tungsten plate: dark gold (#ffe6bd to #d69a4e to #4f3212), heavy bevel.
+4 reactor core: violet (#f6ecff to #a98cf0 to #331f5c) with a glowing violet (not cyan) centre energy seam.
+5 explosive plate: hot red (#ffd0cc to #e0303a to #5a0f14) with orange-black hazard chevrons.
+6 regen alloy: green (#dcffe6 to #3fcf6e to #0f4a24) with a few fine circuit-like lattice lines, clearly decorative and NOT crack-like in the intact column.
+7 shield glass: pale translucent aqua glass in a steel frame with a faint hex-cell pattern, crisp outline, NO glow or halo around it.
+INTACT column: perfectly clean plates, no chips, no cracks, no damage at all, smooth edges.
+CRACKED column: same plate with 2-3 dark keyline fracture lines with a thin off-white highlight edge, plus one chipped corner. Shield glass cracks as a shatter web.
+BROKEN column (only rows 1, 3, 4, 6; leave the other rows' broken cells empty green): same silhouette but heavily fractured, large missing chunks and jagged holes showing the green background through, still clearly the same class colour.
+Each state clearly more damaged than the previous. No spray effects, no text, no numbers, no labels.
