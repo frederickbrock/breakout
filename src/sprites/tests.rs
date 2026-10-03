@@ -59,6 +59,7 @@ fn app_with_sprites(missing: &[&str]) -> App {
             .collect(),
         frame_left: image("frame_left"),
         frame_right: image("frame_right"),
+        parallax: crate::parallax::LAYERS.map(|layer| image(layer.path)),
     };
     app.world_mut().insert_resource(sprites);
     app.update();

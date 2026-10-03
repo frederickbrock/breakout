@@ -15,7 +15,8 @@ fn sprites_of(handle: Handle<Image>) -> GameSprites {
         bricks: std::array::from_fn(|_| handle.clone()),
         damaged: [((BrickSprite::ALL[0], DamageLook::Cracked), handle.clone())].into(),
         frame_left: handle.clone(),
-        frame_right: handle,
+        frame_right: handle.clone(),
+        parallax: std::array::from_fn(|_| handle.clone()),
     }
 }
 

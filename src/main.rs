@@ -23,6 +23,7 @@ mod game_state;
 mod levels;
 mod menu;
 mod paddle;
+mod parallax;
 mod particles;
 mod plate;
 mod powerups;
@@ -131,6 +132,7 @@ fn add_game(app: &mut App) {
         particles::VfxPlugin,
         view::ViewPlugin,
         frame::FramePlugin,
+        parallax::ParallaxPlugin,
         plate::PlatePlugin,
         web_splash::WebSplashPlugin,
     ))
