@@ -11,17 +11,21 @@
 //! `.` empty). The full reference is `docs/levels.md`.
 //!
 //! The campaign manifest `assets/levels/campaign.txt` lists the level files
-//! in order (the web build can't list directories); a run plays the first.
-//! [`LevelsPlugin`] loads both as assets and copies the first level into
-//! [`CurrentLevel`]. It is registered from `main()`, not `add_game`, so the
-//! headless tests never read files: they insert [`CurrentLevel`] directly.
+//! in order (the web build can't list directories); a run plays them in that
+//! order and clearing the last one wins (see `crate::campaign`).
+//! [`LevelsPlugin`] loads both as assets and keeps [`CampaignLevels`] (every
+//! playable level, in order) current. It is registered from `main()`, not
+//! `add_game`, so the headless tests never read files: they insert
+//! [`CampaignLevels`] directly.
 //!
-//! `start_run` reads [`CurrentLevel`] fresh every run and resolves it with
-//! [`build_board`]; when it is absent (not loaded yet, invalid, or in tests)
-//! the run plays [`LevelDef::fallback`], the built-in random 7x10 board with
-//! 6 reactors. Hot reload (native) therefore applies at the next Start / Play
-//! again, never mid-board. An invalid file is logged by Bevy with the file,
-//! line and column, and the run falls back to the random board.
+//! `start_run` reads level 0 through [`campaign_level`] fresh every run and
+//! resolves it with [`build_board`]; each later level is read when the run
+//! reaches it. With no campaign (not loaded yet, every level invalid, or in
+//! tests) the run plays [`LevelDef::fallback`], the built-in random 7x10
+//! board with 6 reactors, as its only level. Hot reload (native) therefore
+//! applies at the next run or when the run reaches the edited level, never
+//! mid-board. An invalid file is logged by Bevy with the file, line and
+//! column, and that level is skipped.
 
 mod board;
 mod loader;
@@ -103,11 +107,20 @@ pub struct Campaign {
     pub levels: Vec<String>,
 }
 
-/// The level the next run plays. Set by [`LevelsPlugin`] from the
-/// campaign's first level; tests insert it directly. Absent:
-/// [`LevelDef::fallback`].
+/// Every playable campaign level, in play order. Kept current by
+/// [`LevelsPlugin`]; tests insert it directly. Absent: the built-in
+/// [`LevelDef::fallback`] is the only level.
 #[derive(Resource, Clone, Debug, PartialEq)]
-pub(crate) struct CurrentLevel(pub(crate) LevelDef);
+pub(crate) struct CampaignLevels(pub(crate) Vec<LevelDef>);
+
+/// The campaign's level at 0-based `index`; with no (or an empty) campaign,
+/// [`LevelDef::fallback`] is the only level. `None` past the last.
+pub(crate) fn campaign_level(campaign: Option<&CampaignLevels>, index: usize) -> Option<LevelDef> {
+    match campaign {
+        Some(c) if !c.0.is_empty() => c.0.get(index).cloned(),
+        _ => (index == 0).then(LevelDef::fallback),
+    }
+}
 
 #[cfg(test)]
 mod tests;

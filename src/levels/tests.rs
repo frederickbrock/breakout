@@ -175,7 +175,7 @@ fn a_level_speed_factor_sets_the_serve_speed() {
 #[test]
 fn without_a_level_the_run_uses_the_fallback() {
     let mut app = app();
-    assert!(app.world().get_resource::<CurrentLevel>().is_none());
+    assert!(app.world().get_resource::<CampaignLevels>().is_none());
     assert_eq!(count::<With<Brick>>(&mut app), 70);
     assert_eq!(count::<With<PowerUpBrick>>(&mut app), 6);
     assert_eq!(count::<With<CarriesPowerUp>>(&mut app), 0);
@@ -185,7 +185,7 @@ fn without_a_level_the_run_uses_the_fallback() {
 #[test]
 fn a_changed_level_applies_at_the_next_run_not_mid_board() {
     let mut app = app_with_level(level("speed_factor: 1.0\ngrid:\nCC"));
-    app.insert_resource(CurrentLevel(level("speed_factor: 2.0\ngrid:\nCCC")));
+    app.insert_resource(CampaignLevels(vec![level("speed_factor: 2.0\ngrid:\nCCC")]));
     app.update();
     assert_eq!(count::<With<Brick>>(&mut app), 2, "not mid-board");
     assert_eq!(app.world().resource::<BallSpeed>().0, 300.0);
@@ -195,10 +195,29 @@ fn a_changed_level_applies_at_the_next_run_not_mid_board() {
 }
 
 #[test]
-fn removing_the_current_level_falls_back_to_the_random_board() {
+fn removing_the_campaign_falls_back_to_the_random_board() {
     let mut app = app_with_level(level("grid:\nCC"));
-    app.world_mut().remove_resource::<CurrentLevel>();
+    app.world_mut().remove_resource::<CampaignLevels>();
     restart(&mut app);
     assert_eq!(count::<With<Brick>>(&mut app), 70);
     assert_eq!(count::<With<PowerUpBrick>>(&mut app), 6);
+}
+
+#[test]
+fn without_a_campaign_the_fallback_is_the_only_level() {
+    assert_eq!(campaign_level(None, 0), Some(LevelDef::fallback()));
+    assert_eq!(campaign_level(None, 1), None);
+    let empty = CampaignLevels(vec![]);
+    assert_eq!(campaign_level(Some(&empty), 0), Some(LevelDef::fallback()));
+    assert_eq!(campaign_level(Some(&empty), 1), None);
+}
+
+#[test]
+fn campaign_level_indexes_the_campaign_in_order() {
+    let a = level("name: A\ngrid:\nC");
+    let b = level("name: B\ngrid:\nT");
+    let campaign = CampaignLevels(vec![a.clone(), b.clone()]);
+    assert_eq!(campaign_level(Some(&campaign), 0), Some(a));
+    assert_eq!(campaign_level(Some(&campaign), 1), Some(b));
+    assert_eq!(campaign_level(Some(&campaign), 2), None);
 }

@@ -1,19 +1,22 @@
 //! The asset side of levels: [`LevelLoader`] (`.level` files into
 //! [`LevelDef`]), [`CampaignLoader`] (`campaign.txt` into [`Campaign`]) and
-//! [`LevelsPlugin`], which loads the campaign at startup, follows it to its
-//! first level and keeps [`CurrentLevel`] in step with that asset.
+//! [`LevelsPlugin`], which loads the campaign at startup, loads every level
+//! it lists and keeps [`CampaignLevels`] in step with those assets.
 //!
 //! A loader error (a [`LevelError`](super::parse::LevelError)) is logged by
 //! Bevy as "Failed to load asset '<path>' ...: line L, column C: ...", and
-//! [`sync_current_level`] then removes [`CurrentLevel`] so the next run
-//! plays the built-in random board. Natively, saving a level file reloads it
-//! (Bevy's `file_watcher`) and the new version applies at the next run.
+//! [`sync_campaign_levels`] then leaves that level out of [`CampaignLevels`]
+//! (skipped, with a warning); with no playable level left it removes the
+//! resource so runs play the built-in random board. Natively, saving a level
+//! file reloads it (Bevy's `file_watcher`) and the new version applies the
+//! next time that level starts.
 
 use bevy::asset::io::Reader;
 use bevy::asset::{AssetLoadFailedEvent, AssetLoader, LoadContext};
+use bevy::platform::collections::HashSet;
 use bevy::prelude::*;
 
-use super::{parse_campaign, parse_level, Campaign, CurrentLevel, LevelDef};
+use super::{parse_campaign, parse_level, Campaign, CampaignLevels, LevelDef};
 
 /// The campaign manifest, relative to `assets/`.
 const CAMPAIGN_PATH: &str = "levels/campaign.txt";
@@ -82,17 +85,20 @@ impl AssetLoader for CampaignLoader {
     }
 }
 
-/// The campaign and the level it currently points at (its first entry).
+/// The campaign, the levels it lists (in order) and the ones whose last
+/// load failed.
 #[derive(Resource, Default)]
 pub(crate) struct LevelHandles {
     pub(crate) campaign: Handle<Campaign>,
-    pub(crate) level: Option<Handle<LevelDef>>,
+    pub(crate) levels: Vec<Handle<LevelDef>>,
+    pub(crate) failed: HashSet<AssetId<LevelDef>>,
 }
 
 /// Loads levels from files. Registered from `main()` only, so the headless
 /// tests never read `assets/`. Its `Update` systems are deliberately not
-/// gated on the game state: they only keep [`CurrentLevel`] current, and
-/// `start_run` reads it once per run, so a change never lands mid-board.
+/// gated on the game state: they only keep [`CampaignLevels`] current, and
+/// the run reads a level only when it starts it, so a change never lands
+/// mid-board.
 pub struct LevelsPlugin;
 
 impl Plugin for LevelsPlugin {
@@ -103,7 +109,7 @@ impl Plugin for LevelsPlugin {
             .register_asset_loader(CampaignLoader)
             .init_resource::<LevelHandles>()
             .add_systems(Startup, load_campaign)
-            .add_systems(Update, (follow_campaign, sync_current_level).chain());
+            .add_systems(Update, (follow_campaign, sync_campaign_levels).chain());
     }
 }
 
@@ -111,7 +117,7 @@ fn load_campaign(server: Res<AssetServer>, mut handles: ResMut<LevelHandles>) {
     handles.campaign = server.load(CAMPAIGN_PATH);
 }
 
-/// When the campaign loads or changes, loads its first level.
+/// When the campaign loads or changes, loads every level it lists.
 pub(crate) fn follow_campaign(
     mut events: MessageReader<AssetEvent<Campaign>>,
     campaigns: Res<Assets<Campaign>>,
@@ -127,73 +133,80 @@ pub(crate) fn follow_campaign(
     if !touched {
         return;
     }
-    match campaigns.get(campaign).and_then(|c| c.levels.first()) {
-        Some(file) => {
-            let level = server.load(format!("{LEVELS_DIR}/{file}"));
-            if handles.level.as_ref() != Some(&level) {
-                handles.level = Some(level);
-            }
-        }
-        None => {
-            warn!("{CAMPAIGN_PATH} lists no levels; playing the built-in random board");
-            handles.level = None;
-        }
+    let wanted: Vec<Handle<LevelDef>> = campaigns
+        .get(campaign)
+        .map(|c| {
+            c.levels
+                .iter()
+                .map(|file| server.load(format!("{LEVELS_DIR}/{file}")))
+                .collect()
+        })
+        .unwrap_or_default();
+    if wanted.is_empty() {
+        warn!("{CAMPAIGN_PATH} lists no levels; playing the built-in random board");
+    }
+    if handles.levels != wanted {
+        handles.levels = wanted;
     }
 }
 
-/// Copies the campaign's level into [`CurrentLevel`] whenever it loads,
-/// reloads or the campaign points somewhere else; removes it when the load
-/// failed or there is no level, so runs fall back to the random board.
-pub(crate) fn sync_current_level(
+/// Rebuilds [`CampaignLevels`] from the campaign's levels, in order, whenever
+/// one loads, reloads or fails, or the campaign lists different levels. A
+/// level that failed to load is skipped; with none playable the resource is
+/// removed, so runs fall back to the random board. While a listed level is
+/// still loading the resource is left alone, so a half-loaded campaign never
+/// starts at the wrong level.
+pub(crate) fn sync_campaign_levels(
     mut commands: Commands,
-    handles: Res<LevelHandles>,
+    mut handles: ResMut<LevelHandles>,
     levels: Res<Assets<LevelDef>>,
     mut events: MessageReader<AssetEvent<LevelDef>>,
     mut failed: MessageReader<AssetLoadFailedEvent<LevelDef>>,
 ) {
-    let Some(handle) = &handles.level else {
-        events.clear();
-        failed.clear();
-        if handles.is_changed() {
-            commands.remove_resource::<CurrentLevel>();
+    let changed = handles.is_changed();
+    // Editing the failed set is bookkeeping, not a change of campaign.
+    let handles = handles.bypass_change_detection();
+    let tracked: HashSet<AssetId<LevelDef>> = handles.levels.iter().map(Handle::id).collect();
+    let mut touched = false;
+    for event in events.read() {
+        let id = match *event {
+            AssetEvent::LoadedWithDependencies { id } | AssetEvent::Modified { id } => id,
+            _ => continue,
+        };
+        if tracked.contains(&id) {
+            // A later valid save sends `Modified` again and restores the level.
+            handles.failed.remove(&id);
+            touched = true;
         }
-        return;
-    };
-    let id = handle.id();
-    let touched = events
-        .read()
-        .filter(|event| event.is_loaded_with_dependencies(id) || event.is_modified(id))
-        .count()
-        > 0;
-    // A failure wins over any earlier load in the same frame; a later valid
-    // save sends `Modified` again and restores the level.
-    let mut failed_now = false;
-    for failure in failed.read().filter(|failure| failure.id == id) {
-        warn!(
-            "{}: playing the built-in random board instead",
-            failure.path
-        );
-        failed_now = true;
     }
-    if failed_now {
-        commands.remove_resource::<CurrentLevel>();
+    // A failure wins over any earlier load in the same frame.
+    for failure in failed.read().filter(|f| tracked.contains(&f.id)) {
+        warn!("{}: skipping this level", failure.path);
+        handles.failed.insert(failure.id);
+        touched = true;
+    }
+    if !touched && !changed {
         return;
     }
-    if !touched && !handles.is_changed() {
+    handles.failed.retain(|id| tracked.contains(id));
+    let loading = handles
+        .levels
+        .iter()
+        .any(|h| !levels.contains(h.id()) && !handles.failed.contains(&h.id()));
+    if loading {
         return;
     }
-    match levels.get(id) {
-        Some(def) => {
-            info!(
-                "level \"{}\" ready ({}x{})",
-                def.name,
-                def.grid.len(),
-                def.cols()
-            );
-            commands.insert_resource(CurrentLevel(def.clone()));
-        }
-        None if handles.is_changed() => commands.remove_resource::<CurrentLevel>(),
-        None => {}
+    let playable: Vec<LevelDef> = handles
+        .levels
+        .iter()
+        .filter(|h| !handles.failed.contains(&h.id()))
+        .filter_map(|h| levels.get(h.id()).cloned())
+        .collect();
+    if playable.is_empty() {
+        commands.remove_resource::<CampaignLevels>();
+    } else {
+        info!("campaign ready: {} level(s)", playable.len());
+        commands.insert_resource(CampaignLevels(playable));
     }
 }
 

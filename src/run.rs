@@ -2,9 +2,10 @@
 //!
 //! [`start_run`] (on entering `AppState::InGame`, i.e. first launch and every
 //! restart) resets [`Score`] and [`Lives`] (to [`STARTING_LIVES`]), sets the
-//! `BallSpeed` and builds the board from the level ([`CurrentLevel`], else
-//! the built-in random board, read fresh each run so an edited level applies
-//! at the next Start), spawns the run's ball, paddle, bricks and HUD (all
+//! `BallSpeed` and builds the board from the campaign's first level
+//! ([`CampaignLevels`] via [`campaign_level`], else the built-in random
+//! board, read fresh each run so an edited level applies at the next Start),
+//! spawns the run's ball, paddle, bricks and HUD (all
 //! scoped to the run), and broadcasts
 //! [`RestartGame`]; every other subsystem with state to reset observes that
 //! instead of being reset from here. [`end_run`] inserts the `GameOutcome`
@@ -29,7 +30,7 @@ use crate::bricks::grid::spawn_bricks;
 use crate::bricks::PlacedBrick;
 use crate::collision::BallCollisionSignals;
 use crate::game_state::{AppState, GameOutcome};
-use crate::levels::{build_board, CurrentLevel, LevelDef};
+use crate::levels::{build_board, campaign_level, CampaignLevels, LevelDef};
 use crate::paddle::{
     paddle_field, prong, Paddle, PADDLE_HEIGHT, PADDLE_LINEAR_DAMPING, PADDLE_MARGIN_BOTTOM,
     PADDLE_MASS, PADDLE_WIDTH,
@@ -78,8 +79,8 @@ pub(crate) struct Lives(pub(crate) i32);
 pub(crate) struct RestartGame;
 
 /// Starts a fresh run: resets the counters this module owns, sets the ball
-/// speed and builds the board from the level ([`CurrentLevel`], or
-/// [`LevelDef::fallback`] when there is none), spawns the run's entities
+/// speed and builds the board from the campaign's first level (via
+/// [`campaign_level`]: [`LevelDef::fallback`] when there is no campaign), spawns the run's entities
 /// (all scoped to [`AppState::InGame`], so leaving the run despawns them),
 /// and broadcasts [`RestartGame`] for every other subsystem.
 pub(crate) fn start_run(
@@ -88,22 +89,15 @@ pub(crate) fn start_run(
     mut lives: ResMut<Lives>,
     mut signals: ResMut<BallCollisionSignals>,
     ball_look: Res<BallLook>,
-    level: Option<Res<CurrentLevel>>,
+    campaign: Option<Res<CampaignLevels>>,
     mut ball_speed: ResMut<BallSpeed>,
 ) {
     score.0 = 0;
     lives.0 = STARTING_LIVES;
     *signals = BallCollisionSignals::default();
-    let fallback;
-    let def = match &level {
-        Some(level) => &level.0,
-        None => {
-            fallback = LevelDef::fallback();
-            &fallback
-        }
-    };
+    let def = campaign_level(campaign.as_deref(), 0).unwrap_or_else(LevelDef::fallback);
     *ball_speed = BallSpeed::from_factor(def.speed_factor.unwrap_or(BALL_SPEED_SCALE));
-    let board = build_board(def, &mut rand::rng());
+    let board = build_board(&def, &mut rand::rng());
     spawn_run_entities(&mut commands, &ball_look, &board, def.cols());
     commands.trigger(RestartGame);
 }
