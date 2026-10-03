@@ -18,7 +18,7 @@ fn color(app: &App, brick: Entity) -> Color {
 }
 
 #[test]
-fn a_second_hit_within_three_seconds_breaks_it() {
+fn a_second_hit_before_it_heals_breaks_it() {
     let mut app = app();
     let regen = brick_of(&mut app, BrickClass::Regen);
     hit(&mut app, regen);
@@ -28,17 +28,17 @@ fn a_second_hit_within_three_seconds_breaks_it() {
         theme::REGEN,
         "damage doesn't recolour it"
     );
-    wait(&mut app, 2.0);
+    wait(&mut app, HEAL_SECS - 1.0);
     hit(&mut app, regen);
     assert!(app.world().get_entity(regen).is_err());
 }
 
 #[test]
-fn left_alone_for_three_seconds_it_heals_to_full() {
+fn left_alone_for_the_heal_time_it_heals_to_full() {
     let mut app = app();
     let regen = brick_of(&mut app, BrickClass::Regen);
     hit(&mut app, regen);
-    wait(&mut app, 2.5);
+    wait(&mut app, HEAL_SECS - 0.5);
     assert_eq!(health(&app, regen), 1, "not yet");
     wait(&mut app, 1.0);
     assert_eq!(health(&app, regen), 2);
@@ -62,8 +62,8 @@ fn pausing_freezes_the_heal_timer() {
     wait(&mut app, 10.0);
     assert_eq!(health(&app, regen), 1, "paused for 10 s: still damaged");
     tap(&mut app, KeyCode::KeyP);
-    // About 1.2 s had run before the pause, so ~1.8 s remain.
-    wait(&mut app, 1.0);
+    // About 1.2 s had run before the pause, so ~HEAL_SECS - 1.2 s remain.
+    wait(&mut app, HEAL_SECS - 2.0);
     assert_eq!(health(&app, regen), 1);
     wait(&mut app, 1.5);
     assert_eq!(health(&app, regen), 2);
@@ -82,8 +82,8 @@ fn further_damage_restarts_the_timer() {
         class: BrickClass::Regen,
     });
     app.world_mut().flush();
-    wait(&mut app, 2.0);
-    assert_eq!(health(&app, regen), 1, "timer restarted: 2 s < 3 s");
+    wait(&mut app, HEAL_SECS - 1.0);
+    assert_eq!(health(&app, regen), 1, "timer restarted, not yet up");
     wait(&mut app, 1.5);
     assert_eq!(health(&app, regen), 2);
 }

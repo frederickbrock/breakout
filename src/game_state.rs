@@ -9,9 +9,12 @@
 //! without anyone zeroing velocities.
 //!
 //! [`AppState`] is `MainMenu` (where the app launches), `Settings`, `InGame`
-//! or `GameOver`; [`PlayState`] is an `InGame` sub-state, `Playing` or
-//! `Paused` (P/Esc toggles it). [`GameOutcome`] (won or lost) is inserted
-//! when a run ends.
+//! or `GameOver`; [`PlayState`] is an `InGame` sub-state: `Playing`,
+//! `Paused`, or `LevelClear` (between levels, the sector card is up and the
+//! game is frozen like `Paused`). P/Esc pauses `Playing` or `LevelClear`, and
+//! P/Esc or the pause menu's Resume returns to the state that was paused
+//! ([`PausedFrom`]). [`GameOutcome`] (won or lost) is inserted when a run
+//! ends.
 
 use avian2d::prelude::*;
 use bevy::prelude::*;
@@ -34,6 +37,19 @@ pub enum PlayState {
     #[default]
     Playing,
     Paused,
+    /// Between levels: the sector card is up; the game is frozen like Paused.
+    LevelClear,
+}
+
+/// The state [`PlayState::Paused`] was entered from, so resuming returns to
+/// it (`Playing`, or `LevelClear` to finish the sector card).
+#[derive(Resource, Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct PausedFrom(pub(crate) PlayState);
+
+impl Default for PausedFrom {
+    fn default() -> Self {
+        Self(PlayState::Playing)
+    }
 }
 
 /// How the last run ended. Inserted right before switching to
@@ -50,6 +66,7 @@ impl Plugin for GameStatePlugin {
     fn build(&self, app: &mut App) {
         app.init_state::<AppState>()
             .add_sub_state::<PlayState>()
+            .init_resource::<PausedFrom>()
             // Every non-playing state is reached either by leaving `Playing`
             // or as the app's initial state, so these cover all of them
             // regardless of which state the app launches into.
@@ -74,12 +91,19 @@ fn toggle_pause(
     keyboard: Res<ButtonInput<KeyCode>>,
     state: Res<State<PlayState>>,
     mut next: ResMut<NextState<PlayState>>,
+    mut from: ResMut<PausedFrom>,
 ) {
     if !keyboard.any_just_pressed([KeyCode::KeyP, KeyCode::Escape]) {
         return;
     }
-    next.set(match state.get() {
-        PlayState::Playing => PlayState::Paused,
-        PlayState::Paused => PlayState::Playing,
-    });
+    match *state.get() {
+        PlayState::Paused => next.set(from.0),
+        running => {
+            from.0 = running;
+            next.set(PlayState::Paused);
+        }
+    }
 }
+
+#[cfg(test)]
+mod tests;

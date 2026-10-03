@@ -141,7 +141,8 @@ fn the_hud_shows_uppercase_labels_and_ink_values() {
         labels,
         [
             ("LIVES\n".to_string(), theme::LABEL),
-            ("SCORE\n".to_string(), theme::LABEL)
+            ("SCORE\n".to_string(), theme::LABEL),
+            ("SECTOR\n".to_string(), theme::LABEL)
         ]
     );
     let values: Vec<Color> = world
@@ -149,7 +150,7 @@ fn the_hud_shows_uppercase_labels_and_ink_values() {
         .iter(world)
         .map(|c| c.0)
         .collect();
-    assert_eq!(values, [theme::INK, theme::INK]);
+    assert_eq!(values, [theme::INK, theme::INK, theme::INK]);
 }
 
 #[test]
@@ -165,6 +166,7 @@ fn the_hud_sits_in_the_left_side_panel() {
             };
             (t.translation.x, t.translation.y, *a, size)
         })
+        .filter(|&(x, ..)| x < 0.0)
         .collect();
     assert_eq!(blocks.len(), 2);
     // Widest line is 6 glyphs ("SCORE", a value); monospace ~0.6 em each.
@@ -190,8 +192,8 @@ fn each_hud_plate_covers_its_text_and_stays_in_the_left_panel() {
         PLAYFIELD_HEIGHT / 2.0 - HUD_MARGIN - HUD_BLOCK_SPACING,
     ];
     for y in tops {
-        let text = hud_text_rect(y);
-        let plate = hud_plate_rect(y);
+        let text = hud_text_rect(HUD_X, y);
+        let plate = hud_plate_rect(HUD_X, y);
         assert_eq!(plate.union(text), plate, "covers the text");
         assert!(
             plate.min.x < text.min.x && plate.max.y > text.max.y,
@@ -206,7 +208,10 @@ fn each_hud_plate_covers_its_text_and_stays_in_the_left_panel() {
         assert!(plate.min.x > -WORLD_WIDTH / 2.0);
         assert!(plate.max.x < -PLAYFIELD_WIDTH / 2.0);
     }
-    let (score, lives) = (hud_plate_rect(tops[0]), hud_plate_rect(tops[1]));
+    let (score, lives) = (
+        hud_plate_rect(HUD_X, tops[0]),
+        hud_plate_rect(HUD_X, tops[1]),
+    );
     assert!(score.intersect(lives).is_empty(), "plates don't overlap");
     // Frame < plate < HUD text (z 1).
     const { assert!(FRAME_Z < PLATE_Z && PLATE_Z < 1.0) };
@@ -220,7 +225,8 @@ fn hud_plates(app: &mut App) -> Vec<(Vec3, Vec2, bool)> {
         .iter(world)
         .map(|(p, t, mesh)| (t.translation, p.size, mesh))
         .collect();
-    plates.sort_by(|a, b| b.0.y.total_cmp(&a.0.y));
+    // Left panel first, then top to bottom.
+    plates.sort_by(|a, b| a.0.x.total_cmp(&b.0.x).then(b.0.y.total_cmp(&a.0.y)));
     plates
 }
 
@@ -229,13 +235,15 @@ fn the_hud_sits_on_plates_that_come_and_go_with_the_run() {
     let mut app = app();
     app.update();
     let plates = hud_plates(&mut app);
-    let tops = [
-        PLAYFIELD_HEIGHT / 2.0 - HUD_MARGIN,
-        PLAYFIELD_HEIGHT / 2.0 - HUD_MARGIN - HUD_BLOCK_SPACING,
+    let top = PLAYFIELD_HEIGHT / 2.0 - HUD_MARGIN;
+    let blocks = [
+        (HUD_X, top),
+        (HUD_X, top - HUD_BLOCK_SPACING),
+        (HUD_RIGHT_X, top),
     ];
-    assert_eq!(plates.len(), 2, "SCORE and LIVES");
-    for ((centre, size, meshed), y) in plates.into_iter().zip(tops) {
-        let rect = hud_plate_rect(y);
+    assert_eq!(plates.len(), 3, "SCORE, LIVES and SECTOR");
+    for ((centre, size, meshed), (x, y)) in plates.into_iter().zip(blocks) {
+        let rect = hud_plate_rect(x, y);
         assert_eq!(centre, rect.center().extend(crate::plate::PLATE_Z));
         assert_eq!(size, rect.size());
         assert!(meshed);
@@ -249,5 +257,30 @@ fn the_hud_sits_on_plates_that_come_and_go_with_the_run() {
         .set(AppState::InGame);
     app.update();
     app.update();
-    assert_eq!(hud_plates(&mut app).len(), 2, "back on the next Start");
+    assert_eq!(hud_plates(&mut app).len(), 3, "back on the next Start");
+}
+
+#[test]
+fn the_sector_hud_sits_top_right_above_the_capsules() {
+    use crate::powerups::capsules::{capsule_plate_rect, slot_y};
+    let plate = hud_plate_rect(HUD_RIGHT_X, PLAYFIELD_HEIGHT / 2.0 - HUD_MARGIN);
+    assert!(plate.min.x > PLAYFIELD_WIDTH / 2.0);
+    assert!(plate.max.x < WORLD_WIDTH / 2.0);
+    assert!(plate.max.y <= WORLD_HEIGHT / 2.0);
+    assert!(
+        plate.min.y > slot_y(0) + capsule_plate_rect().max.y,
+        "capsule 0's plate is entirely below the sector plate"
+    );
+}
+
+#[test]
+fn a_fresh_run_shows_sector_01_in_ink() {
+    let mut app = app();
+    let world = app.world_mut();
+    let sector: Vec<(String, Color)> = world
+        .query_filtered::<(&TextSpan, &TextColor), With<SectorText>>()
+        .iter(world)
+        .map(|(t, c)| (t.0.clone(), c.0))
+        .collect();
+    assert_eq!(sector, [("01".to_string(), theme::INK)]);
 }

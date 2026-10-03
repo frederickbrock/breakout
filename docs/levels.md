@@ -11,7 +11,10 @@ ball speed. The game reads it into a format-independent `LevelDef`
   line, in play order. `#` starts a comment; blank lines are ignored.
   The manifest exists because the web build can't list a directory: every level
   must be listed here.
-- A run plays the **first** level in the manifest.
+- A run plays the levels in manifest order; clearing one shows a ~2 s
+  `SECTOR NN // name` card and starts the next; clearing the last wins. A level
+  that fails to load is skipped (logged); with none valid the run plays the
+  built-in random board.
 - The shipped `01-random.level` is 7 rows × 10 of `?` with `powerups: 6`,
   which is the classic random board. The game also has this board built in
   and falls back to it whenever there is no valid level.
@@ -112,8 +115,8 @@ N + 8 `?` cells).
 ## Errors
 
 A file with a mistake is rejected. The game logs an error naming the file, the
-line and the column, and the run plays the built-in random board instead. It
-never crashes. For example:
+line and the column, and the campaign skips that level (with no valid level
+left, the run plays the built-in random board). It never crashes. For example:
 
 ```
 Failed to load asset 'levels/01-random.level' with asset loader '...LevelLoader': line 9, column 3: unknown symbol 'Z'
@@ -136,6 +139,7 @@ Lines and columns count from 1; columns count characters of the original line.
 ## Hot reload (native)
 
 With `cargo run`, saving a level file (or `campaign.txt`) while the game runs
-reloads it. The change applies the next time a run starts (Start or Play
-again), never to the board in play. Saving an invalid file logs the error, and
-the next run falls back to the random board until the file is fixed.
+reloads it. An edited level applies the next time it starts (at the next run,
+or when the run reaches it), never to the board in play. Saving an invalid file
+logs the error, and that level is skipped until the file is fixed (with no valid
+level left, runs play the random board).
