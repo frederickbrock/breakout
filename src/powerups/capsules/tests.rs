@@ -1,6 +1,7 @@
 use super::super::{ActiveEffect, PowerUpCollected};
 use super::*;
 use crate::test_support::*;
+use crate::world::PLAYFIELD_WIDTH;
 
 fn effect(duration: f32, elapsed: f32) -> ActiveEffect {
     let mut timer = Timer::from_seconds(duration, TimerMode::Once);

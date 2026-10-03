@@ -38,6 +38,7 @@ One line per file; each module's details live in its own `//!` doc comment.
 - `src/web_splash.rs` — `WebSplashPlugin`: tells the web page's loading splash (`index.html`, `web/loader.js`) the menu is drawn.
 - `src/game_state.rs` — `AppState` / `PlayState` state machine, `GameOutcome` and the physics clock.
 - `src/run.rs` — starting and ending a run, `Score` / `Lives`, `RestartGame` and the HUD.
+- `src/campaign.rs` — campaign progression: `CurrentLevel`, the SECTOR card between levels (`PlayState::LevelClear`) and `LevelStarted`.
 - `src/paddle.rs` — the paddle, its movement and its prong/field pieces; `PaddleMovementSet`.
 - `src/ball.rs` — ball movement rules, the serve, `BallApproach`, `BallSpeed` and `BALL_SPEED_SCALE`.
 - `src/collision.rs` — `on_ball_collision`, scoring, `BrickDamaged` / `BrickDestroyed`; `BallBounced` / `PaddleHit` for VFX.
@@ -47,7 +48,7 @@ One line per file; each module's details live in its own `//!` doc comment.
 - `src/bricks/regen.rs` — regen alloy: damaged bricks heal after a timer.
 - `src/bricks/explosive.rs` — explosive bricks and their chained blasts.
 - `src/bricks/outline.rs` — behaviour outlines drawn over special bricks.
-- `src/levels/mod.rs` — `LevelDef` and the `.level` text-grid format, `build_board`, the level/campaign asset loaders (`LevelsPlugin`, main-only) and `CurrentLevel`; format in `docs/levels.md`.
+- `src/levels/mod.rs` — `LevelDef` and the `.level` text-grid format, `build_board`, the level/campaign asset loaders (`LevelsPlugin`, main-only) and `CampaignLevels`; format in `docs/levels.md`.
 - `src/menu/mod.rs` — `MenuPlugin` and the reusable menu widget kit.
 - `src/menu/main_menu.rs` — title screen: Start, Settings, Quit (native only).
 - `src/menu/settings.rs` — Settings screen: the paddle-control toggle.
@@ -79,7 +80,7 @@ One line per file; each module's details live in its own `//!` doc comment.
   the brick; a hit it survives triggers `BrickDamaged { brick }` instead (regen reacts to
   that; blasts fire it too). `BrickDestroyed.by_blast` marks blast kills, which don't set
   off another blast (the chain is already resolved). Other modules (power-ups) hook brick breaks through that event rather than
-  editing `on_ball_collision`. The run is won when a brick broke and none are left. Tests
+  editing `on_ball_collision`. When a brick broke and none are left the level is cleared (`LevelCleared`); after the last level the run is won. Tests
   fake a ball contact with `test_support::hit(app, brick)`, which triggers `CollisionStart`
   exactly as Avian does (`hit_moving` also sets the ball's velocity; `brick_of(app, class)`
   finds a brick of a class).
@@ -114,11 +115,12 @@ One line per file; each module's details live in its own `//!` doc comment.
   (paddle input, `ball_movement`, power-up fall/pickup, effect timers) gate
   themselves with `run_if(in_state(PlayState::Playing))`; a new per-frame gameplay system
   must do the same or it keeps running while paused. The collision observer needs no gate:
-  with the clock stopped, no collisions fire.
+  with the clock stopped, no collisions fire. `PlayState` also has `LevelClear` (frozen
+  between levels while the sector card is up); pausing from it returns to it via `PausedFrom`.
 - **A run's entities are state-scoped.** Ball, paddle, bricks, HUD text and falling
   power-ups carry `DespawnOnExit(AppState::InGame)`, so leaving the run (game over) removes
   them. Walls and camera are global.
-  `ball_movement` ends a run via `end_run` (inserts `GameOutcome`, sets `AppState::GameOver`);
+  `ball_movement` ends a lost run via `end_run` (inserts `GameOutcome`, sets `AppState::GameOver`), and campaign does the same for a win after the last level;
   R on the game-over screen goes back to `InGame` (a shortcut for its Play again button);
   Main menu from the pause or game-over screen leaves `InGame`, so the run is torn down and
   the next Start begins fresh.
@@ -126,10 +128,10 @@ One line per file; each module's details live in its own `//!` doc comment.
   `start_run` (in `run.rs`, on `OnEnter(AppState::InGame)`, i.e. first launch and every restart) only
   resets what it directly owns (score, lives = `STARTING_LIVES`, ball/paddle/bricks/HUD) and
   fires `commands.trigger(RestartGame)`; each subsystem with its own state to reset
-  (currently just power-ups: `reset_on_restart` clears drops and effects, and
-  `attach_reactor_power_ups` equips the run's reactor and level-flagged bricks, which already exist then
-  because `start_run` queues their spawns before the trigger) owns its own observer on
-  that event. Adding a new stateful subsystem later means giving it its own
+  (currently just power-ups: `reset_on_restart` resets the per-run drop count) owns its own
+  observer on that event. Per-level resets (power-up effects and falling drops, reactor equip,
+  the ball re-anchor) observe `LevelStarted` instead, which `start_run` fires after
+  `RestartGame` and `campaign` fires for each new level, both after queuing the board's spawns. Adding a new stateful subsystem later means giving it its own
   `RestartGame` observer, not editing `start_run`.
 - **`PaddleMovementSet` / `TickActiveEffects`** are ordering-only `SystemSet`s that let a
   system in one module (e.g. Super-Sizer's paddle-width recompute) declare `.before(...)`/

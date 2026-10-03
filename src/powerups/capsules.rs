@@ -1,5 +1,5 @@
 //! Time capsules: one gauge per active timed power-up in the right side
-//! panel, showing how long it has left.
+//! panel, below the SECTOR block, showing how long it has left.
 //!
 //! Everything is recomputed from [`ActiveEffects`] each frame
 //! ([`capsule_views`]), so there's no bookkeeping. Capsule `slot` *i* shows
@@ -28,9 +28,9 @@
 use super::{ActiveEffects, PowerUpKind, TickActiveEffects};
 use crate::game_state::AppState;
 use crate::plate::{BackingPlate, PLATE_Z};
-use crate::run::HUD_MARGIN;
+use crate::run::{HUD_BLOCK_SPACING, HUD_MARGIN, HUD_RIGHT_X};
 use crate::theme;
-use crate::world::{PLAYFIELD_WIDTH, WORLD_HEIGHT};
+use crate::world::WORLD_HEIGHT;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
 
@@ -42,9 +42,10 @@ const BLINK_HZ: f32 = 4.0;
 const BLINK_DIM: f32 = 0.3;
 
 /// The right panel's inner left edge, inset by the HUD margin.
-const PANEL_LEFT: f32 = PLAYFIELD_WIDTH / 2.0 + HUD_MARGIN;
-/// Centre line of the first capsule, and the distance between slots.
-const FIRST_SLOT_Y: f32 = WORLD_HEIGHT / 2.0 - HUD_MARGIN - ICON_SIZE / 2.0;
+const PANEL_LEFT: f32 = HUD_RIGHT_X;
+/// Centre line of the first capsule, and the distance between slots. The
+/// SECTOR block sits above slot 0, one HUD block higher.
+const FIRST_SLOT_Y: f32 = WORLD_HEIGHT / 2.0 - HUD_MARGIN - HUD_BLOCK_SPACING - ICON_SIZE / 2.0;
 pub(crate) const SLOT_SPACING: f32 = 56.0;
 
 const ICON_SIZE: f32 = 32.0;

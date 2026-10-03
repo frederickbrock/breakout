@@ -1,3 +1,3 @@
-# Campaign order: one level file (in this folder) per line. A run plays the first.
+# Campaign order: one level file (in this folder) per line. A run plays them in order; clearing the last one wins.
 # The web build can't list directories, so every level must be listed here.
 01-random.level
