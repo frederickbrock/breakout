@@ -1,0 +1,89 @@
+v1: prong A
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Match the line language of the first reference (the ball) and the second reference (a brick) EXACTLY: thick dark keyline, one offset off-white inner outline, flat cel colour blocks with a hard light/shadow split, hard white glint, thin warm orange rim at lower right, same line weight. No spray effects, no text, no numbers. Subject: ONE paddle emitter prong (the LEFT prong), side-on front view, a compact dark steel emitter block about 54:40 in proportion (wider than tall, slightly), flat on the right side where it attaches to an energy field, rounded steel housing with a bevelled nose pointing left, a round emitter port (outlined circle) in the middle, steel colours #16202c to #a9bacd, off-white keyline detail. The right edge is a straight vertical cut flush with the frame side. Do not draw the field. Single isolated object, centred, whole object inside frame, plain flat solid #00FF00 background, no shadow on the background, no scenery, no other objects. 
+
+v2: prong B
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Match the line language of the first reference (the ball) and the second reference (a brick) EXACTLY: thick dark keyline, one offset off-white inner outline, flat cel colour blocks with a hard light/shadow split, hard white glint, thin warm orange rim at lower right, same line weight. No spray effects, no text, no numbers. Subject: ONE paddle emitter prong (the LEFT prong), side-on front view, a compact dark steel emitter block about 54:40 in proportion (wider than tall, slightly), flat on the right side where it attaches to an energy field, rounded steel housing with a bevelled nose pointing left, a round emitter port (outlined circle) in the middle, steel colours #16202c to #a9bacd, off-white keyline detail. The right edge is a straight vertical cut flush with the frame side. Do not draw the field. Single isolated object, centred, whole object inside frame, plain flat solid #00FF00 background, no shadow on the background, no scenery, no other objects. 
+
+v3: field A
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Match the line language of the first reference (the ball) and the second reference (a brick) EXACTLY: thick dark keyline, one offset off-white inner outline, flat cel colour blocks with a hard light/shadow split, hard white glint, thin warm orange rim at lower right, same line weight. No spray effects, no text, no numbers. Subject: ONE paddle energy field strip, a horizontal band about 93:40 in proportion that stretches between two emitters: cyan energy (#4fd8ff, pale #e6fdff core) drawn as flat cel colour blocks with a bold dark keyline top and bottom edge, a bright off-white core line running horizontally through the middle, a few horizontal flowing wave contour lines. The left and right ends must be cut perfectly straight and vertical and repeat seamlessly (identical cross-section at both ends, no end caps). Fill the whole frame width edge to edge. Single isolated object, centred, whole object inside frame, plain flat solid #FF00FF background, no shadow on the background, no scenery, no other objects. 
+
+v4: field B
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Match the line language of the first reference (the ball) and the second reference (a brick) EXACTLY: thick dark keyline, one offset off-white inner outline, flat cel colour blocks with a hard light/shadow split, hard white glint, thin warm orange rim at lower right, same line weight. No spray effects, no text, no numbers. Subject: ONE paddle energy field strip, a horizontal band about 93:40 in proportion that stretches between two emitters: cyan energy (#4fd8ff, pale #e6fdff core) drawn as flat cel colour blocks with a bold dark keyline top and bottom edge, a bright off-white core line running horizontally through the middle, a few horizontal flowing wave contour lines. The left and right ends must be cut perfectly straight and vertical and repeat seamlessly (identical cross-section at both ends, no end caps). Fill the whole frame width edge to edge. Single isolated object, centred, whole object inside frame, plain flat solid #FF00FF background, no shadow on the background, no scenery, no other objects. 
+
+v5: power-up A
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Match the line language of the first reference (the ball) and the second reference (a brick) EXACTLY: thick dark keyline, one offset off-white inner outline, flat cel colour blocks with a hard light/shadow split, hard white glint, thin warm orange rim at lower right, same line weight. No spray effects, no text, no numbers. Subject: ONE power-up capsule icon, square 1:1, a rounded-square steel frame with thick dark keyline and off-white inner outline, four small bolts, containing a violet (#b58cff, #f6ecff to #a98cf0 to #331f5c) cel-shaded gem with a hard white glint. Violet only on the gem. Reads clearly at 24 px; it must NOT look like a ball (square frame). Single isolated object, centred, whole object inside frame, plain flat solid #00FF00 background, no shadow on the background, no scenery, no other objects. 
+
+v6: power-up B
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Match the line language of the first reference (the ball) and the second reference (a brick) EXACTLY: thick dark keyline, one offset off-white inner outline, flat cel colour blocks with a hard light/shadow split, hard white glint, thin warm orange rim at lower right, same line weight. No spray effects, no text, no numbers. Subject: ONE power-up capsule icon, square 1:1, a rounded-square steel frame with thick dark keyline and off-white inner outline, four small bolts, containing a violet (#b58cff, #f6ecff to #a98cf0 to #331f5c) cel-shaded gem with a hard white glint. Violet only on the gem. Reads clearly at 24 px; it must NOT look like a ball (square frame). Single isolated object, centred, whole object inside frame, plain flat solid #00FF00 background, no shadow on the background, no scenery, no other objects. 
