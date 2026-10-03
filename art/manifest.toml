@@ -190,3 +190,19 @@ processing = [
   "outline_reactor: artgen process --bg key --key-color #85a257 --tolerance 45 --trim --size 168x68 --fit stretch (source was 1632x640, ~4:3 off from 168:68, so stretched slightly)",
   "verified all at exact size with alpha; composited on #0a0e15 and viewed",
 ]
+
+[[asset]]
+id = "graffiti_ball_paddle_powerup"
+issue = "sim-usq.2"
+files = ["assets/sprites/ball.png", "assets/sprites/paddle_prong_left.png", "assets/sprites/paddle_prong_right.png", "assets/sprites/paddle_field.png", "assets/sprites/powerup.png"]
+source = "ball=r1/v4, prong=r2/v1 (right = mirror), field=r2/v4, powerup=r2/v6"
+model = "google/gemini-2.5-flash-image"
+prompt_file_r1 = "art/prompts/sim-usq.2-r1.txt"
+prompt_file_r2 = "art/prompts/sim-usq.2-r2.txt"
+processing = [
+  "ball: artgen process --bg key --key-color #e53488 --tolerance 50 --trim --size 60x60 (the pink key was not exact #ff00ff, sampled from the corners)",
+  "prong: artgen process --bg key --key-color #729f65 --tolerance 50 --trim --size 54x40 --fit stretch; paddle_prong_right.png = horizontal mirror",
+  "power-up: artgen process --bg key --key-color #729f65 --tolerance 50 --trim --size 48x48",
+  "field: cropped the straight middle of the source (x 300-1300, band rows only, dropping the rounded end caps) then artgen process --bg none --size 93x40 --fit stretch; stretches horizontally without end-cap seams",
+  "composited on #0a0e15 at 5x and viewed",
+]
