@@ -54,7 +54,7 @@ fn app_with_sprites(missing: &[&str]) -> App {
         bricks: BrickSprite::ALL.map(|b| image(b.path())),
         damaged: BrickSprite::ALL
             .into_iter()
-            .flat_map(|b| b.damage_looks().into_iter().map(move |l| (b, l)))
+            .flat_map(|b| b.damage_looks().iter().map(move |&l| (b, l)))
             .map(|(b, l)| ((b, l), image(&b.damage_path(l))))
             .collect(),
         frame_left: image("frame_left"),
@@ -243,18 +243,39 @@ fn intact_plate(app: &App, sprite: BrickSprite) -> Handle<Image> {
 }
 
 #[test]
-fn every_ladder_plate_exists_on_disk() {
-    for sprite in BrickSprite::ALL {
-        for look in sprite.damage_looks() {
-            let path = format!("assets/{}", sprite.damage_path(look));
-            assert!(std::path::Path::new(&path).exists(), "{path}");
-        }
-    }
+fn exactly_the_shipped_damage_plates_are_preloaded() {
+    use std::collections::BTreeSet;
+    let listed: BTreeSet<String> = BrickSprite::ALL
+        .into_iter()
+        .flat_map(|sprite| {
+            sprite
+                .damage_looks()
+                .iter()
+                .map(move |&l| sprite.damage_path(l))
+        })
+        .collect();
+    let shipped: BTreeSet<String> = std::fs::read_dir("assets/sprites/bricks")
+        .unwrap()
+        .filter_map(|entry| entry.ok()?.file_name().into_string().ok())
+        .filter(|name| name.ends_with("_cracked.png") || name.ends_with("_broken.png"))
+        .map(|name| format!("sprites/bricks/{name}"))
+        .collect();
+    assert_eq!(
+        listed, shipped,
+        "every listed plate ships, every shipped plate is listed"
+    );
     assert_eq!(
         BrickSprite::Tungsten.damage_path(DamageLook::Cracked),
         "sprites/bricks/tungsten_cracked.png"
     );
-    assert!(BrickSprite::Ceramic.damage_looks().is_empty());
+    // The default ladders are covered too.
+    for sprite in BrickSprite::ALL {
+        let max = sprite.class().max_hits();
+        for hits_left in 1..max {
+            let look = crate::bricks::damage_look(max, hits_left);
+            assert!(sprite.damage_looks().contains(&look), "{sprite:?} {look:?}");
+        }
+    }
 }
 
 #[test]
@@ -345,6 +366,29 @@ fn the_plate_follows_the_bricks_own_max_hits() {
         plate(&app, tungsten),
         damage_plate(&app, BrickSprite::Tungsten, DamageLook::Cracked)
     );
+}
+
+#[test]
+fn a_titanium_hits_4_brick_cracks_and_breaks_at_its_own_thresholds() {
+    let mut app = app_with_sprites(&[]);
+    let titanium = brick_of(&mut app, BrickClass::Titanium);
+    // As a level's `k = titanium hits=4` spawns it, then worn down.
+    for (left, look) in [
+        (4, None),
+        (3, Some(DamageLook::Cracked)),
+        (2, Some(DamageLook::Cracked)),
+        (1, Some(DamageLook::Broken)),
+    ] {
+        app.world_mut()
+            .entity_mut(titanium)
+            .insert((BrickHealth(left), BrickMaxHits(4)));
+        app.update();
+        let expected = match look {
+            None => intact_plate(&app, BrickSprite::Titanium),
+            Some(look) => damage_plate(&app, BrickSprite::Titanium, look),
+        };
+        assert_eq!(plate(&app, titanium), expected, "{left} hits left");
+    }
 }
 
 #[test]
