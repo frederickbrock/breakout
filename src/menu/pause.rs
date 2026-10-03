@@ -1,9 +1,10 @@
 //! Pause menu, shown over the frozen game while [`PlayState::Paused`]:
-//! Resume, or abandon the run for the main menu. P/Esc still toggle pause
-//! (see `game_state::toggle_pause`).
+//! Resume (back to the game, or to the sector card if paused during it), or
+//! abandon the run for the main menu. P/Esc still toggle pause (see
+//! `game_state::toggle_pause`).
 
-use super::{go_to, heading, menu_button, menu_list, menu_screen, OVERLAY_DIM};
-use crate::game_state::{AppState, PlayState};
+use super::{go_to, heading, menu_button, menu_list, menu_screen, ButtonActivated, OVERLAY_DIM};
+use crate::game_state::{AppState, PausedFrom, PlayState};
 use bevy::prelude::*;
 
 pub struct PauseMenuPlugin;
@@ -20,14 +21,18 @@ fn spawn_pause_menu(mut commands: Commands) {
         .with_children(|screen| {
             screen.spawn(heading("Paused", 56.0));
             screen.spawn(menu_list()).with_children(|list| {
-                list.spawn(menu_button("Resume"))
-                    .observe(go_to(PlayState::Playing));
+                list.spawn(menu_button("Resume")).observe(resume);
                 // Leaving `InGame` despawns the run's entities; Start from the
                 // main menu then begins a fresh run via `start_run`.
                 list.spawn(menu_button("Main menu"))
                     .observe(go_to(AppState::MainMenu));
             });
         });
+}
+
+/// Returns to the state that was paused (see [`PausedFrom`]).
+fn resume(_on: On<ButtonActivated>, from: Res<PausedFrom>, mut next: ResMut<NextState<PlayState>>) {
+    next.set(from.0);
 }
 
 #[cfg(test)]
