@@ -27,7 +27,7 @@ On the web, trunk copies the whole `assets/` folder into `dist/`
 ```
 # comments start with #
 name: Rainbow Bands
-speed_factor: 1.5      # optional; ball speed = 300 x factor; default 1.8 (540)
+speed_factor: 1.5      # optional; ball speed = 300 x factor; default ramps 1.8, 1.9, ... 2.5 per round
 powerups: 6            # optional; N extra random bricks get a power-up; default 0
 legend:                # optional; add or override symbols for this file
   k = titanium hits=4
@@ -45,7 +45,7 @@ Keys come before `grid:`, one `key: value` per line.
 | Key | Default | Meaning |
 |---|---|---|
 | `name` | the file name without extension | The level's name (shown in the log for now). |
-| `speed_factor` | `1.8` (`BALL_SPEED_SCALE` in `src/ball.rs`) | The ball's speed factor: the ball moves at 300 × factor world units per second, so the default 1.8 is 540 and `2.0` is 600. Must be a number greater than 0. It is independent of `GAME_SCALE`. There is no upper limit, but very high speeds can make the ball pass through bricks. |
+| `speed_factor` | the round's ramp value (`speed_factor(round)` in `src/ball.rs`): 1.8 in round 1, +0.1 per round, capped at 2.5 from round 8 | The ball's speed factor: the ball moves at 300 × factor world units per second, so round 1's 1.8 is 540, round 2's 1.9 is 570, the 2.5 cap is 750, and `2.0` is 600. Setting it fixes this level's speed whatever its round. Must be a number greater than 0. It is independent of `GAME_SCALE`. There is no upper limit, but very high speeds can make the ball pass through bricks. |
 | `powerups` | `0` | How many extra bricks drop a power-up (see below). A whole number, 0 or more. |
 
 Any other key is an error.
