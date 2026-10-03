@@ -6,7 +6,7 @@
 //! last one triggers [`BrickDestroyed`] *before* the despawn, so observers
 //! (regen, explosive, power-ups, particles) can still read the brick. Shield
 //! glass only takes damage from a ball that was moving down (read from
-//! [`crate::ball::BallApproach`]); anything else just flashes it.
+//! [`crate::ball::BallApproach`]); anything else just deflects ([`ShieldDeflected`]).
 //!
 //! A second observer, [`on_ball_bounce`], turns every contact with a wall,
 //! brick or the paddle into [`BallBounced`] at the contact point, and a
@@ -22,10 +22,9 @@ use bevy::prelude::*;
 
 use crate::ball::{Ball, BallApproach};
 use crate::bricks::grid::{Brick, BrickHealth};
-use crate::bricks::{self, BrickClass};
+use crate::bricks::BrickClass;
 use crate::paddle::{Paddle, PADDLE_HEIGHT};
 use crate::run::Score;
-use crate::theme;
 use crate::world::Wall;
 
 /// What the ball bounced off.
@@ -60,6 +59,14 @@ pub(crate) fn paddle_hit_point(ball_x: f32, paddle: Vec2, width: f32) -> Vec2 {
         ball_x.clamp(paddle.x - half, paddle.x + half),
         paddle.y + PADDLE_HEIGHT / 2.0,
     )
+}
+
+/// Fired by [`on_ball_collision`] when the ball bounces off shield glass
+/// without breaking it (it wasn't moving down). No damage, no score; the
+/// VFX layer throws glass glints at `position`, the contact point.
+#[derive(Event)]
+pub(crate) struct ShieldDeflected {
+    pub(crate) position: Vec2,
 }
 
 /// Fired by [`on_ball_collision`] when a brick takes its last hit, *before*
@@ -102,33 +109,36 @@ pub(crate) struct BrickDamaged {
 /// Each hit on a brick scores 10 and removes one hit point; the last one
 /// despawns it (after triggering [`BrickDestroyed`]). Shield glass is the
 /// exception: it only takes damage from a ball that was moving downward, read
-/// from [`BallApproach`]; any other contact just flashes it.
+/// from [`BallApproach`]; any other contact just deflects ([`ShieldDeflected`]).
 pub(crate) fn on_ball_collision(
     on: On<CollisionStart>,
     mut commands: Commands,
     mut score: ResMut<Score>,
     mut signals: ResMut<BallCollisionSignals>,
-    mut brick_query: Query<(&Transform, &BrickClass, &mut BrickHealth, &mut Sprite), With<Brick>>,
+    mut brick_query: Query<(&Transform, &BrickClass, &mut BrickHealth), With<Brick>>,
     paddle_query: Query<&Transform, With<Paddle>>,
     ball_query: Query<(&BallApproach, &Transform), With<Ball>>,
 ) {
     let other = on.collider2;
-    if let Ok((transform, &class, mut health, mut sprite)) = brick_query.get_mut(other) {
+    if let Ok((transform, &class, mut health)) = brick_query.get_mut(other) {
         // Already broken by an earlier contact; its despawn is still queued.
         if health.0 == 0 {
             return;
         }
         // Shield glass only breaks from above: a ball moving downward at
-        // contact. Anything else bounces (Avian already did) and flashes.
+        // contact. Anything else bounces (Avian already did) and only
+        // deflects.
         if class == BrickClass::Shield {
             let from_above = ball_query
                 .get(on.collider1)
                 .is_ok_and(|(approach, _)| approach.0.y < 0.0);
             if !from_above {
-                sprite.color = theme::SHIELD_FLASH;
-                commands
-                    .entity(other)
-                    .insert(bricks::ShieldFlash::default());
+                let contact = ball_query
+                    .get(on.collider1)
+                    .map_or(transform.translation, |(_, ball)| ball.translation);
+                commands.trigger(ShieldDeflected {
+                    position: contact.truncate(),
+                });
                 return;
             }
         }

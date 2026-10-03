@@ -337,15 +337,11 @@ fn a_missing_damage_plate_keeps_the_intact_one() {
 }
 
 #[test]
-fn skinned_shield_glass_still_flashes() {
+fn skinned_shield_glass_stays_untinted_when_it_deflects() {
     let mut app = app_with_sprites(&[]);
     let shield = brick_of(&mut app, BrickClass::Shield);
     hit_moving(&mut app, shield, Vec2::new(0.0, BALL_SPEED));
     app.update();
-    assert_eq!(brick_sprite(&app, shield).color, theme::SHIELD_FLASH_TINT);
-    app.update();
-    app.update();
-    assert!(!app.world().entity(shield).contains::<ShieldFlash>());
     assert_eq!(brick_sprite(&app, shield).color, theme::UNTINTED);
 }
 

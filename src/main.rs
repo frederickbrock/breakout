@@ -30,6 +30,7 @@ mod sprites;
 pub(crate) mod test_support;
 mod theme;
 mod view;
+mod web_splash;
 mod world;
 
 use avian2d::prelude::*;
@@ -122,6 +123,7 @@ fn add_game(app: &mut App) {
         particles::VfxPlugin,
         view::ViewPlugin,
         frame::FramePlugin,
+        web_splash::WebSplashPlugin,
     ))
     .insert_resource(Gravity(Vec2::new(0.0, 0.8 * GAME_SCALE)))
     .init_resource::<ButtonInput<MouseButton>>()

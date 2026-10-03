@@ -36,6 +36,12 @@ fn the_shipped_effect_files_parse() {
         TRAIL_PATH,
         BOUNCE_PATH,
         FLARE_PATH,
+        CHARGE_PATH,
+        BREACH_PATH,
+        DEMOLITION_PATH,
+        DEBRIS_PATH,
+        BLAST_SMOKE_PATH,
+        GLINT_PATH,
     ] {
         let text = std::fs::read_to_string(format!("assets/{path}")).unwrap();
         let effect: Particle2dEffect =
@@ -56,6 +62,12 @@ fn app_with_vfx() -> App {
         trail: Handle::default(),
         bounce: bounce_handle(),
         flare: Handle::default(),
+        charge: Handle::default(),
+        breach: Handle::default(),
+        demolition: Handle::default(),
+        debris: Handle::default(),
+        blast_smoke: Handle::default(),
+        glint: Handle::default(),
         class_hit: all_classes()
             .into_iter()
             .map(|c| (c, effect_handle(c, Burst::Hit)))
@@ -80,6 +92,11 @@ fn app_with_vfx() -> App {
         trail: Handle::default(),
         bounce: Handle::default(),
         flare: Handle::default(),
+        blast_red: Handle::default(),
+        blast_orange: Handle::default(),
+        debris: Handle::default(),
+        glint: Handle::default(),
+        glint_light: Handle::default(),
         sheets: HashMap::default(),
         plain: Handle::default(),
     });
@@ -103,10 +120,11 @@ fn bounce_handle() -> Handle<Particle2dEffect> {
 }
 
 /// The effect each one-shot brick burst plays (the ball's bounce sparks,
-/// which every brick hit also fires, are left out).
+/// which every brick hit also fires, and blasts and glass glints, which
+/// have their own markers, are left out).
 fn burst_effects(app: &mut App) -> Vec<Handle<Particle2dEffect>> {
     app.world_mut()
-        .query_filtered::<&ParticleEffectHandle, With<OneShot>>()
+        .query_filtered::<&ParticleEffectHandle, (With<OneShot>, Without<BlastBurst>, Without<GlassGlint>)>()
         .iter(app.world())
         .map(|h| h.0.clone())
         .filter(|h| *h != bounce_handle())
@@ -325,6 +343,76 @@ fn the_flare_reaches_each_end_of_a_widened_paddle() {
     assert_eq!(widened.spawn_amount, 2 * base.spawn_amount);
 }
 
+#[test]
+fn each_explosive_variant_has_a_blast_shaped_like_its_rule() {
+    use BlastEffect as E;
+    // Charge: a round burst, red and orange.
+    let charge = blast_parts(ExplosiveKind::Charge);
+    assert_eq!(
+        charge,
+        [
+            (E::Charge, BlastTint::Red, 0.0),
+            (E::Charge, BlastTint::Orange, 0.0)
+        ]
+    );
+    assert_eq!(
+        effect_file(CHARGE_PATH).direction.unwrap().1,
+        1.0,
+        "all round"
+    );
+
+    // Breach: four narrow jets, a quarter turn apart: a "+".
+    let breach = blast_parts(ExplosiveKind::Breach);
+    assert_eq!(breach.len(), 4);
+    assert!(breach.iter().all(|(e, _, _)| *e == E::Breach));
+    let mut quarters: Vec<i32> = breach
+        .iter()
+        .map(|(_, _, a)| (a / std::f32::consts::FRAC_PI_2).round() as i32)
+        .collect();
+    quarters.sort();
+    assert_eq!(quarters, [0, 1, 2, 3]);
+    assert!(
+        effect_file(BREACH_PATH).direction.unwrap().1 < 0.05,
+        "narrow"
+    );
+
+    // Demolition: bigger than a charge, with debris and lingering smoke.
+    let demolition = blast_parts(ExplosiveKind::Demolition);
+    let effects: Vec<E> = demolition.iter().map(|(e, _, _)| *e).collect();
+    assert!(effects.contains(&E::Demolition));
+    assert!(effects.contains(&E::Debris));
+    assert!(effects.contains(&E::Smoke));
+    let (big, small) = (effect_file(DEMOLITION_PATH), effect_file(CHARGE_PATH));
+    assert!(big.spawn_amount > small.spawn_amount);
+    assert!(big.linear_speed.unwrap().0 > small.linear_speed.unwrap().0);
+    let smoke = effect_file(BLAST_SMOKE_PATH);
+    assert!(smoke.lifetime.0 > 2.0 * big.lifetime.0, "lingers");
+}
+
+#[derive(Resource, Default)]
+struct Explosions(Vec<ExplosiveKind>);
+
+#[test]
+fn every_explosion_in_a_chain_plays_its_blast() {
+    for kind in [
+        ExplosiveKind::Charge,
+        ExplosiveKind::Breach,
+        ExplosiveKind::Demolition,
+    ] {
+        let mut app = app_with_vfx();
+        app.init_resource::<Explosions>().add_observer(
+            |on: On<BrickExploded>, mut seen: ResMut<Explosions>| seen.0.push(on.kind),
+        );
+        let explosive = brick_of(&mut app, BrickClass::Explosive(kind));
+        hit(&mut app, explosive);
+        let exploded = app.world().resource::<Explosions>().0.clone();
+        assert_eq!(exploded[0], kind, "the ball-hit brick goes first");
+        // A random board may chain into more explosives; each plays its own.
+        let parts: usize = exploded.iter().map(|k| blast_parts(*k).len()).sum();
+        assert_eq!(count::<With<BlastBurst>>(&mut app), parts, "{kind:?}");
+    }
+}
+
 const CLASSES: [BrickClass; 7] = [
     BrickClass::Ceramic,
     BrickClass::Titanium,
@@ -354,6 +442,24 @@ fn every_class_has_its_own_hit_break_and_sheet_files_on_disk() {
             "{sheet}"
         );
     }
+}
+
+#[test]
+fn shield_glass_glints_when_it_deflects_and_shatters_when_it_breaks() {
+    let mut app = app_with_vfx();
+    let shield = brick_of(&mut app, BrickClass::Shield);
+    hit_moving(&mut app, shield, Vec2::new(0.0, 450.0));
+    assert_eq!(count::<With<GlassGlint>>(&mut app), 2, "glints, both tones");
+    assert_eq!(bursts(&mut app), 3, "plus the bounce sparks, nothing else");
+
+    hit_moving(&mut app, shield, Vec2::new(0.0, -450.0));
+    assert!(app.world().get_entity(shield).is_err());
+    assert_eq!(count::<With<GlassGlint>>(&mut app), 2, "no new glints");
+    assert_eq!(
+        bursts(&mut app),
+        5,
+        "the glass shatter and its bounce sparks"
+    );
 }
 
 #[test]
@@ -454,6 +560,10 @@ fn without_the_vfx_resources_nothing_spawns() {
     hit(&mut app, tungsten);
     let paddle = paddle(&mut app);
     hit(&mut app, paddle);
+    let shield = brick_of(&mut app, BrickClass::Shield);
+    hit_moving(&mut app, shield, Vec2::new(0.0, 450.0));
+    let charge = brick_of(&mut app, BrickClass::Explosive(ExplosiveKind::Charge));
+    hit(&mut app, charge);
     app.update();
     assert_eq!(count::<Spawners>(&mut app), 0);
 }
