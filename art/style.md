@@ -125,7 +125,7 @@ that wants full scenery and no key colour.
 **Don't**
 - No spray-paint effects: drips, overspray, mist, speckle, stencil fuzz, tags, bubble letters, wall-graffiti look.
 - No soft photoreal hard-surface rendering (the pre-2026-10-02 look) for new work.
-- No violet outside the reactor core / power-up.
+- No violet outside the reactor core / power-up. *Exception (user, 2026-10-03):* background nebula glow may use violet and magenta if it stays clearly dimmer and less saturated than the reactor brick and power-up, so those still stand out.
 - No cyan glow outside energy (paddle field, bounds, HUD) and the shield-glass brick.
 - No painterly brushwork, no fantasy motifs (smooth rounded space-age shapes are fine).
 - No text, numbers, hit-count pips or logos baked into sprites (hit state is shown by the cracked variant).
