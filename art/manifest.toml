@@ -221,3 +221,17 @@ processing = [
   "reactor_broken: extra green-keying of the enclosed background patches that flood fill could not reach; the chipped edge notches there are left transparent",
   "verified each at 160x60 RGBA; composited on #0a0e15 and viewed as one 7-class montage",
 ]
+
+[[asset]]
+id = "graffiti_outlines"
+issue = "sim-usq.3"
+files = ["assets/sprites/bricks/outline_charge.png", "assets/sprites/bricks/outline_breach.png", "assets/sprites/bricks/outline_demolition.png", "assets/sprites/bricks/outline_regen.png", "assets/sprites/bricks/outline_shield.png", "assets/sprites/bricks/outline_reactor.png"]
+source = "charge=r3/v2, reactor=r3/v5, breach=r2/v3, demolition=r2/v6, regen=r2/v8, shield=r2/v9"
+model = "google/gemini-2.5-flash-image"
+prompt_file_r2 = "art/prompts/sim-usq.3-r2.txt"
+prompt_file_r3 = "art/prompts/sim-usq.3-r3.txt"
+processing = [
+  "artgen process --bg key --tolerance 55 --trim --size 168x68 --fit stretch, with the key colour sampled per source (sage #8fb55e / #709d61, pink #d64aa5 / #e53289 — not the nominal flat colours); the key removes both the outside and the transparent centre",
+  "charge: then artgen recolor --color #ff9a3d (red-orange to warm orange, distinct from breach); reactor: artgen recolor --color #b58cff (magenta to reactor violet)",
+  "verified 168x68 RGBA, transparent centre and corners; composited on #0a0e15 and viewed",
+]
