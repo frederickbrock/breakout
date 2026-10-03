@@ -1,20 +1,23 @@
-//! Brick entities on the board: the [`Brick`] marker, [`BrickHealth`], the
-//! grid layout and [`spawn_bricks`].
+//! Brick entities on the board: the [`Brick`] marker, [`BrickHealth`],
+//! [`BrickMaxHits`], [`CarriesPowerUp`], the grid layout and
+//! [`spawn_bricks`], which spawns a resolved board (from
+//! `crate::levels::build_board`) centred for its column count.
 //!
 //! [`BRICK_WIDTH`] is derived, not set: a full row fills the playfield well
 //! less a [`SIDE_CHANNEL`] each side, and [`SIDE_CHANNEL_BALLS`] (ball widths)
 //! is the one knob. The pure [`brick_x`] and [`brick_y`] centre the grid, so
 //! fewer columns just widen the equal channels. Row 0's top sits
 //! [`BRICK_TOP_OFFSET`] (120) below the top wall: the original
-//! [`BRICK_TOP_MARGIN`] plus one brick height of [`BRICK_HEADROOM`]. Each brick spawns at its
-//! class's `max_hits()` with its [`crate::bricks::BrickCell`], scoped to the
-//! run.
+//! [`BRICK_TOP_MARGIN`] plus one brick height of [`BRICK_HEADROOM`]. Each brick
+//! spawns at its own [`BrickMaxHits`] (its class's `max_hits()` or a level's
+//! `hits=`) with its
+//! [`crate::bricks::BrickCell`], scoped to the run.
 
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::ball::BALL_SIZE;
-use crate::bricks::{self, BrickCell};
+use crate::bricks::{self, BrickCell, PlacedBrick};
 use crate::game_state::AppState;
 use crate::theme;
 use crate::world::{GAME_SCALE, PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH};
@@ -47,43 +50,51 @@ pub(crate) const BRICK_COLS: usize = bricks::BOARD_COLS;
 #[derive(Component)]
 pub(crate) struct Brick;
 
-/// Hits a brick still takes before it breaks; it spawns at its class's
-/// `max_hits()`.
+/// Hits a brick still takes before it breaks; it spawns at its
+/// [`BrickMaxHits`].
 #[derive(Component)]
 pub(crate) struct BrickHealth(pub(crate) u8);
 
-/// A fresh random board of brick classes (see [`bricks::generate_board`]),
-/// each brick at its class's colour and hit count.
-pub(crate) fn spawn_bricks(commands: &mut Commands) {
-    let board = bricks::generate_board(&mut rand::rng());
-    for (row, classes) in board.iter().enumerate() {
-        for (col, &class) in classes.iter().enumerate() {
-            let cell = BrickCell { row, col };
-            commands.spawn((
-                Sprite::from_color(
-                    theme::brick_color(class),
-                    Vec2::new(BRICK_WIDTH, BRICK_HEIGHT),
-                ),
-                Transform::from_translation(brick_translation(cell)),
-                RigidBody::Static,
-                Collider::rectangle(BRICK_WIDTH, BRICK_HEIGHT),
-                Brick,
-                class,
-                cell,
-                BrickHealth(class.max_hits()),
-                DespawnOnExit(AppState::InGame),
-            ));
+/// The hits a full-health brick of this kind takes: its class's
+/// `max_hits()`, or a level's `hits=` override. Healing (regen) and damage
+/// visuals compare against this, never the class default.
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct BrickMaxHits(pub(crate) u8);
+
+/// A non-reactor brick a level flagged `powerup`: power-ups equip it with a
+/// `PowerUpBrick` at run start, like a reactor.
+#[derive(Component)]
+pub(crate) struct CarriesPowerUp;
+
+/// Spawns a resolved board (see `crate::levels::build_board`) of `cols`
+/// columns, each brick at its class's colour and its own hit count.
+pub(crate) fn spawn_bricks(commands: &mut Commands, board: &[PlacedBrick], cols: usize) {
+    for brick in board {
+        let mut entity = commands.spawn((
+            Sprite::from_color(
+                theme::brick_color(brick.class),
+                Vec2::new(BRICK_WIDTH, BRICK_HEIGHT),
+            ),
+            Transform::from_translation(brick_translation(brick.cell, cols)),
+            RigidBody::Static,
+            Collider::rectangle(BRICK_WIDTH, BRICK_HEIGHT),
+            Brick,
+            brick.class,
+            brick.cell,
+            BrickHealth(brick.hits),
+            BrickMaxHits(brick.hits),
+            DespawnOnExit(AppState::InGame),
+        ));
+        if brick.powerup {
+            entity.insert(CarriesPowerUp);
         }
     }
 }
 
-/// Where the brick in `cell` sits (see [`brick_x`] and [`brick_y`]).
-pub(crate) fn brick_translation(cell: BrickCell) -> Vec3 {
-    Vec3::new(
-        brick_x(cell.col, bricks::BOARD_COLS),
-        brick_y(cell.row),
-        0.0,
-    )
+/// Where the brick in `cell` of a `cols`-wide grid sits (see [`brick_x`] and
+/// [`brick_y`]).
+pub(crate) fn brick_translation(cell: BrickCell, cols: usize) -> Vec3 {
+    Vec3::new(brick_x(cell.col, cols), brick_y(cell.row), 0.0)
 }
 
 /// Centre x of column `col` in a row of `cols` bricks, centred in the well so

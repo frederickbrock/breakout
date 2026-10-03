@@ -18,11 +18,13 @@
 //! is loaded. The plate follows the damage ladder
 //! ([`crate::bricks::damage_look`]):
 //! - `<class>_intact.png` at full health
-//! - `<class>_cracked.png` (tungsten only)
+//! - `<class>_cracked.png` (tungsten only, by default)
 //! - `<class>_broken.png` once the next hit would destroy it
 //!
-//! It's recomputed every frame from `BrickHealth`, so a regen heal goes back
-//! to intact. A missing damage plate keeps the intact one, and a missing
+//! It's recomputed every frame from `BrickHealth` against the brick's own
+//! `BrickMaxHits` (a level's `hits=` shifts the ladder), so a regen heal goes back
+//! to intact. Every damage plate that ships is preloaded, not only the ones a
+//! class's default hits reach. A missing damage plate keeps the intact one, and a missing
 //! intact plate keeps the flat colour. Damage is never a tint (the smoke
 //! particles sit on top), and shield deflects are shown by particles.
 //!
@@ -36,6 +38,7 @@
 use crate::ball::{Ball, BALL_SIZE};
 use crate::bricks::grid::Brick;
 use crate::bricks::grid::BrickHealth;
+use crate::bricks::grid::BrickMaxHits;
 use crate::bricks::{damage_look, BrickClass, DamageLook};
 use crate::frame::{FramePanel, FramePiece};
 use crate::paddle::{PaddleField, PaddleProng};
@@ -94,7 +97,8 @@ impl BrickSprite {
     }
 
     /// A brick class drawing this sprite (explosives: any variant), for
-    /// asking the damage ladder which plates it can show.
+    /// asking the damage ladder which plates its default hits need.
+    #[cfg(test)]
     fn class(self) -> BrickClass {
         match self {
             Self::Ceramic => BrickClass::Ceramic,
@@ -107,15 +111,17 @@ impl BrickSprite {
         }
     }
 
-    /// The damage plates this material's ladder can show (none for 1-hit
-    /// bricks, broken only for 2-hit, cracked and broken for tungsten).
-    pub fn damage_looks(self) -> Vec<DamageLook> {
-        let class = self.class();
-        let mut looks: Vec<DamageLook> = (1..class.max_hits())
-            .map(|hits_left| damage_look(class, hits_left))
-            .collect();
-        looks.dedup();
-        looks
+    /// The damage plates that ship for this material, all preloaded: a
+    /// level's `hits=` can put any brick on any rung of the ladder
+    /// ([`damage_look`] of its own `BrickMaxHits`), not just the rungs its
+    /// class's default hits reach. A look without a plate here draws the
+    /// intact plate.
+    pub fn damage_looks(self) -> &'static [DamageLook] {
+        use DamageLook::{Broken, Cracked};
+        match self {
+            Self::Ceramic | Self::Explosive | Self::Shield => &[Cracked],
+            Self::Titanium | Self::Tungsten | Self::Reactor | Self::Regen => &[Cracked, Broken],
+        }
     }
 
     /// The path of a damage plate, relative to `assets/`:
@@ -161,7 +167,7 @@ pub struct GameSprites {
     pub power_up: Handle<Image>,
     /// Intact brick plates, in [`BrickSprite::ALL`] order.
     pub bricks: [Handle<Image>; 7],
-    /// The damage plates each material's ladder shows
+    /// Every damage plate that ships, per material
     /// ([`BrickSprite::damage_looks`]).
     pub damaged: HashMap<(BrickSprite, DamageLook), Handle<Image>>,
     /// The painted side-panel frame. Shipped at 2×, drawn at panel size;
@@ -236,8 +242,8 @@ fn load_sprites(mut commands: Commands, assets: Res<AssetServer>) {
             .flat_map(|sprite| {
                 sprite
                     .damage_looks()
-                    .into_iter()
-                    .map(move |look| (sprite, look))
+                    .iter()
+                    .map(move |&look| (sprite, look))
             })
             .map(|(sprite, look)| ((sprite, look), assets.load(sprite.damage_path(look))))
             .collect(),
@@ -386,6 +392,7 @@ type BrickPlate = (
     Entity,
     &'static BrickClass,
     &'static BrickHealth,
+    &'static BrickMaxHits,
     &'static mut Sprite,
     Has<Skinned>,
 );
@@ -401,8 +408,8 @@ fn skin_bricks(
     images: Res<Assets<Image>>,
     mut bricks: Query<BrickPlate, With<Brick>>,
 ) {
-    for (entity, &class, health, mut sprite, skinned) in &mut bricks {
-        let look = damage_look(class, health.0);
+    for (entity, &class, health, max_hits, mut sprite, skinned) in &mut bricks {
+        let look = damage_look(max_hits.0, health.0);
         let Some(image) = sprites.plate(BrickSprite::of(class), look, &images) else {
             continue;
         };

@@ -9,7 +9,7 @@
 //! A regen brick that survives a hit gets a [`RegenTimer`]; when it runs
 //! out the brick heals to full health (and its damage particles stop).
 
-use super::grid::BrickHealth;
+use super::grid::{BrickHealth, BrickMaxHits};
 use super::BrickClass;
 use crate::collision::BrickDamaged;
 use crate::game_state::PlayState;
@@ -58,11 +58,11 @@ fn start_heal_timer(on: On<BrickDamaged>, mut commands: Commands, classes: Query
 fn heal_regen_bricks(
     mut commands: Commands,
     time: Res<Time>,
-    mut bricks: Query<(Entity, &mut RegenTimer, &BrickClass, &mut BrickHealth)>,
+    mut bricks: Query<(Entity, &mut RegenTimer, &BrickMaxHits, &mut BrickHealth)>,
 ) {
-    for (entity, mut timer, &class, mut health) in &mut bricks {
+    for (entity, mut timer, max, mut health) in &mut bricks {
         if timer.0.tick(time.delta()).is_finished() {
-            health.0 = class.max_hits();
+            health.0 = max.0;
             commands.entity(entity).remove::<RegenTimer>();
         }
     }

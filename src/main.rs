@@ -1,10 +1,11 @@
 //! Breakout entry point and app wiring. This file holds no game logic.
 //!
 //! `main` adds the engine plugins (`DefaultPlugins` with the window and asset
-//! settings, Avian's `PhysicsPlugins`, scripting, sprites and particles) and
-//! then calls [`add_game`], which wires every game module's plugins,
-//! resources and core systems into the `App`. The headless tests
-//! (`test_support::app()`) call [`add_game`] too, on `MinimalPlugins`.
+//! settings, Avian's `PhysicsPlugins`, scripting, sprites, levels and
+//! particles) and then calls [`add_game`], which wires every game module's
+//! plugins, resources and core systems into the `App`. The headless tests
+//! (`test_support::app()`) call [`add_game`] too, on `MinimalPlugins`; they
+//! leave out the plugins that read files (sprites, levels).
 //!
 //! The native window opens at [`WINDOW_START_WIDTH`]×[`WINDOW_START_HEIGHT`]
 //! (1280×720) and is resizable; the world scales to fit (see [`crate::view`]).
@@ -18,6 +19,7 @@ mod collision;
 mod controls;
 mod frame;
 mod game_state;
+mod levels;
 mod menu;
 mod paddle;
 mod particles;
@@ -35,7 +37,7 @@ mod web_splash;
 mod world;
 
 use avian2d::prelude::*;
-use ball::{ball_movement, follow_paddle, launch_ball, record_ball_approach};
+use ball::{ball_movement, follow_paddle, launch_ball, record_ball_approach, BallSpeed};
 use bevy::asset::AssetMetaCheck;
 use bevy::prelude::*;
 use collision::{on_ball_bounce, on_ball_collision, BallCollisionSignals};
@@ -85,6 +87,7 @@ fn main() {
     .add_plugins(PhysicsPlugins::default())
     .add_plugins(script_manager::ScriptPlugin)
     .add_plugins(sprites::SpritesPlugin)
+    .add_plugins(levels::LevelsPlugin)
     .add_plugins(particles::ParticlesPlugin)
     .insert_resource(ClearColor(theme::VOID));
     add_game(&mut app);
@@ -130,6 +133,7 @@ fn add_game(app: &mut App) {
     .insert_resource(Gravity(Vec2::new(0.0, 0.8 * GAME_SCALE)))
     .init_resource::<ButtonInput<MouseButton>>()
     .init_resource::<Score>()
+    .init_resource::<BallSpeed>()
     .insert_resource(Lives(STARTING_LIVES))
     .init_resource::<BallCollisionSignals>()
     .add_observer(on_ball_collision)

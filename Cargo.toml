@@ -10,6 +10,8 @@ bevy = "0.19.1"
 # 2D particle engine (CPU-simulated, GPU-instanced; runs on wasm). VFX layer: src/particles/.
 bevy_enoki = "0.7"
 rand = "0.10.2"
+# LevelDef derives (a later JSON level format is nearly free).
+serde = { version = "1", features = ["derive"] }
 
 # Native desktop build: avian2d with its full default feature set (includes
 # `parallel`/rayon, which is fine and desirable off the web).

@@ -3,7 +3,8 @@
 //! [`app`] is a headless app running the real game logic (no window,
 //! renderer or scripting) in a fresh run, with a fixed 100 ms step per
 //! `update()` and keyboard input driven by hand via [`tap`] ([`launch`] stops
-//! on the main menu instead). There is no physics simulation: [`hit`] fakes a
+//! on the main menu instead; [`app_with_level`] starts a run of an injected
+//! level). There is no physics simulation: [`hit`] fakes a
 //! ball contact with a brick by triggering `CollisionStart` exactly as Avian
 //! does, [`hit_moving`] also sets the ball's velocity, and [`brick_of`] finds
 //! a brick of a class. [`click`] left-clicks. Serve with
@@ -45,6 +46,18 @@ pub(crate) fn launch() -> App {
 /// A headless app that has left the main menu and is in a fresh run.
 pub(crate) fn app() -> App {
     let mut app = launch();
+    app.world_mut()
+        .resource_mut::<NextState<AppState>>()
+        .set(AppState::InGame);
+    app.update();
+    app
+}
+
+/// A headless app in a fresh run of `level` (injected as `CurrentLevel`; no
+/// files read).
+pub(crate) fn app_with_level(level: crate::levels::LevelDef) -> App {
+    let mut app = launch();
+    app.insert_resource(crate::levels::CurrentLevel(level));
     app.world_mut()
         .resource_mut::<NextState<AppState>>()
         .set(AppState::InGame);

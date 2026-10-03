@@ -221,3 +221,19 @@ fn in_mouse_mode_a_paddle_edge_hit_still_spins_the_ball() {
         "near the edge the ball leaves at a side angle, got {v:?}"
     );
 }
+
+#[test]
+fn the_ball_speed_resource_drives_serve_and_renormalisation() {
+    assert_eq!(BallSpeed::default().0, BALL_SPEED);
+    let mut app = app();
+    app.world_mut().insert_resource(BallSpeed(500.0));
+    tap(&mut app, KeyCode::Space);
+    let v = ball_velocity(&mut app);
+    assert!((v.length() - 500.0).abs() < 1e-3, "served at {v:?}");
+
+    let ball = ball(&mut app);
+    app.world_mut().get_mut::<LinearVelocity>(ball).unwrap().0 = Vec2::new(10.0, -900.0);
+    app.update();
+    let v = ball_velocity(&mut app);
+    assert!((v.length() - 500.0).abs() < 1e-3, "renormalised to {v:?}");
+}

@@ -22,13 +22,21 @@ fn every_brick_gets_its_class_look_health_and_cell() {
     assert_eq!(BRICK_ROWS * BRICK_COLS, 70);
     let world = app.world_mut();
     let mut cells = std::collections::HashSet::new();
-    for (class, health, sprite, transform, cell) in world
-        .query_filtered::<(&BrickClass, &BrickHealth, &Sprite, &Transform, &BrickCell), With<Brick>>()
+    for (class, health, max, sprite, transform, cell) in world
+        .query_filtered::<(
+            &BrickClass,
+            &BrickHealth,
+            &BrickMaxHits,
+            &Sprite,
+            &Transform,
+            &BrickCell,
+        ), With<Brick>>()
         .iter(world)
     {
-        assert_eq!(health.0, class.max_hits());
+        assert_eq!(max.0, class.max_hits());
+        assert_eq!(health.0, max.0);
         assert_eq!(sprite.color, theme::brick_color(*class));
-        assert_eq!(transform.translation, brick_translation(*cell));
+        assert_eq!(transform.translation, brick_translation(*cell, BRICK_COLS));
         assert!(cell.row < 7 && cell.col < 10);
         assert!(cells.insert(*cell), "duplicate cell {cell:?}");
     }
@@ -141,4 +149,15 @@ fn the_grid_sits_one_brick_height_lower_for_headroom() {
             "row {row}"
         );
     }
+}
+
+#[test]
+fn ten_rows_leave_room_above_the_paddle() {
+    use crate::paddle::PADDLE_MARGIN_BOTTOM;
+    let paddle_top = -PLAYFIELD_HEIGHT / 2.0 + PADDLE_MARGIN_BOTTOM + PADDLE_HEIGHT;
+    let lowest = brick_y(crate::levels::MAX_ROWS - 1) - BRICK_HEIGHT / 2.0;
+    assert!(
+        lowest - paddle_top >= 250.0 * GAME_SCALE,
+        "{lowest} vs {paddle_top}"
+    );
 }

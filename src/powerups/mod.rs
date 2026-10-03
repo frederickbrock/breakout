@@ -3,7 +3,8 @@
 //!
 //! A power-up only ever appears when a power-up brick breaks: each run,
 //! `attach_reactor_power_ups` (a [`crate::run::RestartGame`] observer) gives
-//! every reactor-class brick a [`PowerUpBrick`] with a kind picked from
+//! every reactor-class brick, and every brick a level flagged `powerup`
+//! (`CarriesPowerUp`), a [`PowerUpBrick`] with a kind picked from
 //! [`PowerUpSpawner`], and `drop_power_up` observes
 //! [`crate::collision::BrickDestroyed`] and spawns it at the brick's position
 //! (no timed drops). `reset_on_restart` clears drops and effects.
@@ -18,7 +19,7 @@
 pub(crate) mod capsules;
 mod super_sizer;
 
-use crate::bricks::grid::Brick;
+use crate::bricks::grid::{Brick, CarriesPowerUp};
 use crate::bricks::BrickClass;
 use crate::collision::BrickDestroyed;
 use crate::game_state::{AppState, PlayState};
@@ -142,19 +143,22 @@ impl Plugin for PowerUpsPlugin {
     }
 }
 
-/// At the start of every run, gives each reactor-class brick (the board
-/// generator places exactly `bricks::REACTOR_BRICKS`) a weighted-random
-/// power-up from [`PowerUpSpawner`]. Runs on [`RestartGame`], which
-/// `start_run` triggers after queuing the brick spawns, so the new run's
-/// bricks already exist. Health and colour come from the class.
+/// A brick that doesn't carry a power-up yet.
+type UnequippedBrick = (With<Brick>, Without<PowerUpBrick>);
+
+/// At the start of every run, gives each reactor-class brick and each brick
+/// a level flagged `powerup` ([`CarriesPowerUp`]) a weighted-random power-up
+/// from [`PowerUpSpawner`]. Runs on [`RestartGame`], which `start_run`
+/// triggers after queuing the brick spawns, so the new run's bricks already
+/// exist. Health and colour stay the class's.
 fn attach_reactor_power_ups(
     _restart: On<RestartGame>,
     mut commands: Commands,
     spawner: Res<PowerUpSpawner>,
-    bricks: Query<(Entity, &BrickClass), With<Brick>>,
+    bricks: Query<(Entity, &BrickClass, Has<CarriesPowerUp>), UnequippedBrick>,
 ) {
-    for (entity, class) in &bricks {
-        if *class != BrickClass::Reactor {
+    for (entity, class, flagged) in &bricks {
+        if *class != BrickClass::Reactor && !flagged {
             continue;
         }
         let Some(pick) = spawner.pick() else {

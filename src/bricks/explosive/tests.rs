@@ -188,6 +188,7 @@ fn blasts_ignore_the_board_edge_and_gone_bricks() {
 mod in_game {
     use super::super::*;
     use crate::ball::{Ball, BallApproach};
+    use crate::bricks::grid::BrickMaxHits;
     use crate::bricks::regen::RegenTimer;
     use crate::bricks::ExplosiveKind::*;
     use crate::game_state::{AppState, GameOutcome};
@@ -212,6 +213,7 @@ mod in_game {
         app.world_mut().entity_mut(brick).insert((
             class,
             BrickHealth(class.max_hits()),
+            BrickMaxHits(class.max_hits()),
             Sprite::from_color(theme::brick_color(class), Vec2::ONE),
         ));
         brick

@@ -289,3 +289,30 @@ fn abandoning_a_paused_run_for_the_main_menu_clears_power_ups() {
     assert!(app.world().resource::<ActiveEffects>().0.is_empty());
     assert_eq!(count::<With<PowerUp>>(&mut app), 0);
 }
+
+#[test]
+fn flagged_and_reactor_bricks_are_equipped_once() {
+    let def = match crate::levels::parse_level("legend:\nv = reactor powerup\ngrid:\nPvC") {
+        Ok(def) => def,
+        Err(e) => panic!("{e}"),
+    };
+    let mut app = app_with_level(def);
+    assert_eq!(power_up_bricks(&mut app).len(), 2);
+    let kinds = |app: &mut App| -> Vec<(Entity, PowerUpKind)> {
+        let mut kinds: Vec<_> = app
+            .world_mut()
+            .query::<(Entity, &PowerUpBrick)>()
+            .iter(app.world())
+            .map(|(e, b)| (e, b.kind))
+            .collect();
+        kinds.sort_by_key(|(e, _)| *e);
+        kinds
+    };
+    let before = kinds(&mut app);
+    // A second equip pass skips bricks that already carry a power-up.
+    app.world_mut().trigger(RestartGame);
+    app.world_mut().flush();
+    app.update();
+    assert!(before == kinds(&mut app));
+    assert_eq!(power_up_bricks(&mut app).len(), 2);
+}

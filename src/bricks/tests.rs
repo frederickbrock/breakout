@@ -2,8 +2,12 @@ use super::*;
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 
-fn board(seed: u64) -> Board {
-    generate_board(&mut StdRng::seed_from_u64(seed))
+fn board(seed: u64) -> Vec<BrickClass> {
+    random_classes(
+        BOARD_ROWS * BOARD_COLS,
+        REACTOR_BRICKS,
+        &mut StdRng::seed_from_u64(seed),
+    )
 }
 
 #[test]
@@ -46,7 +50,7 @@ fn the_same_seed_gives_the_same_board() {
 
 #[test]
 fn boards_differ_between_seeds() {
-    let boards: Vec<Board> = (0..20).map(board).collect();
+    let boards: Vec<Vec<BrickClass>> = (0..20).map(board).collect();
     for (i, a) in boards.iter().enumerate() {
         for b in &boards[i + 1..] {
             assert_ne!(a, b);
@@ -57,8 +61,8 @@ fn boards_differ_between_seeds() {
 #[test]
 fn patching_an_all_ceramic_board_adds_each_missing_class_once() {
     for seed in 0..100 {
-        let mut board = [[BrickClass::Ceramic; BOARD_COLS]; BOARD_ROWS];
-        patch_board(&mut board, &mut StdRng::seed_from_u64(seed));
+        let mut board = vec![BrickClass::Ceramic; BOARD_ROWS * BOARD_COLS];
+        patch_classes(&mut board, REACTOR_BRICKS, &mut StdRng::seed_from_u64(seed));
         assert_eq!(count(&board, BrickClass::Reactor), REACTOR_BRICKS);
         for (class, _) in &FILL_WEIGHTS[1..] {
             assert_eq!(count(&board, *class), 1, "seed {seed}: {class:?}");
@@ -72,18 +76,14 @@ fn patching_an_all_ceramic_board_adds_each_missing_class_once() {
 
 #[test]
 fn patching_a_complete_board_only_places_reactors() {
-    let mut original = [[BrickClass::Ceramic; BOARD_COLS]; BOARD_ROWS];
-    for (r, row) in original.iter_mut().enumerate() {
-        for (c, cell) in row.iter_mut().enumerate() {
-            *cell = FILL_WEIGHTS[(r * BOARD_COLS + c) % FILL_WEIGHTS.len()].0;
-        }
-    }
-    let mut board = original;
-    patch_board(&mut board, &mut StdRng::seed_from_u64(3));
+    let original: Vec<BrickClass> = (0..BOARD_ROWS * BOARD_COLS)
+        .map(|i| FILL_WEIGHTS[i % FILL_WEIGHTS.len()].0)
+        .collect();
+    let mut board = original.clone();
+    patch_classes(&mut board, REACTOR_BRICKS, &mut StdRng::seed_from_u64(3));
     let changed: Vec<BrickClass> = board
         .iter()
-        .flatten()
-        .zip(original.iter().flatten())
+        .zip(original.iter())
         .filter(|(a, b)| a != b)
         .map(|(a, _)| *a)
         .collect();
@@ -94,7 +94,7 @@ fn patching_a_complete_board_only_places_reactors() {
 fn the_fill_roughly_follows_the_weights() {
     let (mut ceramic, mut explosive, mut shield, mut total) = (0, 0, 0, 0);
     for seed in 0..1000 {
-        for &class in board(seed).iter().flatten() {
+        for class in board(seed) {
             match class {
                 BrickClass::Reactor => continue,
                 BrickClass::Ceramic => ceramic += 1,
@@ -124,13 +124,48 @@ fn the_fill_roughly_follows_the_weights() {
 }
 
 #[test]
+fn patching_few_random_cells_places_what_fits() {
+    for n in 0..=16 {
+        for reactors in [0, 3, 6, 20] {
+            for seed in 0..50 {
+                let mut classes = vec![BrickClass::Ceramic; n];
+                patch_classes(&mut classes, reactors, &mut StdRng::seed_from_u64(seed));
+                assert_eq!(
+                    count(&classes, BrickClass::Reactor),
+                    reactors.min(n),
+                    "{n} cells, {reactors} reactors, seed {seed}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn enough_random_cells_always_get_every_class() {
+    for reactors in [0, 6] {
+        let n = reactors + 8;
+        for seed in 0..200 {
+            let classes = random_classes(n, reactors, &mut StdRng::seed_from_u64(seed));
+            assert_eq!(classes.len(), n);
+            assert_eq!(count(&classes, BrickClass::Reactor), reactors);
+            for (class, _) in FILL_WEIGHTS {
+                assert!(
+                    count(&classes, class) >= 1,
+                    "{n} cells, seed {seed}: no {class:?}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn the_damage_ladder_for_every_class_and_hits_left() {
     use DamageLook::*;
     use ExplosiveKind::*;
     let ladder = |class: BrickClass| -> Vec<DamageLook> {
         (1..=class.max_hits())
             .rev()
-            .map(|left| damage_look(class, left))
+            .map(|left| damage_look(class.max_hits(), left))
             .collect()
     };
     // Full health first, down to one hit left.
@@ -147,4 +182,18 @@ fn the_damage_ladder_for_every_class_and_hits_left() {
     ] {
         assert_eq!(ladder(class), [Intact], "{class:?}");
     }
+}
+
+#[test]
+fn a_level_hits_override_shifts_the_damage_ladder() {
+    use DamageLook::*;
+    let ladder = |max: u8| -> Vec<DamageLook> {
+        (1..=max).rev().map(|left| damage_look(max, left)).collect()
+    };
+    // `tungsten hits=1`: undamaged, so intact (not tungsten's default broken).
+    assert_eq!(damage_look(1, 1), Intact);
+    // `titanium hits=4`: cracked through the middle, broken on the last hit.
+    assert_eq!(ladder(4), [Intact, Cracked, Cracked, Broken]);
+    // `ceramic hits=3`: now shows damage like tungsten.
+    assert_eq!(ladder(3), [Intact, Cracked, Broken]);
 }

@@ -97,3 +97,16 @@ fn other_classes_never_heal() {
     assert_eq!(health(&app, tungsten), 2);
     assert!(!app.world().entity(tungsten).contains::<RegenTimer>());
 }
+
+#[test]
+fn a_regen_brick_heals_to_its_own_max_hits() {
+    let mut app = app();
+    let regen = brick_of(&mut app, BrickClass::Regen);
+    app.world_mut()
+        .entity_mut(regen)
+        .insert((BrickMaxHits(4), BrickHealth(4)));
+    hit(&mut app, regen);
+    assert_eq!(health(&app, regen), 3);
+    wait(&mut app, HEAL_SECS + 0.5);
+    assert_eq!(health(&app, regen), 4, "its own max, not the class's 2");
+}
