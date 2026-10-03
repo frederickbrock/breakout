@@ -197,3 +197,6 @@ fn log_level_start(on: On<LevelStarted>) {
 fn drop_transition(mut commands: Commands) {
     commands.remove_resource::<LevelTransition>();
 }
+
+#[cfg(test)]
+mod tests;
