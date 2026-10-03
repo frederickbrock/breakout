@@ -57,6 +57,11 @@ pub const FRAME_TIE: Color = hex(0x1d2835);
 /// ...and the bright lip exactly on the wall line the ball bounces off.
 pub const FRAME_EDGE: Color = hex(0x7f93a8);
 
+/// The dark, semi-transparent backing plates behind the HUD and the
+/// power-up capsules, so they read over the painted frame (near-black
+/// steel at 80%).
+pub const HUD_PLATE: Color = Color::srgba_u8(0x0a, 0x0f, 0x15, 204);
+
 /// A sprite's tint when it draws its own image unmodified.
 pub const UNTINTED: Color = Color::WHITE;
 

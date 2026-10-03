@@ -52,6 +52,7 @@ One line per file; each module's details live in its own `//!` doc comment.
 - `src/menu/settings.rs` — Settings screen: the paddle-control toggle.
 - `src/menu/pause.rs` — pause menu over the frozen game.
 - `src/menu/game_over.rs` — game-over / win screen with the final score.
+- `src/plate.rs` — `BackingPlate`: the dark rounded plates behind the HUD and the power-up capsules.
 - `src/theme.rs` — the Steelbreak palette; every colour the game draws with.
 - `src/sprites.rs` — image assets: `GameSprites`, the background and sprite skinning (brick damage plates included).
 - `src/particles/mod.rs` — the bevy_enoki VFX layer reacting to brick events.
