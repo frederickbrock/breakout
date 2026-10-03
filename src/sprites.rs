@@ -33,6 +33,8 @@
 //! power-up icon, one image per brick material and its damage plates, the two
 //! frame panels) and spawns the global [`Background`], sized to the playfield well. The side panels hold the
 //! steel frame ([`crate::frame`]), skinned with `frame_left`/`frame_right`.
+//! The parallax layers ([`crate::parallax`]) load here too and draw over the
+//! background; with their images missing the background shows as before.
 //! A skinned entity is marked [`Skinned`].
 
 use crate::ball::{Ball, BALL_SIZE};
@@ -174,6 +176,8 @@ pub struct GameSprites {
     /// the right one is already mirrored in the file.
     pub frame_left: Handle<Image>,
     pub frame_right: Handle<Image>,
+    /// The parallax layers, in [`crate::parallax::LAYERS`] order.
+    pub parallax: [Handle<Image>; 4],
 }
 
 impl GameSprites {
@@ -197,6 +201,7 @@ impl GameSprites {
         .into_iter()
         .chain(&self.bricks)
         .chain(self.damaged.values())
+        .chain(&self.parallax)
     }
 
     /// The plate to draw for `look`, if it's loaded, else the intact plate
@@ -249,6 +254,7 @@ fn load_sprites(mut commands: Commands, assets: Res<AssetServer>) {
             .collect(),
         frame_left: assets.load(FRAME_LEFT_PATH),
         frame_right: assets.load(FRAME_RIGHT_PATH),
+        parallax: crate::parallax::LAYERS.map(|layer| assets.load(layer.path)),
     });
 }
 
