@@ -163,3 +163,16 @@ processing = [
   "backgrounds rendered as a muted sage-green (not flat #00FF00) on every one of the 7 — same non-flat-background issue as the damage sprites above, handled by the per-image detected-colour + feathered-threshold approach rather than a fixed key colour",
   "verified each at 128x32 with alpha and by compositing on the #0a0e15 game background, zoomed 4-5x, checking for background fringe and that the 4-frame fade/decay progression reads clearly in both colour and a greyscale-only render",
 ]
+
+[[asset]]
+id = "frame_panels"
+issue = "sim-73n.3"
+files = ["assets/sprites/frame_left.png", "assets/sprites/frame_right.png"]
+source = "r4/v1"
+model = "google/gemini-2.5-flash-image"
+prompt_file = "art/prompts/sim-73n.3-r4.txt"
+processing = [
+  "custom script (PIL): cropped the 1024x1024 render's white margins (x 249-775, y 49-975, 3px inset from the panel edge), resized to 480 wide, then mirror-tiled vertically (image, flipped, image, ...) and cut to 480x2160 so the line art stays unstretched and the dark channel and right-hand plate edge run the full height",
+  "quantized to a 256-colour palette (median cut, Floyd-Steinberg) to fit the 1 MB web budget (from 1.2 MB)",
+  "frame_right.png = frame_left.png mirrored horizontally (same palette, pixel-exact)",
+]
