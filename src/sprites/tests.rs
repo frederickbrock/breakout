@@ -278,6 +278,40 @@ fn exactly_the_shipped_damage_plates_are_preloaded() {
     }
 }
 
+/// A PNG's (width, height), read from its IHDR chunk (bytes 16..24).
+fn png_size(path: &str) -> (u32, u32) {
+    let bytes = std::fs::read(format!("assets/{path}")).unwrap_or_else(|e| panic!("{path}: {e}"));
+    assert_eq!(&bytes[..8], b"\x89PNG\r\n\x1a\n", "{path} is a PNG");
+    assert_eq!(&bytes[12..16], b"IHDR", "{path}");
+    let be = |i: usize| u32::from_be_bytes(bytes[i..i + 4].try_into().unwrap());
+    (be(16), be(20))
+}
+
+#[test]
+fn the_brick_asset_contract_holds() {
+    // Every plate the game loads (intact, plus each shipped damage plate) is
+    // a 160×60 PNG: 2× the 80×30 brick.
+    for sprite in BrickSprite::ALL {
+        assert_eq!(png_size(sprite.path()), (160, 60), "{}", sprite.path());
+        for &look in sprite.damage_looks() {
+            let path = sprite.damage_path(look);
+            assert_eq!(png_size(&path), (160, 60), "{path}");
+        }
+    }
+    // The behaviour outline frames: 168×68, 4 px of frame around a plate.
+    for style in [
+        "reactor",
+        "regen",
+        "shield",
+        "charge",
+        "breach",
+        "demolition",
+    ] {
+        let path = format!("sprites/bricks/outline_{style}.png");
+        assert_eq!(png_size(&path), (168, 68), "{path}");
+    }
+}
+
 #[test]
 fn tungsten_goes_intact_cracked_broken_then_breaks() {
     let mut app = app_with_sprites(&[]);
