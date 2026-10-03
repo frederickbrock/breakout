@@ -1,0 +1,89 @@
+v1: outline_regen A
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Subject: ONE particle animation strip: a single horizontal row of exactly 4 equal square cells side by side (aspect 4:1, total 128x32 proportion), separated by no borders, each cell containing ONE small centred sprite, in order: frame 1 APPEAR (small, few pieces), frame 2 PEAK (largest, brightest, most pieces), frame 3 (still big but starting to fade, dimmer), frame 4 FADE (small, faint, nearly gone). Drawn in GREYSCALE ONLY, white and light grey fills with dark-grey keylines (it will be tinted in code, so no colour at all). Graffiti line-art treatment: hard outlined shapes, a bold dark keyline, a thin off-white-style highlight stroke on each piece, flat cel shading. Must read at 32 px: chunky simple shapes, not tiny dots. NO soft glow blobs, no blur, no spray mist, no speckle, no text, no numbers. Each sprite stays inside its own cell with clear empty space between cells. The first reference shows the look and shape language to keep for this effect; the second reference shows the exact strip layout wanted: one full-width row of 4 frames. NO box, frame, border or divider line around or between the cells. Effect: regen behaviour glow. Small outlined sprout leaves and tiny curled tendrils (a few separate small leaves, like the first reference), growing and then fading. NO flowers, NO lotus, NO petals. Plain flat solid #00FF00 green background in every cell, no shadow, no scenery.
+
+v2: outline_regen B
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Subject: ONE particle animation strip: a single horizontal row of exactly 4 equal square cells side by side (aspect 4:1, total 128x32 proportion), separated by no borders, each cell containing ONE small centred sprite, in order: frame 1 APPEAR (small, few pieces), frame 2 PEAK (largest, brightest, most pieces), frame 3 (still big but starting to fade, dimmer), frame 4 FADE (small, faint, nearly gone). Drawn in GREYSCALE ONLY, white and light grey fills with dark-grey keylines (it will be tinted in code, so no colour at all). Graffiti line-art treatment: hard outlined shapes, a bold dark keyline, a thin off-white-style highlight stroke on each piece, flat cel shading. Must read at 32 px: chunky simple shapes, not tiny dots. NO soft glow blobs, no blur, no spray mist, no speckle, no text, no numbers. Each sprite stays inside its own cell with clear empty space between cells. The first reference shows the look and shape language to keep for this effect; the second reference shows the exact strip layout wanted: one full-width row of 4 frames. NO box, frame, border or divider line around or between the cells. Effect: regen behaviour glow. Small outlined sprout leaves and tiny curled tendrils (a few separate small leaves, like the first reference), growing and then fading. NO flowers, NO lotus, NO petals. Plain flat solid #00FF00 green background in every cell, no shadow, no scenery.
+
+v3: outline_regen C
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Subject: ONE particle animation strip: a single horizontal row of exactly 4 equal square cells side by side (aspect 4:1, total 128x32 proportion), separated by no borders, each cell containing ONE small centred sprite, in order: frame 1 APPEAR (small, few pieces), frame 2 PEAK (largest, brightest, most pieces), frame 3 (still big but starting to fade, dimmer), frame 4 FADE (small, faint, nearly gone). Drawn in GREYSCALE ONLY, white and light grey fills with dark-grey keylines (it will be tinted in code, so no colour at all). Graffiti line-art treatment: hard outlined shapes, a bold dark keyline, a thin off-white-style highlight stroke on each piece, flat cel shading. Must read at 32 px: chunky simple shapes, not tiny dots. NO soft glow blobs, no blur, no spray mist, no speckle, no text, no numbers. Each sprite stays inside its own cell with clear empty space between cells. The first reference shows the look and shape language to keep for this effect; the second reference shows the exact strip layout wanted: one full-width row of 4 frames. NO box, frame, border or divider line around or between the cells. Effect: regen behaviour glow. Small outlined sprout leaves and tiny curled tendrils (a few separate small leaves, like the first reference), growing and then fading. NO flowers, NO lotus, NO petals. Plain flat solid #00FF00 green background in every cell, no shadow, no scenery.
+
+v4: outline_shield A
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Subject: ONE particle animation strip: a single horizontal row of exactly 4 equal square cells side by side (aspect 4:1, total 128x32 proportion), separated by no borders, each cell containing ONE small centred sprite, in order: frame 1 APPEAR (small, few pieces), frame 2 PEAK (largest, brightest, most pieces), frame 3 (still big but starting to fade, dimmer), frame 4 FADE (small, faint, nearly gone). Drawn in GREYSCALE ONLY, white and light grey fills with dark-grey keylines (it will be tinted in code, so no colour at all). Graffiti line-art treatment: hard outlined shapes, a bold dark keyline, a thin off-white-style highlight stroke on each piece, flat cel shading. Must read at 32 px: chunky simple shapes, not tiny dots. NO soft glow blobs, no blur, no spray mist, no speckle, no text, no numbers. Each sprite stays inside its own cell with clear empty space between cells. The first reference shows the look and shape language to keep for this effect; the second reference shows the exact strip layout wanted: one full-width row of 4 frames. NO box, frame, border or divider line around or between the cells. Effect: shield behaviour glow. Hard outlined hexagonal glass glints: a few small hexagon shards with thin cross glint strokes, like the first reference, shimmering in then fading. Plain flat solid #00FF00 green background in every cell, no shadow, no scenery.
+
+v5: outline_shield B
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Subject: ONE particle animation strip: a single horizontal row of exactly 4 equal square cells side by side (aspect 4:1, total 128x32 proportion), separated by no borders, each cell containing ONE small centred sprite, in order: frame 1 APPEAR (small, few pieces), frame 2 PEAK (largest, brightest, most pieces), frame 3 (still big but starting to fade, dimmer), frame 4 FADE (small, faint, nearly gone). Drawn in GREYSCALE ONLY, white and light grey fills with dark-grey keylines (it will be tinted in code, so no colour at all). Graffiti line-art treatment: hard outlined shapes, a bold dark keyline, a thin off-white-style highlight stroke on each piece, flat cel shading. Must read at 32 px: chunky simple shapes, not tiny dots. NO soft glow blobs, no blur, no spray mist, no speckle, no text, no numbers. Each sprite stays inside its own cell with clear empty space between cells. The first reference shows the look and shape language to keep for this effect; the second reference shows the exact strip layout wanted: one full-width row of 4 frames. NO box, frame, border or divider line around or between the cells. Effect: shield behaviour glow. Hard outlined hexagonal glass glints: a few small hexagon shards with thin cross glint strokes, like the first reference, shimmering in then fading. Plain flat solid #00FF00 green background in every cell, no shadow, no scenery.
+
+v6: outline_shield C
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Subject: ONE particle animation strip: a single horizontal row of exactly 4 equal square cells side by side (aspect 4:1, total 128x32 proportion), separated by no borders, each cell containing ONE small centred sprite, in order: frame 1 APPEAR (small, few pieces), frame 2 PEAK (largest, brightest, most pieces), frame 3 (still big but starting to fade, dimmer), frame 4 FADE (small, faint, nearly gone). Drawn in GREYSCALE ONLY, white and light grey fills with dark-grey keylines (it will be tinted in code, so no colour at all). Graffiti line-art treatment: hard outlined shapes, a bold dark keyline, a thin off-white-style highlight stroke on each piece, flat cel shading. Must read at 32 px: chunky simple shapes, not tiny dots. NO soft glow blobs, no blur, no spray mist, no speckle, no text, no numbers. Each sprite stays inside its own cell with clear empty space between cells. The first reference shows the look and shape language to keep for this effect; the second reference shows the exact strip layout wanted: one full-width row of 4 frames. NO box, frame, border or divider line around or between the cells. Effect: shield behaviour glow. Hard outlined hexagonal glass glints: a few small hexagon shards with thin cross glint strokes, like the first reference, shimmering in then fading. Plain flat solid #00FF00 green background in every cell, no shadow, no scenery.
