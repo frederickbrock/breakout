@@ -21,6 +21,7 @@ mod game_state;
 mod menu;
 mod paddle;
 mod particles;
+mod plate;
 mod powerups;
 mod run;
 mod script_manager;
@@ -123,6 +124,7 @@ fn add_game(app: &mut App) {
         particles::VfxPlugin,
         view::ViewPlugin,
         frame::FramePlugin,
+        plate::PlatePlugin,
         web_splash::WebSplashPlugin,
     ))
     .insert_resource(Gravity(Vec2::new(0.0, 0.8 * GAME_SCALE)))

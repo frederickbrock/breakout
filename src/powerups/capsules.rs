@@ -17,12 +17,17 @@
 //!   cyan fill drains from the left as time runs out
 //! - the seconds left, e.g. `6.2s`
 //!
+//! Each row sits on a dark backing plate ([`crate::plate`], sized by
+//! [`capsule_plate_rect`]), a child of the capsule, so it comes and goes
+//! with it. It stays solid while the fill blinks.
+//!
 //! In the last [`WARN_SECS`] the fill turns amber and blinks. The blink phase
 //! comes from the time left, not the clock, so a paused game (whose effect
 //! timers don't tick) freezes the capsules too.
 
 use super::{ActiveEffects, PowerUpKind, TickActiveEffects};
 use crate::game_state::AppState;
+use crate::plate::{BackingPlate, PLATE_Z};
 use crate::run::HUD_MARGIN;
 use crate::theme;
 use crate::world::{PLAYFIELD_WIDTH, WORLD_HEIGHT};
@@ -56,6 +61,16 @@ const TEXT_SIZE: f32 = 20.0;
 const ICON_X: f32 = PANEL_LEFT + ICON_SIZE / 2.0;
 const PILL_X: f32 = PANEL_LEFT + ICON_SIZE + GAP + PILL_WIDTH / 2.0;
 const TEXT_X: f32 = PANEL_LEFT + ICON_SIZE + GAP + PILL_WIDTH + GAP;
+/// A capsule's z; its contents draw at it, its backing plate below.
+const CAPSULE_Z: f32 = 1.0;
+/// Characters in the widest seconds label a plate fits: `9.9s`, as every
+/// power-up today lasts under 10 s.
+const LABEL_CHARS: usize = 4;
+/// The label font's advance per character (the default FiraMono: 0.6 em).
+const TEXT_CHAR_WIDTH: f32 = TEXT_SIZE * 0.6;
+/// Padding between a capsule row and the edge of its plate (tighter than the
+/// HUD's, so the row's plate stays inside the panel).
+const PLATE_PADDING: f32 = 6.0;
 
 /// What one capsule shows.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -113,6 +128,20 @@ pub(crate) fn capsule_views(active: &ActiveEffects) -> Vec<CapsuleView> {
 /// Centre height of capsule `slot` (0 at the top).
 pub(crate) fn slot_y(slot: usize) -> f32 {
     FIRST_SLOT_Y - slot as f32 * SLOT_SPACING
+}
+
+/// A capsule row's backing plate, in the capsule's local space (centred on
+/// its slot line): from the icon's left edge to the end of a
+/// [`LABEL_CHARS`]-wide label, as tall as the icon, plus padding.
+pub(crate) fn capsule_plate_rect() -> Rect {
+    let content_height = ICON_SIZE.max(PILL_HEIGHT + 2.0 * OUTLINE);
+    Rect::new(
+        PANEL_LEFT,
+        -content_height / 2.0,
+        TEXT_X + LABEL_CHARS as f32 * TEXT_CHAR_WIDTH,
+        content_height / 2.0,
+    )
+    .inflate(PLATE_PADDING)
 }
 
 /// A capsule; slot 0 is the top one.
@@ -229,12 +258,17 @@ fn spawn_capsule(commands: &mut Commands, look: &CapsuleLook, slot: usize, view:
     let mut fill = Sprite::from_color(theme::CAPSULE_FILL, Vec2::ZERO);
     let mut fill_at = Transform::from_xyz(0.0, 0.0, 0.2);
     set_fill(&mut fill, &mut fill_at, view);
+    let plate = capsule_plate_rect();
     commands.spawn((
         Capsule { slot },
-        Transform::from_xyz(0.0, slot_y(slot), 1.0),
+        Transform::from_xyz(0.0, slot_y(slot), CAPSULE_Z),
         Visibility::default(),
         DespawnOnExit(AppState::InGame),
         children![
+            (
+                BackingPlate { size: plate.size() },
+                Transform::from_translation(plate.center().extend(PLATE_Z - CAPSULE_Z)),
+            ),
             (
                 CapsuleIcon,
                 Sprite::from_color(theme::POWER_UP, Vec2::splat(ICON_SIZE)),

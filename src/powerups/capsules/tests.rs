@@ -200,3 +200,49 @@ fn a_new_run_starts_with_no_capsules() {
     app.update();
     assert!(capsules(&mut app).is_empty(), "a new run has none");
 }
+
+#[test]
+fn a_capsule_plate_backs_the_whole_row_inside_the_panel() {
+    use crate::world::WORLD_WIDTH;
+    let plate = capsule_plate_rect();
+    // From the icon's left edge to the end of a `9.9s` label, full height.
+    assert!(plate.min.x < ICON_X - ICON_SIZE / 2.0);
+    assert!(plate.max.x > TEXT_X + "9.9s".len() as f32 * 0.6 * TEXT_SIZE);
+    assert!(plate.height() > ICON_SIZE && plate.height() > PILL_HEIGHT + 2.0 * OUTLINE);
+    assert!(plate.min.x > PLAYFIELD_WIDTH / 2.0 && plate.max.x < WORLD_WIDTH / 2.0);
+    assert!(
+        plate.height() < SLOT_SPACING,
+        "neighbouring plates don't touch"
+    );
+    // Under the capsule's contents.
+    const { assert!(PLATE_Z < CAPSULE_Z) };
+}
+
+/// The capsule each backing plate belongs to, by slot.
+fn capsule_plates(app: &mut App) -> Vec<usize> {
+    let world = app.world_mut();
+    let mut slots: Vec<usize> = world
+        .query_filtered::<&ChildOf, With<BackingPlate>>()
+        .iter(world)
+        .filter_map(|child_of| world.get::<Capsule>(child_of.parent()).map(|c| c.slot))
+        .collect();
+    slots.sort();
+    slots
+}
+
+#[test]
+fn each_capsule_has_one_plate_that_goes_with_it() {
+    let mut app = app();
+    inject(&mut app, &[20.0, 1.0, 10.0]);
+    app.update();
+    assert_eq!(capsule_plates(&mut app), [0, 1, 2]);
+    // The middle effect ends: the gap closes and the last slot's plate goes.
+    for _ in 0..10 {
+        app.update();
+    }
+    assert_eq!(capsule_plates(&mut app), [0, 1]);
+
+    tap(&mut app, KeyCode::Escape);
+    crate::menu::test_helpers::press(&mut app, "Main menu");
+    assert!(capsule_plates(&mut app).is_empty());
+}
