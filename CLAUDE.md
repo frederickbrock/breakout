@@ -120,7 +120,7 @@ One line per file; each module's details live in its own `//!` doc comment.
 - **A run's entities are state-scoped.** Ball, paddle, bricks, HUD text and falling
   power-ups carry `DespawnOnExit(AppState::InGame)`, so leaving the run (game over) removes
   them. Walls and camera are global.
-  `ball_movement` ends a run via `end_run` (inserts `GameOutcome`, sets `AppState::GameOver`);
+  `ball_movement` ends a lost run via `end_run` (inserts `GameOutcome`, sets `AppState::GameOver`), and campaign does the same for a win after the last level;
   R on the game-over screen goes back to `InGame` (a shortcut for its Play again button);
   Main menu from the pause or game-over screen leaves `InGame`, so the run is torn down and
   the next Start begins fresh.
