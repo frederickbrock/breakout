@@ -1,0 +1,89 @@
+v1: charge A
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Subject: ONE complete static behaviour outline FRAME, a thin hollow rounded-rectangle ring on a WIDE landscape canvas of aspect 168:68 (about 2.5:1, like the second reference): the ring fills the whole canvas, its outer edge touching the left, right, top and bottom image edges, NOT a small shape floating in the middle. All four sides and corners visible. The entire CENTRE is empty and filled with the same flat background colour as the outside. Use EXACTLY the line weight and construction of the second reference (a breach frame): very thin ring, outer dark keyline, thin flat coloured band, one thin off-white (#e2dfd2) inner line, inner dark keyline, small rounded corners, no steel housing, no thick bevel, no glow, no heavy outer outline. The first reference gives this behaviour's motif and colour: keep them. No spray effects, no text, no numbers. Behaviour: charge. Band colour warm orange (#ff9a3d), NO cyan anywhere. Motif: four small outlined corner node brackets. Single isolated object, plain flat solid #00FF00 background everywhere outside AND inside the ring, no shadow, no scenery.
+
+v2: charge B
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Subject: ONE complete static behaviour outline FRAME, a thin hollow rounded-rectangle ring on a WIDE landscape canvas of aspect 168:68 (about 2.5:1, like the second reference): the ring fills the whole canvas, its outer edge touching the left, right, top and bottom image edges, NOT a small shape floating in the middle. All four sides and corners visible. The entire CENTRE is empty and filled with the same flat background colour as the outside. Use EXACTLY the line weight and construction of the second reference (a breach frame): very thin ring, outer dark keyline, thin flat coloured band, one thin off-white (#e2dfd2) inner line, inner dark keyline, small rounded corners, no steel housing, no thick bevel, no glow, no heavy outer outline. The first reference gives this behaviour's motif and colour: keep them. No spray effects, no text, no numbers. Behaviour: charge. Band colour warm orange (#ff9a3d), NO cyan anywhere. Motif: four small outlined corner node brackets. Single isolated object, plain flat solid #00FF00 background everywhere outside AND inside the ring, no shadow, no scenery.
+
+v3: charge C
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Subject: ONE complete static behaviour outline FRAME, a thin hollow rounded-rectangle ring on a WIDE landscape canvas of aspect 168:68 (about 2.5:1, like the second reference): the ring fills the whole canvas, its outer edge touching the left, right, top and bottom image edges, NOT a small shape floating in the middle. All four sides and corners visible. The entire CENTRE is empty and filled with the same flat background colour as the outside. Use EXACTLY the line weight and construction of the second reference (a breach frame): very thin ring, outer dark keyline, thin flat coloured band, one thin off-white (#e2dfd2) inner line, inner dark keyline, small rounded corners, no steel housing, no thick bevel, no glow, no heavy outer outline. The first reference gives this behaviour's motif and colour: keep them. No spray effects, no text, no numbers. Behaviour: charge. Band colour warm orange (#ff9a3d), NO cyan anywhere. Motif: four small outlined corner node brackets. Single isolated object, plain flat solid #00FF00 background everywhere outside AND inside the ring, no shadow, no scenery.
+
+v4: reactor A
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Subject: ONE complete static behaviour outline FRAME, a thin hollow rounded-rectangle ring on a WIDE landscape canvas of aspect 168:68 (about 2.5:1, like the second reference): the ring fills the whole canvas, its outer edge touching the left, right, top and bottom image edges, NOT a small shape floating in the middle. All four sides and corners visible. The entire CENTRE is empty and filled with the same flat background colour as the outside. Use EXACTLY the line weight and construction of the second reference (a breach frame): very thin ring, outer dark keyline, thin flat coloured band, one thin off-white (#e2dfd2) inner line, inner dark keyline, small rounded corners, no steel housing, no thick bevel, no glow, no heavy outer outline. The first reference gives this behaviour's motif and colour: keep them. No spray effects, no text, no numbers. Behaviour: reactor. Band colour violet (#b58cff), violet only, NO cyan, NO steel. Motif: small diamond-shaped violet energy studs at the midpoint of all four edges. Single isolated object, plain flat solid #00FF00 background everywhere outside AND inside the ring, no shadow, no scenery.
+
+v5: reactor B
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Subject: ONE complete static behaviour outline FRAME, a thin hollow rounded-rectangle ring on a WIDE landscape canvas of aspect 168:68 (about 2.5:1, like the second reference): the ring fills the whole canvas, its outer edge touching the left, right, top and bottom image edges, NOT a small shape floating in the middle. All four sides and corners visible. The entire CENTRE is empty and filled with the same flat background colour as the outside. Use EXACTLY the line weight and construction of the second reference (a breach frame): very thin ring, outer dark keyline, thin flat coloured band, one thin off-white (#e2dfd2) inner line, inner dark keyline, small rounded corners, no steel housing, no thick bevel, no glow, no heavy outer outline. The first reference gives this behaviour's motif and colour: keep them. No spray effects, no text, no numbers. Behaviour: reactor. Band colour violet (#b58cff), violet only, NO cyan, NO steel. Motif: small diamond-shaped violet energy studs at the midpoint of all four edges. Single isolated object, plain flat solid #00FF00 background everywhere outside AND inside the ring, no shadow, no scenery.
+
+v6: reactor C
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Subject: ONE complete static behaviour outline FRAME, a thin hollow rounded-rectangle ring on a WIDE landscape canvas of aspect 168:68 (about 2.5:1, like the second reference): the ring fills the whole canvas, its outer edge touching the left, right, top and bottom image edges, NOT a small shape floating in the middle. All four sides and corners visible. The entire CENTRE is empty and filled with the same flat background colour as the outside. Use EXACTLY the line weight and construction of the second reference (a breach frame): very thin ring, outer dark keyline, thin flat coloured band, one thin off-white (#e2dfd2) inner line, inner dark keyline, small rounded corners, no steel housing, no thick bevel, no glow, no heavy outer outline. The first reference gives this behaviour's motif and colour: keep them. No spray effects, no text, no numbers. Behaviour: reactor. Band colour violet (#b58cff), violet only, NO cyan, NO steel. Motif: small diamond-shaped violet energy studs at the midpoint of all four edges. Single isolated object, plain flat solid #00FF00 background everywhere outside AND inside the ring, no shadow, no scenery.
