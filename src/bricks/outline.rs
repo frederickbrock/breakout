@@ -1,13 +1,21 @@
-//! Behaviour outlines: a border drawn over each special brick so the player
-//! can tell what it does at a glance. Coded placeholders; the final art
-//! (sim-rdl.7.5) replaces only the strip children.
+//! Behaviour outlines: a frame drawn over each special brick so the player
+//! can tell what it does at a glance.
 //!
-//! Every special brick gets one [`BrickOutline`] child holding thin
-//! [`OutlineStrip`] sprites laid out by the pure [`strips`]. Plain classes
+//! Every special brick gets one [`BrickOutline`] child. Plain classes
 //! (ceramic, titanium, tungsten) get none. The outline is a child of the
-//! brick, so it goes when the brick does. [`animate_outlines`] advances each
-//! outline's pulse phase and sets its strips' brightness; it only runs while
-//! playing, so the animation freezes while paused.
+//! brick, so it goes when the brick does.
+//! - **Painted frame:** once the style's `sprites/bricks/outline_<style>.png`
+//!   ([`OutlineStyle::path`]) is loaded, `crate::sprites` gives the outline
+//!   that image at [`FRAME_SIZE`] (168×68 art around the 160×60 plate) and
+//!   hides its strips.
+//! - **Coded fallback:** until then, or if the file is missing, the outline
+//!   draws thin [`OutlineStrip`] children laid out by the pure [`strips`].
+//!
+//! [`animate_outlines`] advances each outline's pulse phase and lights it.
+//! A painted frame's brightness stays within
+//! [`PAINTED_PULSE_LOW`]–100% ([`painted_brightness`]), so its motif always
+//! reads. Coded strips fade further. It only runs while playing, so the
+//! animation freezes while paused.
 //!
 //! Styles: red charge/breach/demolition, green regen, cyan shield, violet
 //! reactor. A regen brick with a running `RegenTimer` blinks faster as
@@ -35,9 +43,14 @@ const DEMOLITION_INSET: f32 = 5.0;
 const SHIELD_TOP_THICK: f32 = 3.0;
 /// Strip weight of the parts of an outline that are only faintly lit.
 const DIM: f32 = 0.3;
-/// Brightness range of a pulsing outline.
+/// Brightness range of a pulsing outline (coded strips).
 const PULSE_LOW: f32 = 0.25;
 const PULSE_HIGH: f32 = 1.0;
+/// A painted frame never pulses dimmer than this, so it stays readable.
+pub const PAINTED_PULSE_LOW: f32 = 0.6;
+/// A painted frame's drawn size: its 168×68 art scaled like the 160×60 plate
+/// art, so the frame's edge sits 4 art px outside the plate on every side.
+pub const FRAME_SIZE: Vec2 = Vec2::new(BRICK_WIDTH * 168.0 / 160.0, BRICK_HEIGHT * 68.0 / 60.0);
 
 /// Which outline a special brick wears.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -51,6 +64,28 @@ pub enum OutlineStyle {
 }
 
 impl OutlineStyle {
+    /// Every style, in the order `GameSprites::outlines` holds their frames.
+    pub const ALL: [Self; 6] = [
+        Self::Charge,
+        Self::Breach,
+        Self::Demolition,
+        Self::Regen,
+        Self::Shield,
+        Self::Reactor,
+    ];
+
+    /// The painted frame's image, relative to `assets/`.
+    pub fn path(self) -> &'static str {
+        match self {
+            Self::Charge => "sprites/bricks/outline_charge.png",
+            Self::Breach => "sprites/bricks/outline_breach.png",
+            Self::Demolition => "sprites/bricks/outline_demolition.png",
+            Self::Regen => "sprites/bricks/outline_regen.png",
+            Self::Shield => "sprites/bricks/outline_shield.png",
+            Self::Reactor => "sprites/bricks/outline_reactor.png",
+        }
+    }
+
     /// The outline for `class`, or `None` for the plain classes.
     pub fn of(class: BrickClass) -> Option<Self> {
         match class {
@@ -226,6 +261,18 @@ pub fn brightness(pulsing: bool, phase: f32) -> f32 {
     PULSE_LOW + (PULSE_HIGH - PULSE_LOW) * wave
 }
 
+/// A painted frame's brightness at `phase`: the same pulse as the strips,
+/// mapped onto [`PAINTED_PULSE_LOW`]..=1.
+pub fn painted_brightness(pulsing: bool, phase: f32) -> f32 {
+    let t = (brightness(pulsing, phase) - PULSE_LOW) / (PULSE_HIGH - PULSE_LOW);
+    PAINTED_PULSE_LOW + (PULSE_HIGH - PAINTED_PULSE_LOW) * t
+}
+
+/// The tint for a painted frame at `brightness`: white, dimmed.
+pub fn frame_color(brightness: f32) -> Color {
+    Color::srgb(brightness, brightness, brightness)
+}
+
 fn strip_color(style: OutlineStyle, weight: f32, brightness: f32) -> Color {
     style.color().with_alpha(weight * brightness)
 }
@@ -259,14 +306,23 @@ fn add_outline(on: On<Add, BrickClass>, mut commands: Commands, classes: Query<&
     }
 }
 
-/// Advances each outline's pulse and relights its strips.
+/// An outline, and its painted frame's sprite once it has one.
+type OutlineParts<'a> = (
+    &'a mut BrickOutline,
+    &'a ChildOf,
+    &'a Children,
+    Option<&'a mut Sprite>,
+);
+
+/// Advances each outline's pulse and relights its painted frame, or its
+/// strips if it has none.
 fn animate_outlines(
     time: Res<Time>,
-    mut outlines: Query<(&mut BrickOutline, &ChildOf, &Children)>,
+    mut outlines: Query<OutlineParts, Without<OutlineStrip>>,
     timers: Query<&RegenTimer>,
-    mut strips: Query<(&OutlineStrip, &mut Sprite)>,
+    mut strips: Query<(&OutlineStrip, &mut Sprite), Without<BrickOutline>>,
 ) {
-    for (mut outline, parent, children) in &mut outlines {
+    for (mut outline, parent, children, frame) in &mut outlines {
         let heal = timers
             .get(parent.parent())
             .ok()
@@ -274,6 +330,10 @@ fn animate_outlines(
         let hz = pulse_hz(outline.style, heal);
         if let Some(hz) = hz {
             outline.phase = (outline.phase + hz * time.delta_secs()).fract();
+        }
+        if let Some(mut frame) = frame {
+            frame.color = frame_color(painted_brightness(hz.is_some(), outline.phase));
+            continue;
         }
         let lit = brightness(hz.is_some(), outline.phase);
         for &child in children {
