@@ -251,6 +251,20 @@ processing = [
 ]
 
 [[asset]]
+id = "powerup_capsules"
+issue = "sim-c0w"
+files = ["assets/sprites/powerups/super_sizer.png", "assets/sprites/powerups/collapse.png", "assets/sprites/powerups/shell.png"]
+source = "super_sizer=r2/v4, collapse=r3/v2, shell=r4/v2"
+model = "google/gemini-2.5-flash-image"
+prompt_file_r2 = "art/prompts/sim-c0w-r2.txt"
+prompt_file_r3 = "art/prompts/sim-c0w-r3.txt"
+prompt_file_r4 = "art/prompts/sim-c0w-r4.txt"
+processing = [
+  "process --bg flood --trim --size 48x48 --fit stretch on each (sage-green background)",
+  "PIL: one common alpha (pixelwise minimum of the three) so the silhouette is identical; green spill from the background glow removed within 3 px of the edge",
+]
+
+[[asset]]
 id = "brick_cracked_titanium_regen"
 issue = "sim-usq.5"
 files = ["assets/sprites/bricks/titanium_cracked.png", "assets/sprites/bricks/regen_cracked.png"]

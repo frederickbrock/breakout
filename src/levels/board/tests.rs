@@ -1,6 +1,7 @@
 use super::*;
 use crate::bricks::{BOARD_COLS, BOARD_ROWS, REACTOR_BRICKS};
 use crate::levels::parse_level;
+use crate::tuning::BrickTuning;
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 
@@ -24,7 +25,11 @@ fn level(text: &str) -> LevelDef {
 }
 
 fn build(def: &LevelDef, seed: u64) -> Vec<PlacedBrick> {
-    build_board(def, &mut StdRng::seed_from_u64(seed))
+    build_board(
+        def,
+        &mut StdRng::seed_from_u64(seed),
+        &BrickTuning::default(),
+    )
 }
 
 fn cell(row: usize, col: usize) -> BrickCell {
@@ -84,6 +89,7 @@ fn the_fallback_board_matches_random_classes_seed_for_seed() {
         let expected = crate::bricks::random_classes(
             BOARD_ROWS * BOARD_COLS,
             REACTOR_BRICKS,
+            &crate::bricks::FILL_WEIGHTS,
             &mut StdRng::seed_from_u64(seed),
         );
         assert_eq!(classes, expected, "seed {seed}");
