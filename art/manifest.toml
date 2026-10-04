@@ -249,3 +249,12 @@ processing = [
   "greyscale: outline_explosive's orange tint is desaturated (luminance only); frame 4 (the faint fade-out) has its grey lifted to >=170 and alpha boosted 1.5x with noise below 40/255 dropped so it stays visible at 32 px",
   "verified each at 128x32 with alpha and viewed composited on #0a0e15 at 4x",
 ]
+
+[[asset]]
+id = "brick_cracked_titanium_regen"
+issue = "sim-usq.5"
+files = ["assets/sprites/bricks/titanium_cracked.png", "assets/sprites/bricks/regen_cracked.png"]
+source = "titanium_cracked=r1/v2, regen_cracked=r1/v6"
+model = "google/gemini-2.5-flash-image"
+prompt_file = "art/prompts/sim-usq.5-r1.txt"
+processing = ["process --bg flood --trim --size 160x60 --fit stretch (titanium)", "process --bg flood --tolerance 25 --trim --size 160x60 --fit stretch (regen; plate outline stops the flood on the green background)"]
