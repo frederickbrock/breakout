@@ -111,6 +111,47 @@ and ceramic red sit too close to magenta. Exception: green sprites (the regen-al
 `#FF00FF` magenta instead. The hangar background is the one piece
 that wants full scenery and no key colour.
 
+## Prompt preamble (SDXL)
+
+For the ComfyUI backend (`art.backend: comfy`, `art/comfy/`). SDXL reads comma
+tags, not prose or hex codes, so this says the same as the preamble above in
+tags. **Positive**, first in every prompt:
+
+```
+sci-fi space-age game art, graffiti line-art style,
+bold clean contour outlines, dark keyline, offset inner line in off-white,
+warm orange or muted teal, flat colour blocking, strong value contrast,
+crisp hard white highlight strokes, edge shine, cel shading, stylised lighting,
+smooth rounded steel forms, flowing contour lines,
+cold blue-white key light from upper left,
+warm amber bounce light from lower right, dark hangar palette, polished steel,
+cyan glow only on energy fields, restrained glow, strong silhouette,
+readable at small size
+```
+
+For **sprites** add the isolation tags. Use a plain flat light background
+rather than the `#00FF00` key: SDXL doesn't hit an exact key colour, and the
+dark keylines separate cleanly from a light ground (`artgen process --bg flood`).
+For a mostly light object, say *plain flat dark grey background* instead.
+
+```
+single isolated object, centered, whole object in frame, orthographic front view,
+plain flat light grey background, no scenery
+```
+
+**Negative**, passed with `--negative-file`:
+
+```
+spray paint, drips, overspray, mist, speckle, stencil, graffiti tags,
+lettering, text, letters, numbers, logo, watermark, signature, border, frame,
+ui, photo, photorealistic, painterly brushwork, fantasy, lens flare,
+heavy bloom, busy background, scenery, multiple objects, cropped, character,
+person, face, creature, blurry, noisy, gradient background, drop shadow
+```
+
+The brief's subject tags go between the preamble and the isolation tags, and
+the asset contract's size goes to `--control-size`.
+
 ## Do / Don't
 
 **Do**
