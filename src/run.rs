@@ -36,6 +36,7 @@ use crate::paddle::{
 };
 use crate::plate::{BackingPlate, PLATE_PADDING, PLATE_Z};
 use crate::theme;
+use crate::tuning::Tuning;
 use crate::world::{GAME_SCALE, PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH, WORLD_WIDTH};
 
 /// Lives at the start of every run, including the first.
@@ -97,15 +98,19 @@ pub(crate) fn start_run(
     mut signals: ResMut<BallCollisionSignals>,
     ball_look: Res<BallLook>,
     campaign: Option<Res<CampaignLevels>>,
-    mut ball_speed: ResMut<BallSpeed>,
+    (mut ball_speed, tuning): (ResMut<BallSpeed>, Res<Tuning>),
 ) {
     score.0 = 0;
     lives.0 = STARTING_LIVES;
     current.0 = 0;
     *signals = BallCollisionSignals::default();
-    let def = campaign_level(campaign.as_deref(), 0).unwrap_or_else(LevelDef::fallback);
+    let mut def = campaign_level(campaign.as_deref(), 0).unwrap_or_else(LevelDef::fallback);
+    if campaign.as_deref().is_none_or(|c| c.0.is_empty()) {
+        // The built-in random board: its power-up count is tunable.
+        def.extra_powerups = tuning.bricks.reactor_bricks;
+    }
     spawn_run_entities(&mut commands, &ball_look);
-    spawn_board(&mut commands, &def, 1, &mut ball_speed);
+    spawn_board(&mut commands, &def, 1, &mut ball_speed, &tuning);
     commands.trigger(RestartGame);
     commands.trigger(LevelStarted { index: 0 });
 }

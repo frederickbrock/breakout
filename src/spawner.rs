@@ -68,6 +68,16 @@ impl<T: Copy + Send + Sync + 'static> Spawner<T> {
     }
 }
 
+impl<T: Copy + PartialEq + Send + Sync + 'static> Spawner<T> {
+    /// Changes the weight of every entry for `kind` (e.g. from tuning). A
+    /// kind that was never registered is left alone.
+    pub fn set_weight(&mut self, kind: T, weight: f32) {
+        for def in self.defs.iter_mut().filter(|def| def.kind == kind) {
+            def.weight = weight;
+        }
+    }
+}
+
 fn choose_weighted<'a, T>(defs: &'a [SpawnDef<T>], rng: &mut impl Rng) -> Option<&'a SpawnDef<T>> {
     let total: f32 = defs.iter().map(|def| def.weight).sum();
     if total <= 0.0 {
@@ -101,6 +111,19 @@ mod tests {
             let pick = spawner.pick().expect("kind 1 has weight");
             assert_eq!(pick.kind, 1);
             assert_eq!(pick.color, Color::WHITE);
+        }
+    }
+
+    #[test]
+    fn set_weight_changes_what_pick_returns() {
+        let mut spawner = Spawner::default();
+        spawner.register(1u8, 1.0, Color::WHITE);
+        spawner.register(2u8, 0.0, Color::BLACK);
+        spawner.set_weight(1, 0.0);
+        spawner.set_weight(2, 1.0);
+        spawner.set_weight(3, 5.0); // not registered: ignored
+        for _ in 0..50 {
+            assert_eq!(spawner.pick().map(|p| p.kind), Some(2));
         }
     }
 }

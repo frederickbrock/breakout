@@ -6,6 +6,7 @@ fn board(seed: u64) -> Vec<BrickClass> {
     random_classes(
         BOARD_ROWS * BOARD_COLS,
         REACTOR_BRICKS,
+        &FILL_WEIGHTS,
         &mut StdRng::seed_from_u64(seed),
     )
 }
@@ -145,7 +146,8 @@ fn enough_random_cells_always_get_every_class() {
     for reactors in [0, 6] {
         let n = reactors + 8;
         for seed in 0..200 {
-            let classes = random_classes(n, reactors, &mut StdRng::seed_from_u64(seed));
+            let classes =
+                random_classes(n, reactors, &FILL_WEIGHTS, &mut StdRng::seed_from_u64(seed));
             assert_eq!(classes.len(), n);
             assert_eq!(count(&classes, BrickClass::Reactor), reactors);
             for (class, _) in FILL_WEIGHTS {
