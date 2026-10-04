@@ -8,10 +8,17 @@
 //! loads, and whatever it leaves out keeps its default. Distances and speeds
 //! are in world units (already scaled by `GAME_SCALE`).
 //!
-//! Readers so far: the ball (speed, ramp, min vertical share), the paddle
-//! (size, mass, damping, keyboard force, mouse follow; mass and damping are
-//! re-applied when `Tuning` changes) and lives. Bricks and power-ups follow
-//! in sim-dj6.3.
+//! Readers:
+//! - the ball: speed, ramp, min vertical share
+//! - the paddle: size, mass, damping, keyboard force, mouse follow; mass and
+//!   damping are re-applied when `Tuning` changes
+//! - lives
+//! - bricks: hits per class, the random fill, the fallback board's
+//!   power-ups, regen heal time; new bricks and new heal timers use the
+//!   current values
+//! - power-ups: drop gravity, Super-Sizer's duration, width multiplier (of
+//!   the tuned paddle width) and spawn weight, re-applied to the spawner when
+//!   `Tuning` changes
 //!
 //! Two plugins, split like the levels:
 //! - [`add_game`](crate) inits `Tuning` to its defaults, so the headless tests
@@ -124,7 +131,8 @@ pub struct BrickTuning {
     pub hits: ClassHits,
     /// Relative weights of the classes a `?` cell can become.
     pub fill_weights: FillWeights,
-    /// Reactor (power-up) bricks on the built-in random board.
+    /// Power-up (reactor) bricks on the built-in random board (used when
+    /// there is no campaign; a level's `powerups:` sets its own).
     pub reactor_bricks: usize,
     /// Seconds a damaged regen brick takes to heal.
     pub regen_heal_secs: f32,
@@ -154,6 +162,21 @@ pub struct ClassHits {
     pub shield: u8,
 }
 
+impl ClassHits {
+    /// Hits for `class`.
+    pub fn of(&self, class: BrickClass) -> u8 {
+        match class {
+            BrickClass::Ceramic => self.ceramic,
+            BrickClass::Titanium => self.titanium,
+            BrickClass::Tungsten => self.tungsten,
+            BrickClass::Reactor => self.reactor,
+            BrickClass::Explosive(_) => self.explosive,
+            BrickClass::Regen => self.regen,
+            BrickClass::Shield => self.shield,
+        }
+    }
+}
+
 impl Default for ClassHits {
     fn default() -> Self {
         Self {
@@ -180,6 +203,27 @@ pub struct FillWeights {
     pub explosive_demolition: u32,
     pub regen: u32,
     pub shield: u32,
+}
+
+impl FillWeights {
+    /// The fill table, in `bricks::FILL_WEIGHTS` order (the order the rng
+    /// walks it, so the default table reproduces today's boards).
+    pub fn table(&self) -> [(BrickClass, u32); 8] {
+        FILL_WEIGHTS.map(|(class, _)| {
+            let weight = match class {
+                BrickClass::Ceramic => self.ceramic,
+                BrickClass::Titanium => self.titanium,
+                BrickClass::Tungsten => self.tungsten,
+                BrickClass::Explosive(ExplosiveKind::Charge) => self.explosive_charge,
+                BrickClass::Explosive(ExplosiveKind::Breach) => self.explosive_breach,
+                BrickClass::Explosive(ExplosiveKind::Demolition) => self.explosive_demolition,
+                BrickClass::Regen => self.regen,
+                BrickClass::Shield => self.shield,
+                BrickClass::Reactor => 0,
+            };
+            (class, weight)
+        })
+    }
 }
 
 impl Default for FillWeights {

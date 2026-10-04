@@ -101,7 +101,11 @@ pub(crate) fn start_run(
     lives.0 = tuning.ball.lives;
     current.0 = 0;
     *signals = BallCollisionSignals::default();
-    let def = campaign_level(campaign.as_deref(), 0).unwrap_or_else(LevelDef::fallback);
+    let mut def = campaign_level(campaign.as_deref(), 0).unwrap_or_else(LevelDef::fallback);
+    if campaign.as_deref().is_none_or(|c| c.0.is_empty()) {
+        // The built-in random board: its power-up count is tunable.
+        def.extra_powerups = tuning.bricks.reactor_bricks;
+    }
     spawn_run_entities(&mut commands, &ball_look, &tuning);
     spawn_board(&mut commands, &def, 1, &mut ball_speed, &tuning);
     commands.trigger(RestartGame);

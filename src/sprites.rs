@@ -35,12 +35,16 @@
 //! steel frame ([`crate::frame`]), skinned with `frame_left`/`frame_right`.
 //! The parallax layers ([`crate::parallax`]) load here too and draw over the
 //! background; with their images missing the background shows as before.
+//! Each special brick's behaviour outline ([`crate::bricks::outline`]) draws
+//! its painted frame once that image is loaded, and keeps its coded strips
+//! until then (or for good, if the file is missing).
 //! A skinned entity is marked [`Skinned`].
 
 use crate::ball::{Ball, BALL_SIZE};
 use crate::bricks::grid::Brick;
 use crate::bricks::grid::BrickHealth;
 use crate::bricks::grid::BrickMaxHits;
+use crate::bricks::outline::{BrickOutline, OutlineStrip, OutlineStyle, FRAME_SIZE};
 use crate::bricks::{damage_look, BrickClass, DamageLook};
 use crate::frame::{FramePanel, FramePiece};
 use crate::paddle::{PaddleField, PaddleProng};
@@ -178,6 +182,8 @@ pub struct GameSprites {
     pub frame_right: Handle<Image>,
     /// The parallax layers, in [`crate::parallax::LAYERS`] order.
     pub parallax: [Handle<Image>; crate::parallax::LAYER_COUNT],
+    /// The painted behaviour-outline frames, in [`OutlineStyle::ALL`] order.
+    pub outlines: [Handle<Image>; 6],
 }
 
 impl GameSprites {
@@ -202,6 +208,13 @@ impl GameSprites {
         .chain(&self.bricks)
         .chain(self.damaged.values())
         .chain(&self.parallax)
+        .chain(&self.outlines)
+    }
+
+    /// The painted frame for `style`.
+    pub fn outline(&self, style: OutlineStyle) -> &Handle<Image> {
+        // `ALL` lists the variants in declaration order.
+        &self.outlines[style as usize]
     }
 
     /// The plate to draw for `look`, if it's loaded, else the intact plate
@@ -255,6 +268,7 @@ fn load_sprites(mut commands: Commands, assets: Res<AssetServer>) {
         frame_left: assets.load(FRAME_LEFT_PATH),
         frame_right: assets.load(FRAME_RIGHT_PATH),
         parallax: crate::parallax::LAYERS.map(|layer| assets.load(layer.path)),
+        outlines: OutlineStyle::ALL.map(|style| assets.load(style.path())),
     });
 }
 
@@ -279,6 +293,7 @@ impl Plugin for SkinPlugin {
                 skin_power_ups,
                 skin_frame,
                 skin_bricks,
+                skin_outlines,
             )
                 .run_if(resource_exists::<GameSprites>),
         );
@@ -387,6 +402,36 @@ fn skin_frame(
         commands.entity(entity).insert(Skinned);
         for &child in children.into_iter().flatten() {
             if pieces.contains(child) {
+                commands.entity(child).insert(Visibility::Hidden);
+            }
+        }
+    }
+}
+
+/// A special brick's outline draws its painted frame once that image is
+/// loaded, centred at [`FRAME_SIZE`]; its coded strips are hidden. A style
+/// whose file is missing keeps its strips.
+fn skin_outlines(
+    mut commands: Commands,
+    sprites: Res<GameSprites>,
+    images: Res<Assets<Image>>,
+    outlines: Query<(Entity, &BrickOutline, Option<&Children>), Without<Skinned>>,
+    strips: Query<(), With<OutlineStrip>>,
+) {
+    for (entity, outline, children) in &outlines {
+        let Some(image) = loaded(sprites.outline(outline.style), &images) else {
+            continue;
+        };
+        commands.entity(entity).insert((
+            Sprite {
+                image: image.clone(),
+                custom_size: Some(FRAME_SIZE),
+                ..default()
+            },
+            Skinned,
+        ));
+        for &child in children.into_iter().flatten() {
+            if strips.contains(child) {
                 commands.entity(child).insert(Visibility::Hidden);
             }
         }

@@ -29,6 +29,7 @@ use crate::game_state::{AppState, PlayState};
 use crate::paddle::{Paddle, PADDLE_HEIGHT};
 use crate::run::RestartGame;
 use crate::spawner::Spawner;
+use crate::tuning::Tuning;
 use crate::world::{GAME_SCALE, PLAYFIELD_HEIGHT};
 use bevy::prelude::*;
 
@@ -182,12 +183,15 @@ fn drop_power_up(
     on: On<BrickDestroyed>,
     mut commands: Commands,
     mut drops: ResMut<PowerUpDrops>,
+    tuning: Res<Tuning>,
     bricks: Query<&PowerUpBrick>,
 ) {
     let Ok(power_up_brick) = bricks.get(on.brick) else {
         return;
     };
-    let gravity = (BASE_GRAVITY + drops.0 as f32 * GRAVITY_STEP).min(MAX_GRAVITY);
+    let fall = &tuning.powerups;
+    let gravity =
+        (fall.drop_gravity + drops.0 as f32 * fall.drop_gravity_step).min(fall.max_drop_gravity);
     drops.0 += 1;
     commands.spawn((
         Sprite::from_color(power_up_brick.color, Vec2::splat(POWER_UP_SIZE)),
