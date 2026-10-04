@@ -79,6 +79,50 @@ fn elapsed(app: &App) -> f32 {
         .elapsed_secs()
 }
 
+/// The shipped campaign's levels, read from `assets/levels/` in manifest order.
+fn shipped_campaign() -> Vec<LevelDef> {
+    crate::levels::parse_campaign(include_str!("../../assets/levels/campaign.txt"))
+        .levels
+        .iter()
+        .map(|file| {
+            let path = format!("assets/levels/{file}");
+            level(&std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{path}: {e}")))
+        })
+        .collect()
+}
+
+/// Like [`clear`], but every hit comes from above, so shield glass breaks
+/// instead of deflecting (the random boards include shields).
+fn clear_from_above(app: &mut App) {
+    if count::<(With<Ball>, With<Anchored>)>(app) > 0 {
+        tap(app, KeyCode::Space);
+    }
+    while let Some(&brick) = bricks(app).first() {
+        hit_moving(app, brick, Vec2::new(0.0, -450.0));
+    }
+    app.update();
+    app.update();
+}
+
+#[test]
+fn the_shipped_campaign_plays_random_then_the_abyss_then_andromada_and_wins() {
+    let mut app = app_with_campaign(shipped_campaign());
+    for (next, card) in [(1, "SECTOR 02 // The Abyss"), (2, "SECTOR 03 // Andromada")] {
+        clear_from_above(&mut app);
+        assert_eq!(play_state(&app), Some(PlayState::LevelClear));
+        assert!(texts(&mut app).contains(&card.to_string()), "{card}");
+        wait_out_card(&mut app);
+        assert_eq!(current(&app), next);
+        assert!(count::<With<Brick>>(&mut app) > 0, "{card}: board spawned");
+    }
+    clear_from_above(&mut app);
+    assert_eq!(app_state(&app), AppState::GameOver);
+    assert_eq!(
+        app.world().get_resource::<GameOutcome>(),
+        Some(&GameOutcome::Won)
+    );
+}
+
 #[test]
 fn clearing_a_level_shows_the_card_then_starts_the_next_and_the_last_wins() {
     let mut app = app_with_campaign(two_levels());
