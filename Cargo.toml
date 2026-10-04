@@ -12,6 +12,9 @@ bevy_enoki = "0.7"
 rand = "0.10.2"
 # LevelDef derives (a later JSON level format is nearly free).
 serde = { version = "1", features = ["derive"] }
+# The tuning file (assets/game.tuning.ron, src/tuning.rs); the same RON
+# version bevy_enoki uses, so the particle tests parse effects with it too.
+ron = "0.12"
 
 # Native desktop build: avian2d with its full default feature set (includes
 # `parallel`/rayon, which is fine and desirable off the web).
@@ -35,10 +38,6 @@ bevy = { version = "0.19.1", features = ["webgl2"] }
 getrandom = { version = "0.4", features = ["wasm_js"] }
 # The loading-splash hand-over (src/web_splash.rs) dispatches a DOM event.
 web-sys = { version = "0.3", features = ["Window", "Event", "EventTarget"] }
-
-[dev-dependencies]
-# Tests parse the shipped assets/particles/*.particle.ron with the same RON version bevy_enoki uses.
-ron = "0.12"
 
 # Size-tuned profile for the web build only: index.html points trunk's
 # `--release` build at it (`data-cargo-profile-release`), so native

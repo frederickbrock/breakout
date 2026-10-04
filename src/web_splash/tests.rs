@@ -98,3 +98,48 @@ fn hands_over_only_once() {
         "the system stops running once the page has been told"
     );
 }
+
+#[test]
+fn waits_while_the_tuning_file_is_still_loading() {
+    let mut app = app_with_images();
+    let loaded = app
+        .world_mut()
+        .resource_mut::<Assets<Image>>()
+        .add(Image::default());
+    app.insert_resource(sprites_of(loaded));
+    // Not loaded by the asset server and not failed: still pending.
+    app.insert_resource(TuningHandle::default());
+
+    run_frames(&mut app, HAND_OVER_FRAMES * 10);
+    assert!(!done(&app), "the tuning file hasn't settled");
+
+    app.world_mut().remove_resource::<TuningHandle>();
+    run_frames(&mut app, HAND_OVER_FRAMES);
+    assert!(done(&app));
+}
+
+#[test]
+fn hands_over_once_the_real_tuning_file_has_loaded() {
+    let mut app = crate::test_support::launch_with(|app| {
+        app.init_asset::<Image>()
+            .add_plugins(crate::tuning::TuningPlugin);
+    });
+    *app.world_mut().resource_mut::<SplashHandOver>() = SplashHandOver::default();
+    let loaded = app
+        .world_mut()
+        .resource_mut::<Assets<Image>>()
+        .add(Image::default());
+    app.insert_resource(sprites_of(loaded));
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    while !done(&app) {
+        assert!(std::time::Instant::now() < deadline, "never handed over");
+        app.update();
+        std::thread::sleep(std::time::Duration::from_millis(5));
+    }
+    let handle = app.world().resource::<TuningHandle>().0.clone();
+    assert!(app
+        .world()
+        .resource::<AssetServer>()
+        .load_state(&handle)
+        .is_loaded());
+}

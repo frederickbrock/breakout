@@ -1,0 +1,54 @@
+// Game tuning: every build (native and web) loads this at startup, and it
+// holds the shipped defaults (src/tuning.rs). Natively, saving it while the
+// game runs reloads it. Leave a field out and it keeps its compiled default.
+// Distances and speeds are world units (1920x1080 world).
+(
+    ball: (
+        speed_factor: 1.8,
+        speed_per_factor: 300.0,
+        min_vertical_fraction: 0.3,
+        lives: 3,
+    ),
+    paddle: (
+        width: 180.0,
+        mass: 3.0,
+        force: 10500.0,
+        linear_damping: 4.0,
+        follow_gain: 20.0,
+        max_follow_speed: 3000.0,
+        max_gap_per_frame: 0.8,
+    ),
+    bricks: (
+        hits: (
+            ceramic: 1,
+            titanium: 2,
+            tungsten: 3,
+            reactor: 2,
+            explosive: 1,
+            regen: 2,
+            shield: 1,
+        ),
+        fill_weights: (
+            ceramic: 90,
+            titanium: 60,
+            tungsten: 36,
+            explosive_charge: 16,
+            explosive_breach: 16,
+            explosive_demolition: 16,
+            regen: 36,
+            shield: 30,
+        ),
+        reactor_bricks: 6,
+        regen_heal_secs: 6.0,
+    ),
+    powerups: (
+        drop_gravity: 210.0,
+        drop_gravity_step: 30.0,
+        max_drop_gravity: 630.0,
+        super_sizer: (
+            weight: 1.0,
+            width_multiplier: 1.25,
+            duration: 7.0,
+        ),
+    ),
+)
