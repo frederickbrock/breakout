@@ -1,11 +1,11 @@
 //! Breakout entry point and app wiring. This file holds no game logic.
 //!
 //! `main` adds the engine plugins (`DefaultPlugins` with the window and asset
-//! settings, Avian's `PhysicsPlugins`, scripting, sprites, levels and
+//! settings, Avian's `PhysicsPlugins`, scripting, sprites, levels, tuning and
 //! particles) and then calls [`add_game`], which wires every game module's
 //! plugins, resources and core systems into the `App`. The headless tests
 //! (`test_support::app()`) call [`add_game`] too, on `MinimalPlugins`; they
-//! leave out the plugins that read files (sprites, levels).
+//! leave out the plugins that read files (sprites, levels, tuning).
 //!
 //! The native window opens at [`WINDOW_START_WIDTH`]×[`WINDOW_START_HEIGHT`]
 //! (1280×720) and is resizable; the world scales to fit (see [`crate::view`]).
@@ -34,6 +34,7 @@ mod sprites;
 #[cfg(test)]
 pub(crate) mod test_support;
 mod theme;
+mod tuning;
 mod view;
 mod web_splash;
 mod world;
@@ -93,6 +94,7 @@ fn main() {
     .add_plugins(script_manager::ScriptPlugin)
     .add_plugins(sprites::SpritesPlugin)
     .add_plugins(levels::LevelsPlugin)
+    .add_plugins(tuning::TuningPlugin)
     .add_plugins(particles::ParticlesPlugin)
     .insert_resource(ClearColor(theme::VOID));
     add_game(&mut app);
@@ -139,6 +141,7 @@ fn add_game(app: &mut App) {
     .insert_resource(Gravity(Vec2::new(0.0, 0.8 * GAME_SCALE)))
     .init_resource::<ButtonInput<MouseButton>>()
     .init_resource::<Score>()
+    .init_resource::<tuning::Tuning>()
     .init_resource::<BallSpeed>()
     .insert_resource(Lives(STARTING_LIVES))
     .init_resource::<BallCollisionSignals>()

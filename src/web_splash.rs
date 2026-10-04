@@ -4,7 +4,8 @@
 //! downloads and starts (driven by `web/loader.js`). The splash must stay up
 //! until the game has really drawn its main menu, which is after the sprites
 //! have loaded, not when the wasm starts. [`hand_over_splash`] waits until
-//! every [`GameSprites`] image has settled (loaded or failed), lets
+//! every [`GameSprites`] image and the tuning file ([`TuningHandle`], when
+//! the tuning plugin is in the app) have settled (loaded or failed), lets
 //! [`HAND_OVER_FRAMES`] more frames render, then tells the page once by
 //! dispatching a `steelbreak-ready` event on `window`. The page then fades the
 //! splash out. If an image never settles, it hands over anyway after
@@ -14,6 +15,7 @@
 //! runs the same bookkeeping and the call is a no-op.
 
 use crate::sprites::GameSprites;
+use crate::tuning::TuningHandle;
 use bevy::prelude::*;
 
 /// Frames rendered after the sprites settle before the splash goes, so the
@@ -60,14 +62,26 @@ fn sprites_settled(
     })
 }
 
+/// Whether the tuning file has loaded or failed. Without [`TuningHandle`]
+/// (no tuning plugin, e.g. the headless tests) there's nothing to wait for.
+fn tuning_settled(tuning: Option<&TuningHandle>, assets: &AssetServer) -> bool {
+    tuning.is_none_or(|handle| {
+        let state = assets.load_state(&handle.0);
+        state.is_loaded() || state.is_failed()
+    })
+}
+
 fn hand_over_splash(
     mut hand_over: ResMut<SplashHandOver>,
     sprites: Option<Res<GameSprites>>,
     images: Option<Res<Assets<Image>>>,
+    tuning: Option<Res<TuningHandle>>,
     assets: Res<AssetServer>,
 ) {
     hand_over.frames += 1;
-    if sprites_settled(sprites.as_deref(), images.as_deref(), &assets) {
+    if sprites_settled(sprites.as_deref(), images.as_deref(), &assets)
+        && tuning_settled(tuning.as_deref(), &assets)
+    {
         hand_over.settled_frames += 1;
     } else {
         hand_over.settled_frames = 0;

@@ -26,6 +26,12 @@ use std::time::Duration;
 
 /// A headless app as just launched: sitting on the main menu.
 pub(crate) fn launch() -> App {
+    launch_with(|_| {})
+}
+
+/// Like [`launch`], with `extra` (e.g. a file-loading plugin) added before
+/// the first update, so its `Startup` systems run.
+pub(crate) fn launch_with(extra: impl FnOnce(&mut App)) -> App {
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, StatesPlugin))
         .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_millis(
@@ -38,6 +44,7 @@ pub(crate) fn launch() -> App {
         .init_asset::<Mesh>()
         .init_asset::<ColorMaterial>();
     add_game(&mut app);
+    extra(&mut app);
     // Startup + the initial OnEnter(MainMenu).
     app.update();
     app

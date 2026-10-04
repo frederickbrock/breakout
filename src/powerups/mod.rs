@@ -19,7 +19,7 @@
 //! the right panel.
 
 pub(crate) mod capsules;
-mod super_sizer;
+pub(crate) mod super_sizer;
 
 use crate::bricks::grid::{Brick, CarriesPowerUp};
 use crate::bricks::BrickClass;
@@ -33,9 +33,9 @@ use crate::world::{GAME_SCALE, PLAYFIELD_HEIGHT};
 use bevy::prelude::*;
 
 const POWER_UP_SIZE: f32 = 24.0 * GAME_SCALE;
-const BASE_GRAVITY: f32 = 140.0 * GAME_SCALE;
-const GRAVITY_STEP: f32 = 20.0 * GAME_SCALE;
-const MAX_GRAVITY: f32 = 420.0 * GAME_SCALE;
+pub(crate) const BASE_GRAVITY: f32 = 140.0 * GAME_SCALE;
+pub(crate) const GRAVITY_STEP: f32 = 20.0 * GAME_SCALE;
+pub(crate) const MAX_GRAVITY: f32 = 420.0 * GAME_SCALE;
 
 pub type PowerUpSpawner = Spawner<PowerUpKind>;
 
