@@ -10,7 +10,7 @@ gates:
   merge: auto                  # human | auto  (master protection: no required review; required checks native + web, test once green)
 max_bounces: 2
 beads:
-  sync_commit: pr              # trunk-direct | pr | manual  (master is branch-protected)
+  sync_commit: trunk-direct    # trunk-direct | pr | manual  (master is protected but the owner may push; CI skips .beads-only pushes)
 stacks: [stack-rust-bevy]
 checks:                        # coder must pass all before opening/updating a PR
   - cargo build

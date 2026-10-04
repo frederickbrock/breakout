@@ -3,6 +3,10 @@ name: Build
 on:
   push:
     branches: [master]
+    # Beads-only commits (the pm's `chore(beads): sync ...` straight to
+    # master) don't rebuild or redeploy Pages. PRs are not filtered, so the
+    # required checks still run on every PR.
+    paths-ignore: ['.beads/**']
   pull_request:
   workflow_dispatch:
 
