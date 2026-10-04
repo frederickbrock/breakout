@@ -17,6 +17,7 @@ fn sprites_of(handle: Handle<Image>) -> GameSprites {
         frame_left: handle.clone(),
         frame_right: handle.clone(),
         parallax: std::array::from_fn(|_| handle.clone()),
+        outlines: std::array::from_fn(|_| handle.clone()),
     }
 }
 

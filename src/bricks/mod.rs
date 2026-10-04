@@ -24,7 +24,7 @@
 
 pub(crate) mod explosive;
 pub(crate) mod grid;
-mod outline;
+pub(crate) mod outline;
 pub(crate) mod regen;
 
 use bevy::prelude::*;

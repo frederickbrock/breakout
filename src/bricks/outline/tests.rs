@@ -257,3 +257,55 @@ fn a_damaged_regen_outline_speeds_up_until_it_heals() {
     assert!(!app.world().entity(regen).contains::<RegenTimer>());
     assert!((step(&mut app) - breathing).abs() < 1e-4);
 }
+
+#[test]
+fn each_style_maps_to_its_painted_frame() {
+    use ExplosiveKind::*;
+    for (class, file) in [
+        (BrickClass::Reactor, "outline_reactor.png"),
+        (BrickClass::Regen, "outline_regen.png"),
+        (BrickClass::Shield, "outline_shield.png"),
+        (BrickClass::Explosive(Charge), "outline_charge.png"),
+        (BrickClass::Explosive(Breach), "outline_breach.png"),
+        (BrickClass::Explosive(Demolition), "outline_demolition.png"),
+    ] {
+        let style = OutlineStyle::of(class).unwrap();
+        assert_eq!(style.path(), format!("sprites/bricks/{file}"), "{class:?}");
+        assert!(
+            std::path::Path::new(&format!("assets/{}", style.path())).exists(),
+            "{file} ships"
+        );
+    }
+    // `ALL` is in declaration order, which `GameSprites::outline` indexes by.
+    for (i, style) in OutlineStyle::ALL.into_iter().enumerate() {
+        assert_eq!(style as usize, i);
+    }
+}
+
+#[test]
+fn a_painted_frame_never_pulses_below_sixty_percent() {
+    let mut lowest: f32 = 1.0;
+    for step in 0..=100 {
+        let b = painted_brightness(true, step as f32 / 100.0);
+        assert!((PAINTED_PULSE_LOW..=1.0).contains(&b), "{b}");
+        lowest = lowest.min(b);
+    }
+    assert!(
+        (lowest - PAINTED_PULSE_LOW).abs() < 1e-3,
+        "it still pulses down to 60%"
+    );
+    assert_eq!(painted_brightness(true, 0.0), 1.0);
+    assert_eq!(
+        painted_brightness(false, 0.37),
+        1.0,
+        "a steady frame stays full"
+    );
+}
+
+#[test]
+fn the_painted_frame_sits_four_art_pixels_outside_the_plate() {
+    // 168×68 art around 160×60: 4 art px each side, at the plate's scale.
+    let margin = (FRAME_SIZE - SIZE) / 2.0;
+    assert!((margin.x - 4.0 * BRICK_WIDTH / 160.0).abs() < 1e-3);
+    assert!((margin.y - 4.0 * BRICK_HEIGHT / 60.0).abs() < 1e-3);
+}
