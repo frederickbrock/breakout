@@ -70,6 +70,26 @@ fn the_shipped_campaign_starts_with_the_random_level() {
 }
 
 #[test]
+fn every_shipped_campaign_level_parses_in_order() {
+    let campaign = parse_campaign(include_str!("../../assets/levels/campaign.txt"));
+    let names: Vec<String> = campaign
+        .levels
+        .iter()
+        .map(|file| {
+            let path = format!("assets/levels/{file}");
+            let text = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{path}: {e}"));
+            let def = parse_level(&text).unwrap_or_else(|e| panic!("{path}: {e}"));
+            assert!(
+                def.grid.iter().flatten().any(Option::is_some),
+                "{path} has a brick"
+            );
+            def.name
+        })
+        .collect();
+    assert_eq!(names, ["Random", "The Abyss", "Andromada"]);
+}
+
+#[test]
 fn the_default_ball_speed_is_the_ball_speed_constant() {
     assert_eq!(
         BallSpeed::from_factor(BALL_SPEED_SCALE),
