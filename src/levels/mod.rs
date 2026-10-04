@@ -70,7 +70,8 @@ pub struct CellDef {
 pub struct LevelDef {
     pub name: String,
     /// `speed_factor: F`: the ball's speed is 300 x F world units/s. `None`
-    /// uses the default factor, `ball::BALL_SPEED_SCALE` (1.8 = 540).
+    /// uses the per-round ramp, `ball::speed_factor(round)` (1.8 = 540 in
+    /// round 1, +0.1 a round, capped at 2.5).
     pub speed_factor: Option<f32>,
     /// `powerups: N`: this many random bricks become power-up bricks.
     pub extra_powerups: usize,

@@ -149,6 +149,45 @@ fn score_and_lives_carry_over_and_power_ups_and_speed_reset_per_level() {
     assert!((speed - 600.0).abs() < 1e-2, "{speed}");
 }
 
+/// The served ball's measured speed.
+fn served_speed(app: &mut App) -> f32 {
+    tap(app, KeyCode::Space);
+    let ball = ball(app);
+    app.world().get::<LinearVelocity>(ball).unwrap().0.length()
+}
+
+#[test]
+fn without_a_speed_factor_each_round_serves_faster() {
+    let ramped = || vec![level("name: One\ngrid:\nC"), level("name: Two\ngrid:\n.C")];
+    let mut app = app_with_campaign(ramped());
+    // Round 1: today's 540.
+    let speed = served_speed(&mut app);
+    assert!((speed - 540.0).abs() < 5.4, "{speed}");
+
+    clear(&mut app);
+    wait_out_card(&mut app);
+    // Round 2: 570, sizes untouched.
+    let speed = served_speed(&mut app);
+    assert!((speed - 570.0).abs() < 1e-2, "{speed}");
+    let paddle = paddle(&mut app);
+    assert_eq!(
+        app.world().get::<Paddle>(paddle).unwrap().width,
+        PADDLE_WIDTH
+    );
+
+    // Play again after a loss: back to round 1's speed.
+    app.world_mut().resource_mut::<Lives>().0 = 1;
+    move_ball_below_screen(&mut app);
+    app.update();
+    app.update();
+    assert_eq!(app_state(&app), AppState::GameOver);
+    press(&mut app, "Play again");
+    app.update();
+    assert_eq!(current(&app), 0);
+    let speed = served_speed(&mut app);
+    assert!((speed - 540.0).abs() < 1e-2, "{speed}");
+}
+
 #[test]
 fn the_next_levels_reactors_are_equipped() {
     let mut app = app_with_campaign(vec![level("grid:\nC"), level("name: Reactor\ngrid:\nP")]);

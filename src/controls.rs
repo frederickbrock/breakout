@@ -63,13 +63,13 @@ pub struct PaddleTarget {
 }
 
 /// How quickly the paddle closes the gap to its target, per second.
-const FOLLOW_GAIN: f32 = 20.0;
+pub(crate) const FOLLOW_GAIN: f32 = 20.0;
 /// Top horizontal speed while following the mouse.
-const MAX_FOLLOW_SPEED: f32 = 2000.0 * GAME_SCALE;
+pub(crate) const MAX_FOLLOW_SPEED: f32 = 2000.0 * GAME_SCALE;
 /// Most of the gap a single frame may close. The velocity is set once per
 /// frame but Avian integrates it over every fixed step in that frame, so at
 /// a low frame rate an uncapped gain would overshoot and ring.
-const MAX_GAP_PER_FRAME: f32 = 0.8;
+pub(crate) const MAX_GAP_PER_FRAME: f32 = 0.8;
 
 /// The paddle-centre X for a cursor at `cursor_x`, clamped so a paddle of
 /// `paddle_width` stays between the side walls, inside the playfield well.

@@ -56,6 +56,7 @@ One line per file; each module's details live in its own `//!` doc comment.
 - `src/menu/game_over.rs` — game-over / win screen with the final score.
 - `src/plate.rs` — `BackingPlate`: the dark rounded plates behind the HUD and the power-up capsules.
 - `src/theme.rs` — the Steelbreak palette; every colour the game draws with.
+- `src/tuning.rs` — `Tuning`: tunable numbers as a resource, loaded (and hot-reloaded) from `assets/game.tuning.ron` by `TuningPlugin` (main-only).
 - `src/sprites.rs` — image assets: `GameSprites`, the background and sprite skinning (brick damage plates included).
 - `src/parallax.rs` — `ParallaxPlugin`: the deep-space layers and planet drifting down behind the playfield well (`LAYERS` table).
 - `src/particles/mod.rs` — the bevy_enoki VFX layer: per-class brick bursts and damage, explosive blasts, glass glints, ball trail, bounce sparks, paddle flare.
@@ -162,6 +163,8 @@ One line per file; each module's details live in its own `//!` doc comment.
   layers; each is cropped (`Sprite.rect`) so no pixel leaves the 1440×1080 well, and it
   drifts on `Time<Real>` (not virtual or physics time, which pause), on every screen,
   through restarts. Its images are in `GameSprites::parallax`; a missing one isn't drawn.
+  The glow layer (`space_l1_glow.png`) rides with L1 and pulses via `glow_intensity`
+  (breathing + seeded random lightning strikes, capped at `GLOW_PEAK`).
 - **Particles: per-class hit/break bursts.** Each brick material has
   `assets/particles/<class>_hit.particle.ron`, `<class>_break.particle.ron` and a
   4-frame 128×32 greyscale sheet `<class>.png`. `<class>` is `particles::material_slug`:

@@ -447,6 +447,62 @@ fn every_class_has_its_own_hit_break_and_sheet_files_on_disk() {
     }
 }
 
+/// Alpha above this counts as a drawn pixel (below it is keying fringe).
+const DRAWN_ALPHA: u8 = 16;
+
+#[test]
+fn the_class_sheets_are_four_clean_greyscale_frames() {
+    // The sheet contract (sim-4ua): 128×32 RGBA, four 32×32 frames, greyscale
+    // so the effect's colour tints it, each frame drawn and kept off its
+    // cell's edge (no sliver of a neighbouring frame at the cell boundary),
+    // and frame 4 a sparse fade (less drawn than the peak frame 2).
+    let slugs: std::collections::BTreeSet<_> =
+        all_classes().into_iter().map(material_slug).collect();
+    for slug in slugs {
+        let path = format!("particles/{slug}.png");
+        let (w, h, rgba) = shipped_png(&path);
+        assert_eq!((w, h), (128, 32), "{path}");
+        let px = |x: u32, y: u32| {
+            let i = 4 * (y * w + x) as usize;
+            &rgba[i..i + 4]
+        };
+        let mut drawn = [0usize; 4];
+        for frame in 0..4 {
+            for y in 0..32 {
+                for x in 0..32 {
+                    let p = px(frame * 32 + x, y);
+                    if p[3] <= DRAWN_ALPHA {
+                        continue;
+                    }
+                    drawn[frame as usize] += 1;
+                    assert!(
+                        p[0] == p[1] && p[1] == p[2],
+                        "{path} frame {}: ({x},{y}) is not grey: {p:?}",
+                        frame + 1
+                    );
+                    assert!(
+                        x != 0 && x != 31 && y != 0 && y != 31,
+                        "{path} frame {}: drawn pixel on the cell edge at ({x},{y})",
+                        frame + 1
+                    );
+                }
+            }
+        }
+        assert!(
+            drawn.iter().all(|&n| n > 0),
+            "{path}: an empty frame {drawn:?}"
+        );
+        assert!(
+            drawn[3] < drawn[1],
+            "{path}: frame 4 isn't a sparse fade {drawn:?}"
+        );
+        assert!(
+            drawn[3] * 4 <= 32 * 32,
+            "{path}: frame 4 covers over 25% {drawn:?}"
+        );
+    }
+}
+
 #[test]
 fn shield_glass_glints_when_it_deflects_and_shatters_when_it_breaks() {
     let mut app = app_with_vfx();

@@ -12,6 +12,14 @@
 //!   the top once it has fully left the bottom, cropped to the well
 //!   ([`crop_to_well`]).
 //!
+//! The **glow** layer (`space_l1_glow.png`, white with alpha = intensity)
+//! drifts with L1, in register with its cloud forks, and is tinted
+//! [`theme::NEBULA_GLOW`] at [`glow_intensity`]: a slow breathing between
+//! [`GLOW_FLOOR`] and [`GLOW_BREATH_TOP`], plus lightning strikes every
+//! [`STRIKE_GAP_SECS`] (2–4 quick flashes up to the capped [`GLOW_PEAK`],
+//! then a fade) from a [`StrikeSchedule`] refilled as strikes pass. It's
+//! ambient: real time, no gameplay reaction.
+//!
 //! Every pixel stays inside the [`PLAYFIELD_WIDTH`]×[`PLAYFIELD_HEIGHT`]
 //! well: nothing leaks into the side panels or the letterbox bars.
 //!
@@ -23,7 +31,13 @@
 
 use bevy::prelude::*;
 
+use std::collections::VecDeque;
+
+use rand::rngs::StdRng;
+use rand::{RngExt, SeedableRng};
+
 use crate::sprites::GameSprites;
+use crate::theme;
 use crate::world::{PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH};
 
 /// One parallax layer.
@@ -37,19 +51,26 @@ pub(crate) struct LayerSpec {
     /// A vertically seamless texture as wide as the well, wrapping forever;
     /// otherwise a single sprite (the planet) that re-enters from the top.
     pub(crate) tiled: bool,
+    /// A glow mask (white, alpha = intensity), tinted [`theme::NEBULA_GLOW`]
+    /// and pulsed by [`glow_intensity`]; it shares its cloud layer's speed
+    /// and size, so it stays in register with the clouds' forks.
+    pub(crate) glow: bool,
     /// A non-tiling layer's centre at start, in world space.
     pub(crate) start: Vec2,
 }
 
+pub(crate) const LAYER_COUNT: usize = 5;
+
 /// The layers, back to front. All sit between the `Background` (z −10) and
 /// the frame (z −5). To put the planet behind the clouds, give it a z below
 /// theirs.
-pub(crate) const LAYERS: [LayerSpec; 4] = [
+pub(crate) const LAYERS: [LayerSpec; LAYER_COUNT] = [
     LayerSpec {
         path: "parallax/space_l0.png",
         z: -9.0,
         speed: 8.0,
         tiled: true,
+        glow: false,
         start: Vec2::ZERO,
     },
     LayerSpec {
@@ -57,6 +78,16 @@ pub(crate) const LAYERS: [LayerSpec; 4] = [
         z: -8.0,
         speed: 16.0,
         tiled: true,
+        glow: false,
+        start: Vec2::ZERO,
+    },
+    LayerSpec {
+        // L1's lightning glow: L1's speed, between L1 and L2.
+        path: "parallax/space_l1_glow.png",
+        z: -7.5,
+        speed: 16.0,
+        tiled: true,
+        glow: true,
         start: Vec2::ZERO,
     },
     LayerSpec {
@@ -64,6 +95,7 @@ pub(crate) const LAYERS: [LayerSpec; 4] = [
         z: -7.0,
         speed: 28.0,
         tiled: true,
+        glow: false,
         start: Vec2::ZERO,
     },
     LayerSpec {
@@ -71,6 +103,7 @@ pub(crate) const LAYERS: [LayerSpec; 4] = [
         z: -6.0,
         speed: 2.0,
         tiled: false,
+        glow: false,
         // Lower right, its centre 100 px inside the right edge.
         start: Vec2::new(
             PLAYFIELD_WIDTH / 2.0 - 100.0,
@@ -151,6 +184,119 @@ pub(crate) fn crop_to_well(centre: Vec2, size: Vec2) -> Option<(Rect, Rect)> {
     Some((visible, texture))
 }
 
+/// The glow's breathing range (fraction of full brightness) and period.
+pub(crate) const GLOW_FLOOR: f32 = 0.15;
+pub(crate) const GLOW_BREATH_TOP: f32 = 0.35;
+pub(crate) const GLOW_BREATH_SECS: f32 = 5.0;
+/// The brightest a strike gets: capped below full so the brick area stays
+/// calm (the art also dims the forks behind the brick rows).
+pub(crate) const GLOW_PEAK: f32 = 0.85;
+/// Seconds between strikes (random in this range), the flicker's length
+/// and flash count ranges, and the fade back to breathing.
+pub(crate) const STRIKE_GAP_SECS: (f32, f32) = (6.0, 15.0);
+pub(crate) const STRIKE_FLICKER_SECS: (f32, f32) = (0.3, 0.6);
+pub(crate) const STRIKE_FLASHES: (u8, u8) = (2, 4);
+pub(crate) const STRIKE_FADE_SECS: f32 = 1.0;
+/// Within each flash, the share of its slot spent lit, and the dip between.
+const FLASH_ON: f32 = 0.6;
+const FLASH_DIP: f32 = 0.35;
+
+/// One lightning strike: when it starts, how long it flickers, how often.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct Strike {
+    pub(crate) start: f32,
+    pub(crate) flicker: f32,
+    pub(crate) flashes: u8,
+}
+
+impl Strike {
+    /// When it has fully faded back to breathing.
+    pub(crate) fn end(&self) -> f32 {
+        self.start + self.flicker + STRIKE_FADE_SECS
+    }
+
+    /// How far toward [`GLOW_PEAK`] (`0..=1`) the strike pushes the glow at
+    /// `t`: flashes of full brightness with dips between, then a smooth
+    /// fade to 0.
+    pub(crate) fn envelope(&self, t: f32) -> f32 {
+        let dt = t - self.start;
+        if dt < 0.0 || t >= self.end() {
+            return 0.0;
+        }
+        if dt < self.flicker {
+            let slot = dt / self.flicker * self.flashes as f32;
+            // The last flash stays lit into the fade, so there's no jump.
+            let last = slot >= self.flashes.saturating_sub(1) as f32;
+            return if last || slot.fract() < FLASH_ON {
+                1.0
+            } else {
+                FLASH_DIP
+            };
+        }
+        let fade = (dt - self.flicker) / STRIKE_FADE_SECS;
+        1.0 - fade * fade * (3.0 - 2.0 * fade)
+    }
+}
+
+/// The slow breathing between strikes, in `GLOW_FLOOR..=GLOW_BREATH_TOP`.
+pub(crate) fn breathing(t: f32) -> f32 {
+    let phase = (t / GLOW_BREATH_SECS * std::f32::consts::TAU).cos();
+    GLOW_FLOOR + (GLOW_BREATH_TOP - GLOW_FLOOR) * (0.5 - 0.5 * phase)
+}
+
+/// The glow's brightness at `t`: breathing, pushed toward [`GLOW_PEAK`] by
+/// any strike under way. Always in `GLOW_FLOOR..=GLOW_PEAK`.
+pub(crate) fn glow_intensity(t: f32, strikes: &[Strike]) -> f32 {
+    let base = breathing(t);
+    let push = strikes.iter().map(|s| s.envelope(t)).fold(0.0, f32::max);
+    base + (GLOW_PEAK - base) * push
+}
+
+/// The upcoming strikes, drawn from a seeded rng and refilled as they pass.
+#[derive(Resource)]
+pub(crate) struct StrikeSchedule {
+    rng: StdRng,
+    pub(crate) strikes: VecDeque<Strike>,
+    /// When the last scheduled strike starts.
+    last_start: f32,
+}
+
+impl StrikeSchedule {
+    pub(crate) fn seeded(seed: u64) -> Self {
+        Self {
+            rng: StdRng::seed_from_u64(seed),
+            strikes: VecDeque::new(),
+            last_start: 0.0,
+        }
+    }
+
+    /// Drops strikes that have ended by `t` and schedules ahead so at least
+    /// the next strike after `t` is known.
+    pub(crate) fn advance(&mut self, t: f32) {
+        while self.strikes.front().is_some_and(|s| s.end() <= t) {
+            self.strikes.pop_front();
+        }
+        while self.last_start <= t || self.strikes.is_empty() {
+            let gap = self.rng.random_range(STRIKE_GAP_SECS.0..=STRIKE_GAP_SECS.1);
+            let start = self.last_start + gap;
+            self.strikes.push_back(Strike {
+                start,
+                flicker: self
+                    .rng
+                    .random_range(STRIKE_FLICKER_SECS.0..=STRIKE_FLICKER_SECS.1),
+                flashes: self.rng.random_range(STRIKE_FLASHES.0..=STRIKE_FLASHES.1),
+            });
+            self.last_start = start;
+        }
+    }
+}
+
+impl Default for StrikeSchedule {
+    fn default() -> Self {
+        Self::seeded(rand::rng().random())
+    }
+}
+
 /// One sprite of a parallax layer: `part` 0/1 of a tiling layer, or the
 /// planet's only sprite.
 #[derive(Component, Debug)]
@@ -163,8 +309,12 @@ pub(crate) struct ParallaxPlugin;
 
 impl Plugin for ParallaxPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, spawn_layers)
-            .add_systems(Update, drift.run_if(resource_exists::<GameSprites>));
+        app.init_resource::<StrikeSchedule>()
+            .add_systems(Startup, spawn_layers)
+            .add_systems(
+                Update,
+                (drift.run_if(resource_exists::<GameSprites>), pulse_glow),
+            );
     }
 }
 
@@ -245,6 +395,23 @@ fn drift(
         transform.translation = world.center().extend(spec.z);
         if *visibility != Visibility::Inherited {
             *visibility = Visibility::Inherited;
+        }
+    }
+}
+
+/// Sets each glow layer's tint alpha to [`glow_intensity`] at `Time<Real>`.
+fn pulse_glow(
+    time: Res<Time<Real>>,
+    mut schedule: ResMut<StrikeSchedule>,
+    mut layers: Query<(&ParallaxSprite, &mut Sprite)>,
+) {
+    let t = time.elapsed_secs();
+    schedule.advance(t);
+    let strikes: Vec<Strike> = schedule.strikes.iter().copied().collect();
+    let color = theme::NEBULA_GLOW.with_alpha(glow_intensity(t, &strikes));
+    for (piece, mut sprite) in &mut layers {
+        if LAYERS[piece.layer].glow && sprite.color != color {
+            sprite.color = color;
         }
     }
 }

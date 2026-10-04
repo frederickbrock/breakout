@@ -93,9 +93,15 @@ pub(crate) fn sector_card_text(index: usize, name: &str) -> String {
     format!("SECTOR {} // {}", sector_number(index), name)
 }
 
-/// Sets the ball speed for `def` and spawns its board.
-pub(crate) fn spawn_board(commands: &mut Commands, def: &LevelDef, ball_speed: &mut BallSpeed) {
-    *ball_speed = BallSpeed::for_level(def);
+/// Sets the ball speed for `def` played as round `round` (from 1: the
+/// level index + 1) and spawns its board.
+pub(crate) fn spawn_board(
+    commands: &mut Commands,
+    def: &LevelDef,
+    round: usize,
+    ball_speed: &mut BallSpeed,
+) {
+    *ball_speed = BallSpeed::for_level(def, round);
     let board = build_board(def, &mut rand::rng());
     spawn_bricks(
         commands,
@@ -179,7 +185,12 @@ fn advance_after_card(
     *signals = BallCollisionSignals::default();
     // The bricks are queued before the trigger, so `LevelStarted` observers
     // see the new board.
-    spawn_board(&mut commands, &transition.def, &mut ball_speed);
+    spawn_board(
+        &mut commands,
+        &transition.def,
+        current.0 + 1,
+        &mut ball_speed,
+    );
     commands.remove_resource::<LevelTransition>();
     commands.trigger(LevelStarted { index: current.0 });
     next_play.set(PlayState::Playing);

@@ -96,7 +96,7 @@ pub struct PlacedBrick {
 /// evenly over its three variants (ceramic 30, titanium 20, tungsten 12,
 /// explosive 16, regen 12, shield 10). Also the list of classes every board
 /// must contain at least once. Reactor bricks are placed separately.
-const FILL_WEIGHTS: [(BrickClass, u32); 8] = [
+pub(crate) const FILL_WEIGHTS: [(BrickClass, u32); 8] = [
     (BrickClass::Ceramic, 90),
     (BrickClass::Titanium, 60),
     (BrickClass::Tungsten, 36),

@@ -65,6 +65,10 @@ pub const FRAME_EDGE: Color = hex(0x7f93a8);
 /// steel at 80%).
 pub const HUD_PLATE: Color = Color::srgba_u8(0x0a, 0x0f, 0x15, 204);
 
+/// The nebula's lightning glow (the parallax glow mask's tint); cream-white
+/// until the sim-rdl.10 art's lightning colour is picked.
+pub const NEBULA_GLOW: Color = hex(0xfff3d6);
+
 /// A sprite's tint when it draws its own image unmodified.
 pub const UNTINTED: Color = Color::WHITE;
 

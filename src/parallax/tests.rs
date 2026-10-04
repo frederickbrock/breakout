@@ -1,6 +1,10 @@
 use super::*;
 
 const PERIOD: f32 = 2160.0;
+
+fn planet() -> LayerSpec {
+    *LAYERS.iter().find(|l| !l.tiled).unwrap()
+}
 const VIEW: f32 = PLAYFIELD_HEIGHT;
 
 /// The texture row shown `y` px below the top of the view.
@@ -66,7 +70,7 @@ fn the_content_drifts_down_with_no_jump_across_the_wrap() {
 #[test]
 fn the_planet_drifts_down_and_re_enters_from_above() {
     let size = 640.0;
-    let start = LAYERS[3].start.y;
+    let start = planet().start.y;
     assert_eq!(planet_y(0.0, 2.0, start, size), start);
     assert!((planet_y(10.0, 2.0, start, size) - (start - 20.0)).abs() < 1e-3);
     // Fully below the well: re-enters just above the top, no stop.
@@ -83,7 +87,7 @@ fn the_planet_drifts_down_and_re_enters_from_above() {
 
 #[test]
 fn the_planet_starts_lower_right_partly_cut_off() {
-    let planet = LAYERS[3];
+    let planet = planet();
     assert!(!planet.tiled);
     let inside_right = PLAYFIELD_WIDTH / 2.0 - planet.start.x;
     assert!((80.0..=120.0).contains(&inside_right));
@@ -129,7 +133,11 @@ fn the_layers_sit_between_the_background_and_the_frame() {
         );
         z = layer.z;
     }
-    let speeds: Vec<f32> = LAYERS.iter().filter(|l| l.tiled).map(|l| l.speed).collect();
+    let speeds: Vec<f32> = LAYERS
+        .iter()
+        .filter(|l| l.tiled && !l.glow)
+        .map(|l| l.speed)
+        .collect();
     assert_eq!(speeds, [8.0, 16.0, 28.0], "stars slowest, wisps fastest");
 }
 
@@ -161,6 +169,129 @@ fn every_layer_gets_its_sprites_hidden_until_its_image_loads() {
         .iter(world)
         .map(|(p, v)| (p.layer, *v))
         .collect();
-    assert_eq!(sprites.len(), 2 + 2 + 2 + 1);
+    assert_eq!(sprites.len(), 2 + 2 + 2 + 2 + 1);
     assert!(sprites.iter().all(|(_, v)| *v == Visibility::Hidden));
+}
+
+#[test]
+fn the_glow_rides_with_the_cloud_layer_between_l1_and_l2() {
+    let by_path = |p: &str| *LAYERS.iter().find(|l| l.path == p).unwrap();
+    let (l1, glow, l2) = (
+        by_path("parallax/space_l1.png"),
+        by_path("parallax/space_l1_glow.png"),
+        by_path("parallax/space_l2.png"),
+    );
+    assert!(glow.glow && glow.tiled);
+    assert_eq!(LAYERS.iter().filter(|l| l.glow).count(), 1);
+    assert_eq!(glow.speed, l1.speed, "same drift, so it stays in register");
+    assert!(l1.z < glow.z && glow.z < l2.z);
+    // Same speed and texture height: the same slices at every moment.
+    for t in [0.0, 12.5, 135.0, 400.0] {
+        assert_eq!(
+            tile_offset(t, glow.speed, PERIOD),
+            tile_offset(t, l1.speed, PERIOD)
+        );
+    }
+}
+
+#[test]
+fn breathing_stays_between_its_floor_and_top_and_is_smooth() {
+    let mut prev = breathing(0.0);
+    assert!((prev - GLOW_FLOOR).abs() < 1e-5, "starts at the floor");
+    assert!((breathing(GLOW_BREATH_SECS / 2.0) - GLOW_BREATH_TOP).abs() < 1e-5);
+    for i in 1..=2000 {
+        let b = breathing(i as f32 * 0.01);
+        assert!((GLOW_FLOOR - 1e-5..=GLOW_BREATH_TOP + 1e-5).contains(&b));
+        assert!((b - prev).abs() < 0.005, "no jumps at {}", i as f32 * 0.01);
+        prev = b;
+    }
+}
+
+#[test]
+fn the_glow_never_leaves_its_floor_and_cap() {
+    let mut schedule = StrikeSchedule::seeded(7);
+    for i in 0..30_000 {
+        let t = i as f32 * 0.01;
+        schedule.advance(t);
+        let strikes: Vec<Strike> = schedule.strikes.iter().copied().collect();
+        let g = glow_intensity(t, &strikes);
+        assert!(
+            (GLOW_FLOOR - 1e-5..=GLOW_PEAK + 1e-5).contains(&g),
+            "{g} at {t}"
+        );
+    }
+}
+
+#[test]
+fn a_strike_flashes_then_fades_back_to_breathing() {
+    let strike = Strike {
+        start: 10.0,
+        flicker: 0.4,
+        flashes: 3,
+    };
+    let strikes = [strike];
+    // Before it: just breathing.
+    assert_eq!(glow_intensity(9.9, &strikes), breathing(9.9));
+    // Lit at the start of each flash, reaching the cap.
+    for k in 0..3 {
+        let t = 10.0 + 0.4 * k as f32 / 3.0 + 0.01;
+        assert!(
+            (glow_intensity(t, &strikes) - GLOW_PEAK).abs() < 1e-5,
+            "flash {k}"
+        );
+    }
+    // Counting the rising edges gives the flash count.
+    let mut lit = false;
+    let mut flashes = 0;
+    for i in 0..=400 {
+        let on = strike.envelope(10.0 + i as f32 * 0.001) > 0.99;
+        if on && !lit {
+            flashes += 1;
+        }
+        lit = on;
+    }
+    assert_eq!(flashes, 3);
+    // The fade falls smoothly to breathing over STRIKE_FADE_SECS.
+    let mut prev = strike.envelope(10.4);
+    for i in 1..=100 {
+        let e = strike.envelope(10.4 + i as f32 * 0.01);
+        assert!(e <= prev + 1e-6 && prev - e < 0.05);
+        prev = e;
+    }
+    assert_eq!(
+        glow_intensity(strike.end() + 0.01, &strikes),
+        breathing(strike.end() + 0.01)
+    );
+}
+
+#[test]
+fn strikes_come_at_varied_intervals_within_their_ranges() {
+    let mut schedule = StrikeSchedule::seeded(42);
+    let mut starts = Vec::new();
+    let mut t = 0.0;
+    while t < 600.0 {
+        schedule.advance(t);
+        for s in &schedule.strikes {
+            if !starts.contains(&s.start) {
+                starts.push(s.start);
+                assert!((STRIKE_FLICKER_SECS.0..=STRIKE_FLICKER_SECS.1).contains(&s.flicker));
+                assert!((STRIKE_FLASHES.0..=STRIKE_FLASHES.1).contains(&s.flashes));
+            }
+        }
+        t += 0.25;
+    }
+    assert!(starts[0] <= STRIKE_GAP_SECS.1, "the first within 15 s");
+    let gaps: Vec<f32> = starts.windows(2).map(|w| w[1] - w[0]).collect();
+    assert!(gaps.len() > 30);
+    for g in &gaps {
+        assert!((STRIKE_GAP_SECS.0..=STRIKE_GAP_SECS.1).contains(g), "{g}");
+    }
+    let (min, max) = gaps
+        .iter()
+        .fold((f32::MAX, 0.0f32), |(a, b), &g| (a.min(g), b.max(g)));
+    assert!(max - min > 4.0, "not a metronome: {min}..{max}");
+    // The same seed gives the same schedule.
+    let mut again = StrikeSchedule::seeded(42);
+    again.advance(0.0);
+    assert_eq!(again.strikes[0].start, starts[0]);
 }

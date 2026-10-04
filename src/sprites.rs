@@ -177,7 +177,7 @@ pub struct GameSprites {
     pub frame_left: Handle<Image>,
     pub frame_right: Handle<Image>,
     /// The parallax layers, in [`crate::parallax::LAYERS`] order.
-    pub parallax: [Handle<Image>; 4],
+    pub parallax: [Handle<Image>; crate::parallax::LAYER_COUNT],
 }
 
 impl GameSprites {
