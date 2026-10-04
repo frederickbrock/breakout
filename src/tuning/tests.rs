@@ -388,3 +388,21 @@ fn tuned_lives_start_the_run_and_show_in_the_hud() {
         .collect();
     assert_eq!(shown, ["5"]);
 }
+
+#[test]
+fn super_sizer_multiplies_the_tuned_paddle_width_by_the_tuned_multiplier() {
+    use crate::paddle::Paddle;
+    use crate::powerups::{PowerUpCollected, PowerUpKind};
+    let mut app = run_with(Tuning::default(), None);
+    {
+        let mut t = tuning_mut(&mut app);
+        t.paddle.width = 200.0;
+        t.powerups.super_sizer.width_multiplier = 1.5;
+    }
+    app.world_mut().trigger(PowerUpCollected {
+        kind: PowerUpKind::SuperSizer,
+    });
+    app.update();
+    let paddle = crate::test_support::paddle(&mut app);
+    assert_eq!(app.world().get::<Paddle>(paddle).unwrap().width, 300.0);
+}
