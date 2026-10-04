@@ -31,3 +31,18 @@ functional:
 pr:
   reviewers: [frederickbrock]
   draft_first: true
+art:                           # art team (art-pipeline skill); defaults listed there
+  backend: openrouter          # openrouter | comfy (concept rounds)
+  model: google/gemini-2.5-flash-image   # openrouter model for concept rounds
+  alt_models: []
+  variations: 4
+  max_rounds: 5                # per issue, both backends
+  budget_usd: 2.00             # per issue; comfy rounds cost $0
+  concepts_dir: art/concepts
+  assets_dir: assets
+  style_guide: art/style.md
+  manifest: art/manifest.toml
+  comfy:
+    url: http://127.0.0.1:8188
+    workflow: art/comfy/sprite.json
+    variations: 4
