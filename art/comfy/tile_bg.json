@@ -1,20 +1,11 @@
 {
   "1": {
-    "class_type": "CheckpointLoaderSimple",
+    "class_type": "unCLIPCheckpointLoader",
     "inputs": {
       "ckpt_name": "sd_xl_base_1.0.safetensors"
     },
     "_meta": {
-      "title": "Load Checkpoint"
-    }
-  },
-  "2": {
-    "class_type": "VAELoader",
-    "inputs": {
-      "vae_name": "sdxl_vae_fp16_fix.safetensors"
-    },
-    "_meta": {
-      "title": "Load VAE"
+      "title": "Load SDXL (private instance for tiling)"
     }
   },
   "3": {
@@ -150,8 +141,8 @@
     "class_type": "MakeCircularVAE",
     "inputs": {
       "vae": [
-        "2",
-        0
+        "1",
+        2
       ],
       "tiling": "enable",
       "copy_vae": "Modify in place"
