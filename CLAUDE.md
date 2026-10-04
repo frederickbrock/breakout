@@ -161,6 +161,8 @@ One line per file; each module's details live in its own `//!` doc comment.
   layers; each is cropped (`Sprite.rect`) so no pixel leaves the 1440×1080 well, and it
   drifts on `Time<Real>` (not virtual or physics time, which pause), on every screen,
   through restarts. Its images are in `GameSprites::parallax`; a missing one isn't drawn.
+  The glow layer (`space_l1_glow.png`) rides with L1 and pulses via `glow_intensity`
+  (breathing + seeded random lightning strikes, capped at `GLOW_PEAK`).
 - **Particles: per-class hit/break bursts.** Each brick material has
   `assets/particles/<class>_hit.particle.ron`, `<class>_break.particle.ron` and a
   4-frame 128×32 greyscale sheet `<class>.png`. `<class>` is `particles::material_slug`:
