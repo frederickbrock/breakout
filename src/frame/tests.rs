@@ -106,29 +106,6 @@ fn the_frame_stays_through_play_game_over_and_play_again() {
     );
 }
 
-/// Decodes a shipped PNG under `assets/` (width, height, RGBA8 pixels).
-fn shipped_png(path: &str) -> (u32, u32, Vec<u8>) {
-    use bevy::asset::RenderAssetUsages;
-    use bevy::image::{CompressedImageFormats, ImageSampler, ImageType};
-    let bytes = std::fs::read(format!("assets/{path}")).unwrap_or_else(|e| panic!("{path}: {e}"));
-    let image = Image::from_buffer(
-        &bytes,
-        ImageType::Extension("png"),
-        CompressedImageFormats::NONE,
-        true,
-        ImageSampler::Default,
-        RenderAssetUsages::default(),
-    )
-    .unwrap_or_else(|e| panic!("{path}: {e}"));
-    let rgba = image.convert(bevy::render::render_resource::TextureFormat::Rgba8UnormSrgb);
-    let image = rgba.unwrap_or(image);
-    (
-        image.width(),
-        image.height(),
-        image.data.unwrap_or_default(),
-    )
-}
-
 #[test]
 fn the_shipped_frame_art_is_2x_the_panel_and_mirrored() {
     let (lw, lh, left) = shipped_png("sprites/frame_left.png");

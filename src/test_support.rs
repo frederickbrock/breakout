@@ -11,7 +11,8 @@
 //! `tap(&mut app, KeyCode::Space)` before anything that needs the ball in
 //! flight. The rest ([`ball`], [`paddle`], [`translation`], [`set_paddle_x`],
 //! [`aim_mouse_at`], [`move_ball_below_screen`], [`count`], the state
-//! getters) are small queries and pokes shared across modules' tests.
+//! getters) are small queries and pokes shared across modules' tests;
+//! [`shipped_png`] decodes a PNG under `assets/` for asset-contract tests.
 
 use super::*;
 use crate::ball::{Ball, BallApproach};
@@ -203,4 +204,27 @@ pub(crate) fn set_paddle_x(app: &mut App, x: f32) {
 
 pub(crate) fn aim_mouse_at(app: &mut App, x: f32) {
     app.world_mut().resource_mut::<PaddleTarget>().x = Some(x);
+}
+
+/// Decodes a shipped PNG under `assets/` (width, height, RGBA8 pixels).
+pub(crate) fn shipped_png(path: &str) -> (u32, u32, Vec<u8>) {
+    use bevy::asset::RenderAssetUsages;
+    use bevy::image::{CompressedImageFormats, ImageSampler, ImageType};
+    let bytes = std::fs::read(format!("assets/{path}")).unwrap_or_else(|e| panic!("{path}: {e}"));
+    let image = Image::from_buffer(
+        &bytes,
+        ImageType::Extension("png"),
+        CompressedImageFormats::NONE,
+        true,
+        ImageSampler::Default,
+        RenderAssetUsages::default(),
+    )
+    .unwrap_or_else(|e| panic!("{path}: {e}"));
+    let rgba = image.convert(bevy::render::render_resource::TextureFormat::Rgba8UnormSrgb);
+    let image = rgba.unwrap_or(image);
+    (
+        image.width(),
+        image.height(),
+        image.data.unwrap_or_default(),
+    )
 }
