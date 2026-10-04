@@ -263,3 +263,12 @@ processing = [
   "process --bg flood --trim --size 48x48 --fit stretch on each (sage-green background)",
   "PIL: one common alpha (pixelwise minimum of the three) so the silhouette is identical; green spill from the background glow removed within 3 px of the edge",
 ]
+
+[[asset]]
+id = "brick_cracked_titanium_regen"
+issue = "sim-usq.5"
+files = ["assets/sprites/bricks/titanium_cracked.png", "assets/sprites/bricks/regen_cracked.png"]
+source = "titanium_cracked=r1/v2, regen_cracked=r1/v6"
+model = "google/gemini-2.5-flash-image"
+prompt_file = "art/prompts/sim-usq.5-r1.txt"
+processing = ["process --bg flood --trim --size 160x60 --fit stretch (titanium)", "process --bg flood --tolerance 25 --trim --size 160x60 --fit stretch (regen; plate outline stops the flood on the green background)"]
