@@ -16,9 +16,9 @@ use crate::paddle::{Paddle, PADDLE_HEIGHT, PADDLE_WIDTH};
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-const WEIGHT: f32 = 1.0;
-const WIDTH_MULTIPLIER: f32 = 1.25;
-const DURATION: f32 = 7.0;
+pub(crate) const WEIGHT: f32 = 1.0;
+pub(crate) const WIDTH_MULTIPLIER: f32 = 1.25;
+pub(crate) const DURATION: f32 = 7.0;
 
 pub struct SuperSizerPlugin;
 
