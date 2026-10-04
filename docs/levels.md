@@ -18,6 +18,9 @@ ball speed. The game reads it into a format-independent `LevelDef`
 - The shipped `01-random.level` is 7 rows × 10 of `?` with `powerups: 6`,
   which is the classic random board. The game also has this board built in
   and falls back to it whenever there is no valid level.
+- The shipped campaign is `01-random` → `02-nextlevel` ("The Abyss", 9 rows of
+  `?`, `powerups: 3`) → `03-andromada` ("Andromada", two titanium-framed random
+  blocks split by a gap row, `powerups: 6`).
 
 On the web, trunk copies the whole `assets/` folder into `dist/`
 (`index.html`'s `copy-dir`), so `assets/levels/` ships with the build.
