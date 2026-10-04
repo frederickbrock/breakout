@@ -1,4 +1,5 @@
 use super::*;
+use crate::tuning::BlastTuning;
 use ExplosiveKind::*;
 
 const C: BrickClass = BrickClass::Ceramic;
@@ -45,7 +46,7 @@ fn ring() -> Vec<BrickCell> {
 fn charge_takes_one_hit_from_each_of_the_8_around() {
     let mut g = around(T, BrickClass::Explosive(Charge));
     g.insert(cell(1, 1), (C, 1));
-    let blast = resolve_blast(&g, cell(2, 2), Charge);
+    let blast = resolve_blast(&g, cell(2, 2), Charge, &BlastTuning::default());
     assert_eq!(blast.hits.len(), 8);
     assert_eq!(
         blast.hits[&cell(1, 1)],
@@ -78,6 +79,7 @@ fn breach_destroys_the_4_orthogonal_outright_but_not_diagonals() {
         &around(G, BrickClass::Explosive(Breach)),
         cell(2, 2),
         Breach,
+        &BlastTuning::default(),
     );
     let expected: BTreeMap<_, _> = [cell(1, 2), cell(3, 2), cell(2, 1), cell(2, 3)]
         .into_iter()
@@ -101,7 +103,7 @@ fn breach_destroys_the_4_orthogonal_outright_but_not_diagonals() {
 fn demolition_destroys_all_8_and_does_not_chain() {
     let mut g = around(G, BrickClass::Explosive(Demolition));
     g.insert(cell(1, 2), (BrickClass::Explosive(Charge), 1));
-    let blast = resolve_blast(&g, cell(2, 2), Demolition);
+    let blast = resolve_blast(&g, cell(2, 2), Demolition, &BlastTuning::default());
     assert_eq!(blast.hits.len(), 8);
     assert!(blast.hits.values().all(|h| h.left == 0));
     assert_eq!(
@@ -120,7 +122,7 @@ fn charge_and_breach_chain_into_explosives_they_destroy() {
     let t = Some(T);
     // Row 0: charge(origin) · breach · ceramic · titanium
     let g = grid(&[&[x, b, c, t], &[c, c, c, c]]);
-    let blast = resolve_blast(&g, cell(0, 0), Charge);
+    let blast = resolve_blast(&g, cell(0, 0), Charge, &BlastTuning::default());
     // The charge destroys the breach at (0,1), which goes off in turn.
     assert_eq!(blast.explosions, [cell(0, 0), cell(0, 1)]);
     // (0,2) is out of the charge's reach but orthogonal to the breach.
@@ -150,7 +152,7 @@ fn no_brick_is_scored_twice_in_a_chain() {
     let x = Some(BrickClass::Explosive(Charge));
     let t = Some(T);
     let g = grid(&[&[t, t, t, t], &[t, x, x, t], &[t, t, t, t]]);
-    let blast = resolve_blast(&g, cell(1, 1), Charge);
+    let blast = resolve_blast(&g, cell(1, 1), Charge, &BlastTuning::default());
     assert_eq!(blast.explosions, [cell(1, 1), cell(1, 2)]);
     for (c, hit) in &blast.hits {
         let (_, full) = g[c];
@@ -180,7 +182,7 @@ fn blasts_ignore_the_board_edge_and_gone_bricks() {
         &[Some(C), Some(C)],
     ]);
     g.insert(cell(1, 1), (C, 0)); // already broken this frame
-    let blast = resolve_blast(&g, cell(0, 0), Charge);
+    let blast = resolve_blast(&g, cell(0, 0), Charge, &BlastTuning::default());
     assert_eq!(blast.hits.len(), 2);
     assert!(!blast.hits.contains_key(&cell(1, 1)));
 }
@@ -377,11 +379,13 @@ mod in_game {
                     cell: BrickCell { row: 3, col: 4 },
                     position: charge_at,
                     kind: Charge,
+                    radius: 1,
                 },
                 BrickExploded {
                     cell: BrickCell { row: 3, col: 5 },
                     position: breach_at,
                     kind: Breach,
+                    radius: 1,
                 },
             ]
         );
@@ -401,4 +405,150 @@ mod in_game {
         assert_eq!(seen.len(), 1);
         assert_eq!(seen[0].kind, Demolition);
     }
+}
+
+// ---- tunable radius and chaining (sim-dj6.4) ----
+
+/// A 7×7 grid of `fill` with `center` at (3, 3).
+fn around7(fill: BrickClass, center: BrickClass) -> BlastGrid {
+    let mut g = BlastGrid::new();
+    for r in 0..7 {
+        for c in 0..7 {
+            let class = if (r, c) == (3, 3) { center } else { fill };
+            g.insert(cell(r, c), (class, class.max_hits()));
+        }
+    }
+    g
+}
+
+fn tuned(f: impl FnOnce(&mut BlastTuning)) -> BlastTuning {
+    let mut t = BlastTuning::default();
+    f(&mut t);
+    t
+}
+
+#[test]
+fn radius_one_is_exactly_the_original_offset_tables() {
+    assert_eq!(blast_offsets(Breach, 1), [(-1, 0), (1, 0), (0, -1), (0, 1)]);
+    let square = [
+        (-1, -1),
+        (-1, 0),
+        (-1, 1),
+        (0, -1),
+        (0, 1),
+        (1, -1),
+        (1, 0),
+        (1, 1),
+    ];
+    assert_eq!(blast_offsets(Charge, 1), square);
+    assert_eq!(blast_offsets(Demolition, 1), square);
+    let t = BlastTuning::default();
+    assert_eq!(t.of(Breach), (1, true));
+    assert_eq!(t.of(Charge), (1, true));
+    assert_eq!(t.of(Demolition), (1, false));
+}
+
+#[test]
+fn a_radius_two_breach_destroys_its_diamond_and_nothing_else() {
+    let t = tuned(|t| t.breach.radius = 2);
+    let blast = resolve_blast(
+        &around7(G, BrickClass::Explosive(Breach)),
+        cell(3, 3),
+        Breach,
+        &t,
+    );
+    let mut hit: Vec<BrickCell> = blast.hits.keys().copied().collect();
+    hit.sort();
+    let mut expected: Vec<BrickCell> = (0..7)
+        .flat_map(|r| (0..7).map(move |c| cell(r, c)))
+        .filter(|c| {
+            let d = c.row.abs_diff(3) + c.col.abs_diff(3);
+            (1..=2).contains(&d)
+        })
+        .collect();
+    expected.sort();
+    assert_eq!(hit, expected, "Manhattan distance ≤ 2: 12 cells");
+    assert_eq!(expected.len(), 12);
+    assert!(
+        blast.hits.values().all(|h| h.left == 0),
+        "breach destroys outright"
+    );
+}
+
+#[test]
+fn a_radius_two_charge_hits_the_whole_five_by_five_square() {
+    let t = tuned(|t| t.charge.radius = 2);
+    let blast = resolve_blast(
+        &around7(T, BrickClass::Explosive(Charge)),
+        cell(3, 3),
+        Charge,
+        &t,
+    );
+    let mut hit: Vec<BrickCell> = blast.hits.keys().copied().collect();
+    hit.sort();
+    let mut expected: Vec<BrickCell> = (1..=5)
+        .flat_map(|r| (1..=5).map(move |c| cell(r, c)))
+        .filter(|&c| c != cell(3, 3))
+        .collect();
+    expected.sort();
+    assert_eq!(
+        hit, expected,
+        "Chebyshev distance ≤ 2: the 24 cells round it"
+    );
+    assert!(
+        blast.hits.values().all(|h| h.removed == 1),
+        "charge still hits once"
+    );
+}
+
+#[test]
+fn demolition_chains_only_when_tuned_to() {
+    // A demolition with a charge next to it.
+    let g = grid(&[&[
+        Some(BrickClass::Explosive(Demolition)),
+        Some(BrickClass::Explosive(Charge)),
+        Some(C),
+    ]]);
+    let contained = resolve_blast(&g, cell(0, 0), Demolition, &BlastTuning::default());
+    assert_eq!(
+        contained.explosions,
+        [cell(0, 0)],
+        "default: the charge is destroyed, not set off"
+    );
+    assert!(
+        !contained.hits.contains_key(&cell(0, 2)),
+        "so its own blast never reaches (0, 2)"
+    );
+
+    let chaining = resolve_blast(
+        &g,
+        cell(0, 0),
+        Demolition,
+        &tuned(|t| t.demolition.chains = true),
+    );
+    assert_eq!(
+        chaining.explosions,
+        [cell(0, 0), cell(0, 1)],
+        "now it goes off"
+    );
+    assert_eq!(
+        chaining.hits[&cell(0, 2)].left,
+        0,
+        "and its blast destroys (0, 2)"
+    );
+
+    let quiet_charge = resolve_blast(
+        &grid(&[&[
+            Some(BrickClass::Explosive(Charge)),
+            Some(BrickClass::Explosive(Charge)),
+        ]]),
+        cell(0, 0),
+        Charge,
+        &tuned(|t| t.charge.chains = false),
+    );
+    assert_eq!(
+        quiet_charge.explosions,
+        [cell(0, 0)],
+        "charge can be made not to chain"
+    );
 }

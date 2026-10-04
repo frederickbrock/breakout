@@ -42,11 +42,26 @@
         ),
         reactor_bricks: 6,
         regen_heal_secs: 6.0,
+        blast: (
+            breach: (
+                radius: 1,
+                chains: true,
+            ),
+            charge: (
+                radius: 1,
+                chains: true,
+            ),
+            demolition: (
+                radius: 1,
+                chains: false,
+            ),
+        ),
     ),
     powerups: (
         drop_gravity: 210.0,
         drop_gravity_step: 30.0,
         max_drop_gravity: 630.0,
+        drop_chance: 0.0,
         super_sizer: (
             weight: 1.0,
             width_multiplier: 1.25,

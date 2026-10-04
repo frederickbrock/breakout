@@ -8,6 +8,10 @@
 //! - **Demolition:** the 8 surrounding bricks are destroyed outright;
 //!   explosives caught in it do *not* explode.
 //!
+//! Those are the defaults. `Tuning.bricks.blast` sets each kind's radius
+//! ([`blast_offsets`]: breach a diamond, the others a square) and whether it
+//! chains.
+//!
 //! The chain is worked out by the pure [`resolve_blast`] on a snapshot of the
 //! board, so every brick loses each hit point at most once and nothing is
 //! scored twice. [`explode`] then applies the result through the same path as
@@ -23,6 +27,7 @@ use super::grid::{Brick, BrickHealth};
 use super::{BrickCell, BrickClass, ExplosiveKind};
 use crate::collision::{BallCollisionSignals, BrickDamaged, BrickDestroyed};
 use crate::run::Score;
+use crate::tuning::{BlastTuning, Tuning};
 use bevy::prelude::*;
 use std::collections::{BTreeMap, VecDeque};
 
@@ -47,24 +52,34 @@ pub struct Blast {
     pub explosions: Vec<BrickCell>,
 }
 
-/// The cells a `kind` blast at `cell` reaches.
-fn reach(cell: BrickCell, kind: ExplosiveKind) -> Vec<BrickCell> {
-    let offsets: &[(i64, i64)] = match kind {
-        ExplosiveKind::Breach => &[(-1, 0), (1, 0), (0, -1), (0, 1)],
-        ExplosiveKind::Charge | ExplosiveKind::Demolition => &[
-            (-1, -1),
-            (-1, 0),
-            (-1, 1),
-            (0, -1),
-            (0, 1),
-            (1, -1),
-            (1, 0),
-            (1, 1),
-        ],
-    };
+/// The (row, col) offsets a `kind` blast of `radius` cells reaches: breach a
+/// diamond (Manhattan distance ≤ radius), charge and demolition a square
+/// (Chebyshev distance ≤ radius); never the origin. At radius 1 this is the
+/// original 4 orthogonals and 8 neighbours, in the original order (which
+/// sets the order chained explosions resolve in).
+pub fn blast_offsets(kind: ExplosiveKind, radius: u32) -> Vec<(i64, i64)> {
+    let r = i64::from(radius);
+    let mut offsets: Vec<(i64, i64)> = (-r..=r)
+        .flat_map(|dr| (-r..=r).map(move |dc| (dr, dc)))
+        .filter(|&(dr, dc)| (dr, dc) != (0, 0))
+        .filter(|&(dr, dc)| match kind {
+            ExplosiveKind::Breach => dr.abs() + dc.abs() <= r,
+            ExplosiveKind::Charge | ExplosiveKind::Demolition => true,
+        })
+        .collect();
+    if kind == ExplosiveKind::Breach {
+        // Nearest first; then columns before rows, as the original up, down,
+        // left, right.
+        offsets.sort_by_key(|&(dr, dc)| (dr.abs() + dc.abs(), dc.abs(), dc, dr));
+    }
     offsets
-        .iter()
-        .filter_map(|&(dr, dc)| {
+}
+
+/// The cells a `kind` blast of `radius` at `cell` reaches.
+fn reach(cell: BrickCell, kind: ExplosiveKind, radius: u32) -> Vec<BrickCell> {
+    blast_offsets(kind, radius)
+        .into_iter()
+        .filter_map(|(dr, dc)| {
             let row = usize::try_from(cell.row as i64 + dr).ok()?;
             let col = usize::try_from(cell.col as i64 + dc).ok()?;
             Some(BrickCell { row, col })
@@ -74,8 +89,14 @@ fn reach(cell: BrickCell, kind: ExplosiveKind) -> Vec<BrickCell> {
 
 /// Resolves the blast of a `kind` explosive destroyed at `origin`, including
 /// every chained explosion, on `grid` (which need not contain the origin).
-/// Bricks with 0 hits left count as already gone.
-pub fn resolve_blast(grid: &BlastGrid, origin: BrickCell, kind: ExplosiveKind) -> Blast {
+/// Bricks with 0 hits left count as already gone. Each kind's reach and
+/// whether it sets off the explosives it destroys come from `tuning`.
+pub fn resolve_blast(
+    grid: &BlastGrid,
+    origin: BrickCell,
+    kind: ExplosiveKind,
+    tuning: &BlastTuning,
+) -> Blast {
     let mut grid = grid.clone();
     grid.remove(&origin);
     let mut blast = Blast {
@@ -84,7 +105,8 @@ pub fn resolve_blast(grid: &BlastGrid, origin: BrickCell, kind: ExplosiveKind) -
     };
     let mut pending = VecDeque::from([(origin, kind)]);
     while let Some((cell, kind)) = pending.pop_front() {
-        for target in reach(cell, kind) {
+        let (radius, chains) = tuning.of(kind);
+        for target in reach(cell, kind, radius) {
             let Some((class, left)) = grid.get_mut(&target) else {
                 continue;
             };
@@ -104,8 +126,9 @@ pub fn resolve_blast(grid: &BlastGrid, origin: BrickCell, kind: ExplosiveKind) -
             hit.left = *left;
             if *left == 0 {
                 if let BrickClass::Explosive(next) = *class {
-                    // Demolition destroys explosives without setting them off.
-                    if kind != ExplosiveKind::Demolition {
+                    // A non-chaining blast (demolition by default) destroys
+                    // explosives without setting them off.
+                    if chains {
                         blast.explosions.push(target);
                         pending.push_back((target, next));
                     }
@@ -133,6 +156,8 @@ pub struct BrickExploded {
     pub cell: BrickCell,
     pub position: Vec2,
     pub kind: ExplosiveKind,
+    /// Its blast radius in cells (1 by default); the VFX scale with it.
+    pub radius: u32,
 }
 
 pub struct ExplosivePlugin;
@@ -151,6 +176,7 @@ fn explode(
     mut commands: Commands,
     mut score: ResMut<Score>,
     mut signals: ResMut<BallCollisionSignals>,
+    tuning: Res<Tuning>,
     classes: Query<(&BrickCell, &BrickClass)>,
     mut bricks: Query<BlastTarget, With<Brick>>,
 ) {
@@ -164,7 +190,7 @@ fn explode(
         .iter()
         .map(|(_, cell, class, health, _)| (*cell, (*class, health.0)))
         .collect();
-    let blast = resolve_blast(&grid, origin, kind);
+    let blast = resolve_blast(&grid, origin, kind, &tuning.bricks.blast);
 
     let mut positions = BTreeMap::new();
     positions.insert(origin, on.position);
@@ -208,6 +234,7 @@ fn explode(
                 cell: *cell,
                 position,
                 kind,
+                radius: tuning.bricks.blast.of(kind).0,
             });
         }
     }

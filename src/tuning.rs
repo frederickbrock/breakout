@@ -136,6 +136,69 @@ pub struct BrickTuning {
     pub reactor_bricks: usize,
     /// Seconds a damaged regen brick takes to heal.
     pub regen_heal_secs: f32,
+    /// Each explosive kind's blast.
+    pub blast: BlastTuning,
+}
+
+/// Declares one explosive kind's blast settings type: how far it reaches
+/// (in cells) and whether explosives it destroys go off too, with `$chains`
+/// as the default, so a file that sets only `radius` keeps the kind's rule.
+macro_rules! blast_kind {
+    ($(#[$doc:meta])* $name:ident, $chains:expr) => {
+        $(#[$doc])*
+        #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+        #[serde(default)]
+        pub struct $name {
+            /// Cells the blast reaches: Manhattan distance for breach (a "+"
+            /// or diamond), Chebyshev for charge and demolition (a square).
+            pub radius: u32,
+            /// Explosives it destroys explode in turn.
+            pub chains: bool,
+        }
+
+        impl Default for $name {
+            fn default() -> Self {
+                Self {
+                    radius: 1,
+                    chains: $chains,
+                }
+            }
+        }
+    };
+}
+
+blast_kind!(
+    /// A blast that sets off the explosives it destroys by default (breach,
+    /// charge).
+    ChainingBlast,
+    true
+);
+blast_kind!(
+    /// A blast that destroys explosives without setting them off by default
+    /// (demolition).
+    ContainedBlast,
+    false
+);
+
+/// Every explosive kind's blast. The defaults are today's rules: radius 1,
+/// breach and charge chain, demolition doesn't.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct BlastTuning {
+    pub breach: ChainingBlast,
+    pub charge: ChainingBlast,
+    pub demolition: ContainedBlast,
+}
+
+impl BlastTuning {
+    /// `kind`'s (radius, chains).
+    pub fn of(&self, kind: ExplosiveKind) -> (u32, bool) {
+        match kind {
+            ExplosiveKind::Breach => (self.breach.radius, self.breach.chains),
+            ExplosiveKind::Charge => (self.charge.radius, self.charge.chains),
+            ExplosiveKind::Demolition => (self.demolition.radius, self.demolition.chains),
+        }
+    }
 }
 
 impl Default for BrickTuning {
@@ -145,6 +208,7 @@ impl Default for BrickTuning {
             fill_weights: FillWeights::default(),
             reactor_bricks: REACTOR_BRICKS,
             regen_heal_secs: crate::bricks::regen::HEAL_SECS,
+            blast: BlastTuning::default(),
         }
     }
 }
@@ -257,6 +321,10 @@ pub struct PowerUpTuning {
     pub drop_gravity_step: f32,
     /// The heaviest a drop gets.
     pub max_drop_gravity: f32,
+    /// Chance (0..1) that breaking a brick without a power-up drops one
+    /// anyway (a kind from the spawner). Reactor and `powerup` bricks always
+    /// drop theirs.
+    pub drop_chance: f32,
     pub super_sizer: SuperSizerTuning,
 }
 
@@ -266,6 +334,7 @@ impl Default for PowerUpTuning {
             drop_gravity: BASE_GRAVITY,
             drop_gravity_step: GRAVITY_STEP,
             max_drop_gravity: MAX_GRAVITY,
+            drop_chance: 0.0,
             super_sizer: SuperSizerTuning::default(),
         }
     }
