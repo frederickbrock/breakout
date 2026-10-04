@@ -1,0 +1,14 @@
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Use the reference image as the exact template: keep the same dark steel outer ring, same rounded-square silhouette, same inner steel bezel and rounded rectangular panel, same line weights, keylines, glints and lighting, at the same size and position. Change only the panel contents as follows. The panel is filled with neutral dark structural steel (#16202c to #2a3a4c, shaded like the reference's panel) and has no glyph, no symbol, nothing inside it: a blank empty panel.
+Single isolated object, centred, whole object inside frame, orthographic front view, plain flat solid #00FF00 green background, no shadow on the background, no scenery, no other objects, no text, no border.

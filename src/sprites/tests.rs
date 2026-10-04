@@ -60,6 +60,7 @@ fn app_with_sprites(missing: &[&str]) -> App {
         frame_left: image("frame_left"),
         frame_right: image("frame_right"),
         parallax: crate::parallax::LAYERS.map(|layer| image(layer.path)),
+        outlines: OutlineStyle::ALL.map(|style| image(style.path())),
     };
     app.world_mut().insert_resource(sprites);
     app.update();
@@ -536,4 +537,97 @@ fn a_missing_frame_image_keeps_that_panels_coded_frame() {
     // The right one still skins.
     let (_, _, right_skinned) = frame_panel(&mut app, 1.0);
     assert!(right_skinned);
+}
+
+/// Every outline: (its style, whether it has a painted frame sprite, whether
+/// any of its strips is still shown).
+fn outline_looks(app: &mut App) -> Vec<(OutlineStyle, bool, bool)> {
+    let outlines: Vec<(Entity, OutlineStyle)> = app
+        .world_mut()
+        .query::<(Entity, &BrickOutline)>()
+        .iter(app.world())
+        .map(|(e, o)| (e, o.style))
+        .collect();
+    outlines
+        .into_iter()
+        .map(|(entity, style)| {
+            let world = app.world();
+            let painted = world.get::<Sprite>(entity).is_some();
+            let strips_shown = world
+                .get::<Children>(entity)
+                .into_iter()
+                .flatten()
+                .filter(|&&c| world.get::<OutlineStrip>(c).is_some())
+                .any(|&c| world.get::<Visibility>(c) != Some(&Visibility::Hidden));
+            (style, painted, strips_shown)
+        })
+        .collect()
+}
+
+#[test]
+fn special_bricks_draw_their_painted_frames_instead_of_strips() {
+    let mut app = app_with_sprites(&[]);
+    let looks = outline_looks(&mut app);
+    for style in OutlineStyle::ALL {
+        assert!(
+            looks.iter().any(|(s, ..)| *s == style),
+            "{style:?} on the board"
+        );
+    }
+    assert!(
+        looks.iter().all(|(_, painted, shown)| *painted && !*shown),
+        "{looks:?}"
+    );
+
+    let handles: Vec<Handle<Image>> = OutlineStyle::ALL
+        .map(|style| app.world().resource::<GameSprites>().outline(style).clone())
+        .to_vec();
+    let frames: Vec<(OutlineStyle, Sprite, Vec3)> = app
+        .world_mut()
+        .query::<(&BrickOutline, &Sprite, &Transform)>()
+        .iter(app.world())
+        .map(|(o, s, t)| (o.style, s.clone(), t.translation))
+        .collect();
+    for (style, sprite, at) in frames {
+        assert_eq!(sprite.image, handles[style as usize], "{style:?}");
+        assert_eq!(sprite.custom_size, Some(FRAME_SIZE));
+        assert_eq!(at.truncate(), Vec2::ZERO, "centred on its brick");
+        assert!(at.z > 0.0, "above the plate");
+    }
+}
+
+#[test]
+fn a_pulsing_painted_frame_stays_at_or_above_sixty_percent() {
+    let mut app = app_with_sprites(&[]);
+    let mut lowest: f32 = 1.0;
+    // 4 s at 100 ms: several cycles of every pulse rate.
+    for _ in 0..40 {
+        app.update();
+        let reds: Vec<f32> = app
+            .world_mut()
+            .query::<(&BrickOutline, &Sprite)>()
+            .iter(app.world())
+            .filter(|(o, _)| o.style == OutlineStyle::Charge)
+            .map(|(_, s)| s.color.to_srgba().red)
+            .collect();
+        assert!(!reds.is_empty());
+        lowest = reds.into_iter().fold(lowest, f32::min);
+    }
+    assert!(
+        lowest >= crate::bricks::outline::PAINTED_PULSE_LOW - 1e-3,
+        "{lowest}"
+    );
+    assert!(lowest < 0.95, "it does pulse ({lowest})");
+}
+
+#[test]
+fn a_missing_frame_keeps_that_styles_coded_strips() {
+    let mut app = app_with_sprites(&[OutlineStyle::Shield.path()]);
+    for (style, painted, shown) in outline_looks(&mut app) {
+        if style == OutlineStyle::Shield {
+            assert!(!painted && shown, "shield falls back to strips");
+        } else {
+            assert!(painted && !shown, "{style:?} still painted");
+        }
+    }
 }

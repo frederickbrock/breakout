@@ -28,6 +28,7 @@ use crate::levels::{build_board, campaign_level, CampaignLevels, LevelDef};
 use crate::menu::heading;
 use crate::run::end_run;
 use crate::theme;
+use crate::tuning::Tuning;
 
 /// How long the sector card stays up between levels.
 pub(crate) const SECTOR_CARD_SECS: f32 = 2.0;
@@ -100,9 +101,10 @@ pub(crate) fn spawn_board(
     def: &LevelDef,
     round: usize,
     ball_speed: &mut BallSpeed,
+    tuning: &Tuning,
 ) {
     *ball_speed = BallSpeed::for_level(def, round);
-    let board = build_board(def, &mut rand::rng());
+    let board = build_board(def, &mut rand::rng(), &tuning.bricks);
     spawn_bricks(
         commands,
         &board,
@@ -173,7 +175,7 @@ fn advance_after_card(
     mut current: ResMut<CurrentLevel>,
     (mut ball_speed, mut signals): (ResMut<BallSpeed>, ResMut<BallCollisionSignals>),
     cards: Query<Entity, With<SectorCard>>,
-    mut next_play: ResMut<NextState<PlayState>>,
+    (mut next_play, tuning): (ResMut<NextState<PlayState>>, Res<Tuning>),
 ) {
     if !transition.timer.tick(time.delta()).is_finished() {
         return;
@@ -190,6 +192,7 @@ fn advance_after_card(
         &transition.def,
         current.0 + 1,
         &mut ball_speed,
+        &tuning,
     );
     commands.remove_resource::<LevelTransition>();
     commands.trigger(LevelStarted { index: current.0 });

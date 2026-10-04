@@ -1,5 +1,5 @@
 //! Regen alloy: a damaged regen brick heals back to full unless it's
-//! finished within [`HEAL_SECS`].
+//! finished within `Tuning.bricks.regen_heal_secs` (default [`HEAL_SECS`]).
 //!
 //! Reacts to [`BrickDamaged`] (fired for every non-lethal hit, ball or
 //! explosion), so `on_ball_collision` needs no regen special case. Each
@@ -13,6 +13,7 @@ use super::grid::{BrickHealth, BrickMaxHits};
 use super::BrickClass;
 use crate::collision::BrickDamaged;
 use crate::game_state::PlayState;
+use crate::tuning::Tuning;
 use bevy::prelude::*;
 
 /// How long a damaged regen brick waits before healing to full.
@@ -29,9 +30,11 @@ impl RegenTimer {
     }
 }
 
-impl Default for RegenTimer {
-    fn default() -> Self {
-        Self(Timer::from_seconds(HEAL_SECS, TimerMode::Once))
+impl RegenTimer {
+    /// A countdown of `secs` (`Tuning.bricks.regen_heal_secs`, by default
+    /// [`HEAL_SECS`]).
+    pub fn new(secs: f32) -> Self {
+        Self(Timer::from_seconds(secs, TimerMode::Once))
     }
 }
 
@@ -47,9 +50,16 @@ impl Plugin for RegenPlugin {
 }
 
 /// A regen brick that survives a hit starts (or restarts) its heal timer.
-fn start_heal_timer(on: On<BrickDamaged>, mut commands: Commands, classes: Query<&BrickClass>) {
+fn start_heal_timer(
+    on: On<BrickDamaged>,
+    mut commands: Commands,
+    tuning: Res<Tuning>,
+    classes: Query<&BrickClass>,
+) {
     if classes.get(on.brick) == Ok(&BrickClass::Regen) {
-        commands.entity(on.brick).insert(RegenTimer::default());
+        commands
+            .entity(on.brick)
+            .insert(RegenTimer::new(tuning.bricks.regen_heal_secs));
     }
 }
 
