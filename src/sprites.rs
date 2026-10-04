@@ -45,6 +45,7 @@ use crate::bricks::grid::Brick;
 use crate::bricks::grid::BrickHealth;
 use crate::bricks::grid::BrickMaxHits;
 use crate::bricks::outline::{BrickOutline, OutlineStrip, OutlineStyle, FRAME_SIZE};
+use crate::bricks::sparks::{Spark, SparkClass};
 use crate::bricks::{damage_look, BrickClass, DamageLook};
 use crate::frame::{FramePanel, FramePiece};
 use crate::paddle::{PaddleField, PaddleProng};
@@ -184,6 +185,10 @@ pub struct GameSprites {
     pub parallax: [Handle<Image>; crate::parallax::LAYER_COUNT],
     /// The painted behaviour-outline frames, in [`OutlineStyle::ALL`] order.
     pub outlines: [Handle<Image>; 6],
+    /// The outline sparks' 4-frame sheets, in [`SparkClass::ALL`] order.
+    pub spark_sheets: [Handle<Image>; 4],
+    /// The 4×1 grid of 32×32 cells every spark sheet uses.
+    pub spark_atlas: Handle<TextureAtlasLayout>,
 }
 
 impl GameSprites {
@@ -209,6 +214,13 @@ impl GameSprites {
         .chain(self.damaged.values())
         .chain(&self.parallax)
         .chain(&self.outlines)
+        .chain(&self.spark_sheets)
+    }
+
+    /// The spark sheet for `class`.
+    pub fn spark_sheet(&self, class: SparkClass) -> &Handle<Image> {
+        // `ALL` lists the variants in declaration order.
+        &self.spark_sheets[class as usize]
     }
 
     /// The painted frame for `style`.
@@ -246,7 +258,11 @@ impl Plugin for SpritesPlugin {
     }
 }
 
-fn load_sprites(mut commands: Commands, assets: Res<AssetServer>) {
+fn load_sprites(
+    mut commands: Commands,
+    assets: Res<AssetServer>,
+    mut layouts: ResMut<Assets<TextureAtlasLayout>>,
+) {
     commands.insert_resource(GameSprites {
         background: assets.load(BACKGROUND_PATH),
         ball: assets.load(BALL_PATH),
@@ -269,6 +285,14 @@ fn load_sprites(mut commands: Commands, assets: Res<AssetServer>) {
         frame_right: assets.load(FRAME_RIGHT_PATH),
         parallax: crate::parallax::LAYERS.map(|layer| assets.load(layer.path)),
         outlines: OutlineStyle::ALL.map(|style| assets.load(style.path())),
+        spark_sheets: SparkClass::ALL.map(|class| assets.load(class.sheet_path())),
+        spark_atlas: layouts.add(TextureAtlasLayout::from_grid(
+            UVec2::splat(32),
+            4,
+            1,
+            None,
+            None,
+        )),
     });
 }
 
@@ -294,6 +318,7 @@ impl Plugin for SkinPlugin {
                 skin_frame,
                 skin_bricks,
                 skin_outlines,
+                skin_sparks,
             )
                 .run_if(resource_exists::<GameSprites>),
         );
@@ -435,6 +460,28 @@ fn skin_outlines(
                 commands.entity(child).insert(Visibility::Hidden);
             }
         }
+    }
+}
+
+/// Each outline spark draws its class's sheet (through the 4-cell atlas)
+/// once that image is loaded; its colour stays its class tint, so the
+/// greyscale sheet is coloured. A missing sheet keeps the small square.
+fn skin_sparks(
+    mut commands: Commands,
+    sprites: Res<GameSprites>,
+    images: Res<Assets<Image>>,
+    mut sparks: Query<(Entity, &Spark, &mut Sprite), Without<Skinned>>,
+) {
+    for (entity, spark, mut sprite) in &mut sparks {
+        let Some(image) = loaded(sprites.spark_sheet(spark.class), &images) else {
+            continue;
+        };
+        sprite.image = image.clone();
+        sprite.texture_atlas = Some(TextureAtlas {
+            layout: sprites.spark_atlas.clone(),
+            index: 0,
+        });
+        commands.entity(entity).insert(Skinned);
     }
 }
 

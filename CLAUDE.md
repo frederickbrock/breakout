@@ -48,6 +48,7 @@ One line per file; each module's details live in its own `//!` doc comment.
 - `src/bricks/regen.rs` — regen alloy: damaged bricks heal after a timer.
 - `src/bricks/explosive.rs` — explosive bricks and their chained blasts.
 - `src/bricks/outline.rs` — behaviour outlines over special bricks: painted frames (`outline_<style>.png`), coded strips as fallback.
+- `src/bricks/sparks.rs` — outline sparks: 2–4 tinted sparks per special brick travelling its frame, per-class motion, faster when hit.
 - `src/levels/mod.rs` — `LevelDef` and the `.level` text-grid format, `build_board`, the level/campaign asset loaders (`LevelsPlugin`, main-only) and `CampaignLevels`; format in `docs/levels.md`.
 - `src/menu/mod.rs` — `MenuPlugin` and the reusable menu widget kit.
 - `src/menu/main_menu.rs` — title screen: Start, Settings, Quit (native only).

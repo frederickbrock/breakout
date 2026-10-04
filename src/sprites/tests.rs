@@ -5,6 +5,7 @@ fn startup_loads_the_background_and_spawns_it_behind_everything() {
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, AssetPlugin::default()))
         .init_asset::<Image>()
+        .init_asset::<TextureAtlasLayout>()
         .add_plugins(SpritesPlugin);
     app.update();
 
@@ -61,6 +62,8 @@ fn app_with_sprites(missing: &[&str]) -> App {
         frame_right: image("frame_right"),
         parallax: crate::parallax::LAYERS.map(|layer| image(layer.path)),
         outlines: OutlineStyle::ALL.map(|style| image(style.path())),
+        spark_sheets: SparkClass::ALL.map(|class| image(class.sheet_path())),
+        spark_atlas: Handle::default(),
     };
     app.world_mut().insert_resource(sprites);
     app.update();
@@ -609,5 +612,31 @@ fn a_missing_frame_keeps_that_styles_coded_strips() {
         } else {
             assert!(painted && !shown, "{style:?} still painted");
         }
+    }
+}
+
+#[test]
+fn outline_sparks_draw_their_class_sheet_through_the_atlas() {
+    use crate::bricks::sparks::{Spark, SparkClass};
+    let mut app = app_with_sprites(&[SparkClass::Shield.sheet_path()]);
+    app.update();
+    let looks: Vec<(SparkClass, bool, Color)> = app
+        .world_mut()
+        .query::<(&Spark, &Sprite)>()
+        .iter(app.world())
+        .map(|(spark, sprite)| (spark.class, sprite.texture_atlas.is_some(), sprite.color))
+        .collect();
+    assert!(!looks.is_empty());
+    for (class, sheet, color) in looks {
+        assert_eq!(
+            sheet,
+            class != SparkClass::Shield,
+            "{class:?}: shield's sheet is missing"
+        );
+        assert_eq!(
+            color.to_srgba().with_alpha(1.0),
+            class.color().to_srgba(),
+            "{class:?} tinted"
+        );
     }
 }

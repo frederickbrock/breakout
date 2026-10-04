@@ -18,6 +18,8 @@ fn sprites_of(handle: Handle<Image>) -> GameSprites {
         frame_right: handle.clone(),
         parallax: std::array::from_fn(|_| handle.clone()),
         outlines: std::array::from_fn(|_| handle.clone()),
+        spark_sheets: std::array::from_fn(|_| handle.clone()),
+        spark_atlas: Handle::default(),
     }
 }
 
