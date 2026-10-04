@@ -18,6 +18,7 @@ use bevy::prelude::*;
 
 use crate::controls::{self, ControlSettings, PaddleControl, PaddleTarget};
 use crate::theme;
+use crate::tuning::Tuning;
 use crate::world::GAME_SCALE;
 
 pub(crate) const PADDLE_WIDTH: f32 = 120.0 * GAME_SCALE;
@@ -88,6 +89,23 @@ pub(crate) fn paddle_field() -> impl Bundle {
     )
 }
 
+/// Re-applies the tuned mass and damping to the paddle whenever [`Tuning`]
+/// changes (they're physics components set at spawn; force, follow and width
+/// are read every frame).
+pub(crate) fn apply_paddle_tuning(
+    tuning: Res<Tuning>,
+    mut paddles: Query<(&mut Mass, &mut LinearDamping), With<Paddle>>,
+) {
+    for (mut mass, mut damping) in &mut paddles {
+        if mass.0 != tuning.paddle.mass {
+            mass.0 = tuning.paddle.mass;
+        }
+        if damping.0 != tuning.paddle.linear_damping {
+            damping.0 = tuning.paddle.linear_damping;
+        }
+    }
+}
+
 /// Keeps the prongs at the paddle's ends when its width changes.
 pub(crate) fn place_paddle_pieces(
     paddles: Query<(&Paddle, &Children), Changed<Paddle>>,
@@ -116,18 +134,20 @@ pub(crate) fn paddle_movement(
     keyboard: Res<ButtonInput<KeyCode>>,
     settings: Res<ControlSettings>,
     mut target: ResMut<PaddleTarget>,
+    tuning: Res<Tuning>,
     mut paddle_query: Query<(&Transform, &Paddle, &mut ConstantForce, &mut LinearVelocity)>,
 ) {
+    let tuning = &tuning.paddle;
     let Ok((transform, paddle, mut force, mut velocity)) = paddle_query.single_mut() else {
         return;
     };
 
     let mut fx = 0.0;
     if keyboard.pressed(KeyCode::ArrowLeft) || keyboard.pressed(KeyCode::KeyA) {
-        fx -= PADDLE_FORCE;
+        fx -= tuning.force;
     }
     if keyboard.pressed(KeyCode::ArrowRight) || keyboard.pressed(KeyCode::KeyD) {
-        fx += PADDLE_FORCE;
+        fx += tuning.force;
     }
     force.0 = Vec2::new(fx, 0.0);
 
@@ -138,8 +158,12 @@ pub(crate) fn paddle_movement(
     if settings.paddle == PaddleControl::Mouse {
         if let Some(target_x) = target.x {
             let target_x = controls::clamp_paddle_x(target_x, paddle.width);
-            velocity.0.x =
-                controls::follow_velocity(transform.translation.x, target_x, time.delta_secs());
+            velocity.0.x = controls::follow_velocity(
+                transform.translation.x,
+                target_x,
+                time.delta_secs(),
+                tuning,
+            );
         }
     }
 }

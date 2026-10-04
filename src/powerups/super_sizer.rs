@@ -12,7 +12,8 @@
 //! variant centrally.
 
 use super::{ActiveEffects, PowerUpCollected, PowerUpKind, PowerUpSpawner, TickActiveEffects};
-use crate::paddle::{Paddle, PADDLE_HEIGHT, PADDLE_WIDTH};
+use crate::paddle::{Paddle, PADDLE_HEIGHT};
+use crate::tuning::Tuning;
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
@@ -47,16 +48,18 @@ fn effect(on: On<PowerUpCollected>, mut active: ResMut<ActiveEffects>) {
 
 fn update_paddle_width(
     active: Res<ActiveEffects>,
+    tuning: Res<Tuning>,
     mut paddle_query: Query<(&mut Paddle, &mut Collider)>,
 ) {
+    let base = tuning.paddle.width;
     // The paddle's visual pieces follow `Paddle.width` (`place_paddle_pieces`).
     let Ok((mut paddle, mut collider)) = paddle_query.single_mut() else {
         return;
     };
     let width = if active.is_active(PowerUpKind::SuperSizer) {
-        PADDLE_WIDTH * WIDTH_MULTIPLIER
+        base * WIDTH_MULTIPLIER
     } else {
-        PADDLE_WIDTH
+        base
     };
     if paddle.width != width {
         paddle.width = width;

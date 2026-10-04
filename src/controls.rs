@@ -16,6 +16,7 @@
 
 use crate::game_state::PlayState;
 use crate::run::RestartGame;
+use crate::tuning::PaddleTuning;
 use crate::world::{GAME_SCALE, PLAYFIELD_WIDTH};
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
@@ -83,15 +84,17 @@ pub fn clamp_paddle_x(cursor_x: f32, paddle_width: f32) -> f32 {
 /// rather than teleporting keeps Avian resolving the ball bounce.
 ///
 /// `frame_dt` is this frame's length in seconds: the gain is limited so the
-/// frame closes at most [`MAX_GAP_PER_FRAME`] of the gap however many physics
+/// frame closes at most `max_gap_per_frame` of the gap however many physics
 /// steps run in it, so a slow frame rate can't make the paddle overshoot.
-pub fn follow_velocity(paddle_x: f32, target_x: f32, frame_dt: f32) -> f32 {
+/// The gain, cap and per-frame limit come from `Tuning.paddle` (defaults
+/// [`FOLLOW_GAIN`], [`MAX_FOLLOW_SPEED`], [`MAX_GAP_PER_FRAME`]).
+pub fn follow_velocity(paddle_x: f32, target_x: f32, frame_dt: f32, tuning: &PaddleTuning) -> f32 {
     let gain = if frame_dt > 0.0 {
-        FOLLOW_GAIN.min(MAX_GAP_PER_FRAME / frame_dt)
+        tuning.follow_gain.min(tuning.max_gap_per_frame / frame_dt)
     } else {
-        FOLLOW_GAIN
+        tuning.follow_gain
     };
-    ((target_x - paddle_x) * gain).clamp(-MAX_FOLLOW_SPEED, MAX_FOLLOW_SPEED)
+    ((target_x - paddle_x) * gain).clamp(-tuning.max_follow_speed, tuning.max_follow_speed)
 }
 
 pub struct ControlsPlugin;
