@@ -11,7 +11,8 @@
 //! [`BRICK_TOP_MARGIN`] plus one brick height of [`BRICK_HEADROOM`]. Each brick
 //! spawns at its own [`BrickMaxHits`] (its class's `max_hits()` or a level's
 //! `hits=`) with its
-//! [`crate::bricks::BrickCell`], scoped to the run.
+//! [`crate::bricks::BrickCell`], scoped to the run. [`BoardSize`] records the
+//! level grid in play (Collapse stacks bricks down to its bottom row).
 
 use avian2d::prelude::*;
 use bevy::prelude::*;
@@ -66,9 +67,29 @@ pub(crate) struct BrickMaxHits(pub(crate) u8);
 #[derive(Component)]
 pub(crate) struct CarriesPowerUp;
 
-/// Spawns a resolved board (see `crate::levels::build_board`) of `cols`
-/// columns, each brick at its class's colour and its own hit count.
-pub(crate) fn spawn_bricks(commands: &mut Commands, board: &[PlacedBrick], cols: usize) {
+/// The level grid in play: its columns and rows, empty rows included.
+/// Inserted by [`spawn_bricks`]; the Collapse power-up stacks bricks down to
+/// row `rows - 1`.
+#[derive(Resource, Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct BoardSize {
+    pub(crate) cols: usize,
+    pub(crate) rows: usize,
+}
+
+impl Default for BoardSize {
+    fn default() -> Self {
+        Self {
+            cols: bricks::BOARD_COLS,
+            rows: bricks::BOARD_ROWS,
+        }
+    }
+}
+
+/// Spawns a resolved board (see `crate::levels::build_board`) on a grid of
+/// `size`, each brick at its class's colour and its own hit count.
+pub(crate) fn spawn_bricks(commands: &mut Commands, board: &[PlacedBrick], size: BoardSize) {
+    commands.insert_resource(size);
+    let cols = size.cols;
     for brick in board {
         let mut entity = commands.spawn((
             Sprite::from_color(

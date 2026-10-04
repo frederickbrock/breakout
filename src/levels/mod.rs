@@ -84,6 +84,11 @@ impl LevelDef {
         self.grid.first().map_or(0, Vec::len)
     }
 
+    /// Rows in the grid, empty rows included.
+    pub fn rows(&self) -> usize {
+        self.grid.len()
+    }
+
     /// The built-in random board: 7x10 of `?`, `powerups: 6`, the default
     /// speed. Identical to `assets/levels/01-random.level`.
     pub fn fallback() -> Self {

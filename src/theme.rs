@@ -46,6 +46,9 @@ pub const REACTOR: Color = hex(0xb58cff);
 /// Falling power-ups: cyan, readable against the void and distinct from the
 /// violet bricks they drop from.
 pub const POWER_UP: Color = EMITTER;
+/// Collapse drops: hot magenta, apart from Super-Sizer's cyan, the violet
+/// reactors and the brick colours. Also the tint on its skinned icon.
+pub const POWER_UP_COLLAPSE: Color = hex(0xff4fd2);
 
 /// The steel frame in the side panels (coded placeholder until the painted
 /// `frame_left`/`frame_right` art): the panel's plate fill...

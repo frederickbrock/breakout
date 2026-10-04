@@ -161,3 +161,21 @@ fn ten_rows_leave_room_above_the_paddle() {
         "{lowest} vs {paddle_top}"
     );
 }
+
+#[test]
+fn board_size_is_the_level_grid_including_empty_rows() {
+    let app = app();
+    assert_eq!(
+        *app.world().resource::<BoardSize>(),
+        BoardSize {
+            cols: BRICK_COLS,
+            rows: BRICK_ROWS
+        }
+    );
+    let level = crate::levels::parse_level("grid:\nCC.\n...\n...").unwrap();
+    let app = app_with_level(level);
+    assert_eq!(
+        *app.world().resource::<BoardSize>(),
+        BoardSize { cols: 3, rows: 3 }
+    );
+}

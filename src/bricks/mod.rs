@@ -196,7 +196,7 @@ pub struct BricksPlugin;
 
 impl Plugin for BricksPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((
+        app.init_resource::<grid::BoardSize>().add_plugins((
             regen::RegenPlugin,
             explosive::ExplosivePlugin,
             outline::OutlinePlugin,

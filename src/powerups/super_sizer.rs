@@ -4,7 +4,8 @@
 //! `Plugin` that
 //! 1. registers itself into the shared [`PowerUpSpawner`] registry at
 //!    `build()` time, via
-//!    `app.world_mut().resource_mut::<PowerUpSpawner>().register(...)`,
+//!    `app.world_mut().resource_mut::<PowerUpSpawner>().register(...)`
+//!    (which returns the entry for `.tinted(..)` / `.once_per_cycle()`),
 //! 2. reacts to [`PowerUpCollected`] with its own observer, and
 //! 3. is composed in by `PowerUpsPlugin`'s `.add_plugins(...)`.
 //!
