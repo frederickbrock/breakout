@@ -15,10 +15,16 @@
 //! their derived values from it every frame, so an effect expiring needs no
 //! explicit revert step. [`TickActiveEffects`] is an ordering-only set for
 //! those consumers. Each concrete power-up is its own plugin (see
-//! [`super_sizer`]). [`capsules`] shows each active effect's time left in
-//! the right panel.
+//! [`super_sizer`]; [`collapse`] is an instant one). [`capsules`] shows each
+//! active effect's time left in the right panel.
+//!
+//! Some kinds are limited to once per level (Collapse): kinds are picked at
+//! level start, so `drop_power_up` checks again at drop time, and a kind
+//! already dropped this level re-picks another. A drop's [`IconTint`] keeps
+//! its kind's colour on the skinned icon.
 
 pub(crate) mod capsules;
+pub(crate) mod collapse;
 mod super_sizer;
 
 use crate::bricks::grid::{Brick, CarriesPowerUp};
@@ -45,6 +51,8 @@ pub type PowerUpSpawner = Spawner<PowerUpKind>;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PowerUpKind {
     SuperSizer,
+    /// Every column of bricks drops down to fill its gaps (see [`collapse`]).
+    Collapse,
 }
 
 #[derive(Component)]
@@ -61,7 +69,12 @@ pub struct PowerUp {
 pub struct PowerUpBrick {
     kind: PowerUpKind,
     color: Color,
+    tint: Color,
 }
+
+/// The tint a power-up's skinned icon is drawn with (white: the image as-is).
+#[derive(Component, Clone, Copy, Debug, PartialEq)]
+pub(crate) struct IconTint(pub(crate) Color);
 
 /// Power-ups dropped so far this run; each successive drop falls a little
 /// faster.
@@ -143,7 +156,11 @@ impl Plugin for PowerUpsPlugin {
                     .before(crate::paddle::PaddleMovementSet)
                     .run_if(in_state(PlayState::Playing)),
             )
-            .add_plugins((super_sizer::SuperSizerPlugin, capsules::CapsulesPlugin));
+            .add_plugins((
+                super_sizer::SuperSizerPlugin,
+                collapse::CollapsePlugin,
+                capsules::CapsulesPlugin,
+            ));
     }
 }
 
@@ -159,9 +176,12 @@ type UnequippedBrick = (With<Brick>, Without<PowerUpBrick>);
 fn attach_reactor_power_ups(
     _level: On<LevelStarted>,
     mut commands: Commands,
-    spawner: Res<PowerUpSpawner>,
+    mut spawner: ResMut<PowerUpSpawner>,
     bricks: Query<(Entity, &BrickClass, Has<CarriesPowerUp>), UnequippedBrick>,
 ) {
+    // A new level: once-per-level kinds are available again. Done here, not
+    // in a separate LevelStarted observer, so it can't run after this pick.
+    spawner.new_cycle();
     for (entity, class, flagged) in &bricks {
         if *class != BrickClass::Reactor && !flagged {
             continue;
@@ -172,28 +192,45 @@ fn attach_reactor_power_ups(
         commands.entity(entity).insert(PowerUpBrick {
             kind: pick.kind,
             color: pick.color,
+            tint: pick.tint,
         });
     }
 }
 
 /// A broken power-up brick drops its power-up where it stood. Each
-/// successive drop in a run is a little heavier.
+/// successive drop in a run is a little heavier. A once-per-level kind
+/// already dropped this level re-picks another kind (none left: no drop).
 fn drop_power_up(
     on: On<BrickDestroyed>,
     mut commands: Commands,
     mut drops: ResMut<PowerUpDrops>,
+    mut spawner: ResMut<PowerUpSpawner>,
     bricks: Query<&PowerUpBrick>,
 ) {
     let Ok(power_up_brick) = bricks.get(on.brick) else {
         return;
     };
+    let (kind, color, tint) = if spawner.is_available(power_up_brick.kind) {
+        (
+            power_up_brick.kind,
+            power_up_brick.color,
+            power_up_brick.tint,
+        )
+    } else {
+        let Some(pick) = spawner.pick() else {
+            return;
+        };
+        (pick.kind, pick.color, pick.tint)
+    };
+    spawner.record(kind);
     let gravity = (BASE_GRAVITY + drops.0 as f32 * GRAVITY_STEP).min(MAX_GRAVITY);
     drops.0 += 1;
     commands.spawn((
-        Sprite::from_color(power_up_brick.color, Vec2::splat(POWER_UP_SIZE)),
+        Sprite::from_color(color, Vec2::splat(POWER_UP_SIZE)),
         Transform::from_xyz(on.position.x, on.position.y, 0.5),
+        IconTint(tint),
         PowerUp {
-            kind: power_up_brick.kind,
+            kind,
             velocity: Vec2::ZERO,
             gravity,
         },
