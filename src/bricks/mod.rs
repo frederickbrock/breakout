@@ -111,26 +111,36 @@ pub(crate) const FILL_WEIGHTS: [(BrickClass, u32); 8] = [
 /// [`patch_classes`] places `reactors` reactors (capped at `slots`) and fills
 /// in missing classes. For 70 slots and [`REACTOR_BRICKS`] reactors this is
 /// exactly the old 7x10 random board, consuming the rng the same way.
+///
+/// `weights` is the fill table in [`FILL_WEIGHTS`] order (`Tuning.bricks`
+/// gives today's values, which use the rng exactly as before). A table whose
+/// weights are all 0 falls back to [`FILL_WEIGHTS`].
 pub fn random_classes<R: Rng + ?Sized>(
     slots: usize,
     reactors: usize,
+    weights: &[(BrickClass, u32); 8],
     rng: &mut R,
 ) -> Vec<BrickClass> {
-    let mut classes: Vec<BrickClass> = (0..slots).map(|_| pick_weighted(rng)).collect();
+    let weights = if weights.iter().any(|(_, w)| *w > 0) {
+        weights
+    } else {
+        &FILL_WEIGHTS
+    };
+    let mut classes: Vec<BrickClass> = (0..slots).map(|_| pick_weighted(weights, rng)).collect();
     patch_classes(&mut classes, reactors, rng);
     classes
 }
 
-fn pick_weighted<R: Rng + ?Sized>(rng: &mut R) -> BrickClass {
-    let total: u32 = FILL_WEIGHTS.iter().map(|(_, weight)| weight).sum();
+fn pick_weighted<R: Rng + ?Sized>(weights: &[(BrickClass, u32); 8], rng: &mut R) -> BrickClass {
+    let total: u32 = weights.iter().map(|(_, weight)| weight).sum();
     let mut roll = rng.random_range(0..total);
-    for (class, weight) in FILL_WEIGHTS {
+    for &(class, weight) in weights {
         if roll < weight {
             return class;
         }
         roll -= weight;
     }
-    FILL_WEIGHTS[FILL_WEIGHTS.len() - 1].0
+    weights[weights.len() - 1].0
 }
 
 /// Places the reactor bricks and fills in any missing class, in one bounded

@@ -13,6 +13,7 @@
 
 use super::{ActiveEffects, PowerUpCollected, PowerUpKind, PowerUpSpawner, TickActiveEffects};
 use crate::paddle::{Paddle, PADDLE_HEIGHT, PADDLE_WIDTH};
+use crate::tuning::Tuning;
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
@@ -30,23 +31,35 @@ impl Plugin for SuperSizerPlugin {
             crate::theme::POWER_UP,
         );
 
-        app.add_observer(effect).add_systems(
-            Update,
-            update_paddle_width
-                .after(TickActiveEffects)
-                .before(crate::paddle::PaddleMovementSet),
+        app.add_observer(effect)
+            .add_systems(Update, apply_weight.run_if(resource_changed::<Tuning>))
+            .add_systems(
+                Update,
+                update_paddle_width
+                    .after(TickActiveEffects)
+                    .before(crate::paddle::PaddleMovementSet),
+            );
+    }
+}
+
+fn effect(on: On<PowerUpCollected>, mut active: ResMut<ActiveEffects>, tuning: Res<Tuning>) {
+    if on.kind == PowerUpKind::SuperSizer {
+        active.refresh_or_insert(
+            PowerUpKind::SuperSizer,
+            tuning.powerups.super_sizer.duration,
         );
     }
 }
 
-fn effect(on: On<PowerUpCollected>, mut active: ResMut<ActiveEffects>) {
-    if on.kind == PowerUpKind::SuperSizer {
-        active.refresh_or_insert(PowerUpKind::SuperSizer, DURATION);
-    }
+/// Keeps the spawner's Super-Sizer weight in step with `Tuning` (runs when
+/// it changes, including when it's first inserted).
+fn apply_weight(tuning: Res<Tuning>, mut spawner: ResMut<PowerUpSpawner>) {
+    spawner.set_weight(PowerUpKind::SuperSizer, tuning.powerups.super_sizer.weight);
 }
 
 fn update_paddle_width(
     active: Res<ActiveEffects>,
+    tuning: Res<Tuning>,
     mut paddle_query: Query<(&mut Paddle, &mut Collider)>,
 ) {
     // The paddle's visual pieces follow `Paddle.width` (`place_paddle_pieces`).
@@ -54,7 +67,7 @@ fn update_paddle_width(
         return;
     };
     let width = if active.is_active(PowerUpKind::SuperSizer) {
-        PADDLE_WIDTH * WIDTH_MULTIPLIER
+        PADDLE_WIDTH * tuning.powerups.super_sizer.width_multiplier
     } else {
         PADDLE_WIDTH
     };

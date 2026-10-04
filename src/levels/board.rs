@@ -13,11 +13,18 @@ use rand::Rng;
 
 use super::{ClassSpec, LevelDef};
 use crate::bricks::{self, BrickCell, BrickClass, PlacedBrick};
+use crate::tuning::BrickTuning;
 
-/// Every brick of `def`, row-major, with `?` and `powerups: N` resolved. An
-/// all-`?` level uses the rng exactly as the old random board did, so the
-/// fallback level reproduces it seed for seed.
-pub(crate) fn build_board<R: Rng + ?Sized>(def: &LevelDef, rng: &mut R) -> Vec<PlacedBrick> {
+/// Every brick of `def`, row-major, with `?` and `powerups: N` resolved. Hits
+/// come from `tuning.hits` unless the cell sets `hits=`, and `?` cells use
+/// `tuning.fill_weights`. With the default tuning an all-`?` level uses the
+/// rng exactly as the old random board did, so the fallback level reproduces
+/// it seed for seed.
+pub(crate) fn build_board<R: Rng + ?Sized>(
+    def: &LevelDef,
+    rng: &mut R,
+    tuning: &BrickTuning,
+) -> Vec<PlacedBrick> {
     let cells: Vec<_> = def
         .grid
         .iter()
@@ -33,7 +40,9 @@ pub(crate) fn build_board<R: Rng + ?Sized>(def: &LevelDef, rng: &mut R) -> Vec<P
         .iter()
         .filter(|(_, cell)| cell.class == ClassSpec::Random)
         .count();
-    let mut random = bricks::random_classes(random_count, def.extra_powerups, rng).into_iter();
+    let weights = tuning.fill_weights.table();
+    let mut random =
+        bricks::random_classes(random_count, def.extra_powerups, &weights, rng).into_iter();
 
     let mut board: Vec<PlacedBrick> = cells
         .into_iter()
@@ -46,7 +55,7 @@ pub(crate) fn build_board<R: Rng + ?Sized>(def: &LevelDef, rng: &mut R) -> Vec<P
             PlacedBrick {
                 cell,
                 class,
-                hits: def.hits.unwrap_or(class.max_hits()),
+                hits: def.hits.unwrap_or(tuning.hits.of(class)),
                 powerup: def.powerup,
             }
         })
