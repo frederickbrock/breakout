@@ -105,7 +105,7 @@ pub(crate) fn start_run(
     *signals = BallCollisionSignals::default();
     let def = campaign_level(campaign.as_deref(), 0).unwrap_or_else(LevelDef::fallback);
     spawn_run_entities(&mut commands, &ball_look);
-    spawn_board(&mut commands, &def, &mut ball_speed);
+    spawn_board(&mut commands, &def, 1, &mut ball_speed);
     commands.trigger(RestartGame);
     commands.trigger(LevelStarted { index: 0 });
 }

@@ -36,6 +36,20 @@ pub(crate) const BALL_SPEED_SCALE: f32 = 1.8;
 /// The default [`BallSpeed`] (world units/s): its 300 design value times
 /// [`BALL_SPEED_SCALE`] (the one gameplay speed not scaled by `GAME_SCALE`).
 pub(crate) const BALL_SPEED: f32 = 300.0 * BALL_SPEED_SCALE;
+/// The per-round speed ramp ([`speed_factor`]): round 1 plays at
+/// [`BALL_SPEED_SCALE`] (today's speed), each later round adds
+/// [`SPEED_RAMP_STEP`], up to [`SPEED_RAMP_MAX`]. The speed is
+/// [`BallSpeed::PER_FACTOR`] × factor. Tuning values for sim-a7k.3.
+pub(crate) const SPEED_RAMP_STEP: f32 = 0.1;
+pub(crate) const SPEED_RAMP_MAX: f32 = 2.5;
+
+/// The default speed factor for campaign round `round` (counted from 1):
+/// `min(BALL_SPEED_SCALE + SPEED_RAMP_STEP × (round − 1), SPEED_RAMP_MAX)`.
+pub(crate) fn speed_factor(round: usize) -> f32 {
+    let steps = round.saturating_sub(1) as f32;
+    (BALL_SPEED_SCALE + SPEED_RAMP_STEP * steps).min(SPEED_RAMP_MAX)
+}
+
 /// Gap between the anchored ball and the paddle, so the launch doesn't start
 /// in contact with the paddle (which would trigger the paddle-hit spin rule
 /// and override the 45° serve).
@@ -55,10 +69,10 @@ pub(crate) const BALL_MIN_VERTICAL_FRACTION: f32 = 0.3;
 #[derive(Component)]
 pub(crate) struct Ball;
 
-/// The ball's constant speed this run (world units/s). `start_run` sets it
-/// from the level's optional `speed_factor` ([`BallSpeed::from_factor`]:
-/// 300 x factor); without one the factor is [`BALL_SPEED_SCALE`], giving
-/// [`BALL_SPEED`].
+/// The ball's constant speed this round (world units/s), set whenever a
+/// board is spawned ([`BallSpeed::for_level`]): 300 × the level's optional
+/// `speed_factor`, or else the round's ramp value ([`speed_factor`]; round 1
+/// gives [`BALL_SPEED`]).
 #[derive(Resource, Clone, Copy, Debug, PartialEq)]
 pub(crate) struct BallSpeed(pub(crate) f32);
 
@@ -78,10 +92,11 @@ impl BallSpeed {
         Self(Self::PER_FACTOR * factor)
     }
 
-    /// The speed for a level: its `speed_factor`, else [`BALL_SPEED_SCALE`].
-    /// The one place a level's ball speed is computed.
-    pub(crate) fn for_level(def: &crate::levels::LevelDef) -> Self {
-        Self::from_factor(def.speed_factor.unwrap_or(BALL_SPEED_SCALE))
+    /// The speed for a level played as campaign round `round` (from 1): its
+    /// `speed_factor` if it sets one, else the round's ramp value
+    /// ([`speed_factor`]). The one place a level's ball speed is computed.
+    pub(crate) fn for_level(def: &crate::levels::LevelDef, round: usize) -> Self {
+        Self::from_factor(def.speed_factor.unwrap_or_else(|| speed_factor(round)))
     }
 }
 

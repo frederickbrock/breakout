@@ -237,3 +237,32 @@ fn the_ball_speed_resource_drives_serve_and_renormalisation() {
     let v = ball_velocity(&mut app);
     assert!((v.length() - 500.0).abs() < 1e-3, "renormalised to {v:?}");
 }
+
+#[test]
+fn the_speed_factor_ramps_per_round_and_caps() {
+    for (round, factor) in [(1, 1.8), (2, 1.9), (5, 2.2), (8, 2.5), (20, 2.5)] {
+        assert!(
+            (speed_factor(round) - factor).abs() < 1e-5,
+            "round {round}: {}",
+            speed_factor(round)
+        );
+    }
+    assert_eq!(
+        speed_factor(1),
+        BALL_SPEED_SCALE,
+        "round 1 is today's speed"
+    );
+    assert!((BallSpeed::from_factor(speed_factor(1)).0 - BALL_SPEED).abs() < 1e-3);
+    assert!((BallSpeed::from_factor(speed_factor(8)).0 - 750.0).abs() < 1e-3);
+}
+
+#[test]
+fn a_levels_speed_factor_overrides_the_ramp() {
+    let ramped = crate::levels::parse_level("grid:\nC").unwrap();
+    let fixed = crate::levels::parse_level("speed_factor: 2.0\ngrid:\nC").unwrap();
+    assert!((BallSpeed::for_level(&ramped, 2).0 - 570.0).abs() < 1e-3);
+    assert!((BallSpeed::for_level(&ramped, 1).0 - 540.0).abs() < 1e-3);
+    for round in [1, 2, 9] {
+        assert!((BallSpeed::for_level(&fixed, round).0 - 600.0).abs() < 1e-3);
+    }
+}
