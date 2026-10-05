@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(cargo build*)",
+      "Bash(cargo check*)",
+      "Bash(cargo test*)",
+      "Bash(cargo clippy*)",
+      "Bash(cargo fmt*)",
+      "Bash(cargo tree*)",
+      "Bash(trunk build*)",
+      "Bash(trunk serve*)",
+      "Bash(br *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)",
+      "Bash(git fetch*)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git rebase*)",
+      "Bash(git checkout *)",
+      "Bash(git switch *)",
+      "Bash(git branch*)",
+      "Bash(git worktree *)",
+      "Bash(git stash list*)",
+      "Bash(git range-diff*)",
+      "Bash(git merge --ff-only*)",
+      "Bash(git rev-parse*)",
+      "Bash(git pull --ff-only*)",
+      "Bash(gh pr view*)",
+      "Bash(gh pr list*)",
+      "Bash(gh pr create*)",
+      "Bash(gh pr edit*)",
+      "Bash(gh pr comment*)",
+      "Bash(gh pr ready*)",
+      "Bash(gh pr diff*)",
+      "Bash(gh pr checks*)",
+      "Bash(gh pr review*)",
+      "Bash(gh pr checkout*)",
+      "Bash(gh run *)",
+      "Bash(scripts/native-run.sh*)",
+      "Bash(scripts/window-close.py*)",
+      "Bash(scripts/web-smoke.sh*)",
+      "Bash(xdotool *)",
+      "Bash(import *)",
+      "Bash(python3 scripts/*)",
+      "Bash(uv run *)",
+      "Bash(curl -s* http://127.0.0.1:8188/*)",
+      "Bash(curl -s* http://localhost:9090/*)"
+    ],
+    "deny": [
+      "Bash(gh pr merge*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-bash.py\""
+          }
+        ]
+      }
+    ]
+  }
+}
