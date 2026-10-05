@@ -1,0 +1,3 @@
+# Known, harmless browser messages the web smoke test ignores (scripts/web_smoke.py).
+# One Python regex per line, matched against the message text. Keep each entry
+# narrow (one known message) and say why it is harmless.

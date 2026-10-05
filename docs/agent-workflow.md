@@ -257,6 +257,12 @@ br list -l art                         # all art issues
 br list -l needs-human                 # things waiting on you
 ```
 
+**Web smoke test.** CI's `web-smoke` job loads the built site in headless
+Chromium. It checks that the game reaches the menu and starts a level with no
+console errors, panics or failed requests, and Pages only deploys if it
+passes. The tester runs the same check locally with `scripts/web-smoke.sh`
+(see `scripts/README.md`); it isn't a required check yet.
+
 **Beads sync.** Only the pm commits `.beads/issues.jsonl`, and with
 `beads.sync_commit: trunk-direct` it does so straight to master as
 `chore(beads): sync ...` (no sync PR). If the push is rejected because master

@@ -11,9 +11,14 @@
 //! splash out. If an image never settles, it hands over anyway after
 //! [`MAX_WAIT_FRAMES`], so the splash can't get stuck.
 //!
-//! The DOM call is wasm-only; natively (and in the headless tests) the plugin
-//! runs the same bookkeeping and the call is a no-op.
+//! Every level start ([`LevelStarted`]) also dispatches
+//! `steelbreak-level-started` on `window`, for the web smoke test
+//! (`scripts/web_smoke.py`), which waits for it before its level screenshot.
+//!
+//! The DOM calls are wasm-only; natively (and in the headless tests) the
+//! plugin runs the same bookkeeping and the calls are no-ops.
 
+use crate::campaign::LevelStarted;
 use crate::sprites::GameSprites;
 use crate::tuning::TuningHandle;
 use bevy::prelude::*;
@@ -29,10 +34,12 @@ pub struct WebSplashPlugin;
 
 impl Plugin for WebSplashPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<SplashHandOver>().add_systems(
-            Last,
-            hand_over_splash.run_if(|hand_over: Res<SplashHandOver>| !hand_over.done),
-        );
+        app.init_resource::<SplashHandOver>()
+            .add_observer(announce_level_start)
+            .add_systems(
+                Last,
+                hand_over_splash.run_if(|hand_over: Res<SplashHandOver>| !hand_over.done),
+            );
     }
 }
 
@@ -92,20 +99,30 @@ fn hand_over_splash(
     }
 }
 
+/// Tell the page a level has started (the web smoke test listens for it).
+fn announce_level_start(_level: On<LevelStarted>) {
+    dispatch("steelbreak-level-started");
+}
+
 /// Tell the page the game is on screen (see `web/loader.js`).
-#[cfg(target_arch = "wasm32")]
 fn notify_page() {
+    dispatch("steelbreak-ready");
+}
+
+/// Dispatch a DOM event named `name` on `window`.
+#[cfg(target_arch = "wasm32")]
+fn dispatch(name: &str) {
     let Some(window) = web_sys::window() else {
         return;
     };
-    if let Ok(event) = web_sys::Event::new("steelbreak-ready") {
+    if let Ok(event) = web_sys::Event::new(name) {
         // The page may have no listener (e.g. a custom index.html); that's fine.
         let _ = window.dispatch_event(&event);
     }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn notify_page() {}
+fn dispatch(_name: &str) {}
 
 #[cfg(test)]
 mod tests;

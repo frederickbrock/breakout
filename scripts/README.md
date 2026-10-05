@@ -60,3 +60,21 @@ commit SHA, or refuses with `pr-merge: refusing #N — <reason>` (exit 1) unless
 It merges with `--match-head-commit` set to the head it checked, so a push in between is refused
 by GitHub. Any API error is a refusal. Install: `ln -s <main>/scripts/pr-merge ~/.local/bin/pr-merge`.
 Tests (fake `gh`/`br`, no network): `python3 -m unittest discover -s scripts -p 'test_*.py'`.
+
+## Web smoke test: `web-smoke.sh`
+
+`scripts/web-smoke.sh [dist-dir]` loads the wasm build in headless Chromium (software WebGL2)
+and fails on anything that would break the web version:
+- **Phase 1, menu:** waits for the game's `steelbreak-ready` (splash `.done`), or fails on
+  `.failed` or a 90 s timeout. Screenshot `menu.png`.
+- **Phase 2, level:** presses Enter on the focused Start button, waits for the wasm-only
+  `steelbreak-level-started` event, runs 5 s. Screenshot `level.png`.
+- **Throughout:** any console error, any message containing "panic", uncaught exceptions or
+  rejections, and failed requests (HTTP >= 400) fail the run. The exception is entries in
+  `scripts/web-smoke.allow`: one narrow regex per known-harmless message, each commented.
+
+Without a dist dir it first runs `trunk build --release --public-url /breakout/` (like CI). Output
+goes to `$WEB_SMOKE_OUT` or a temp dir and is printed at the end. It uses `/usr/bin/chromium` and
+gets Playwright through `uv run` (nothing installed globally); `CHROMIUM=<path>` or
+`CHROMIUM=bundled` picks another browser. CI runs it as the `web-smoke` job after `web`, and
+`deploy-pages` waits for it.
