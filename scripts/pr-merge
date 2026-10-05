@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+# pr-merge <pr-number> — squash-merge a finished code PR for the pr-manager.
+#
+# Refuses (exit 1, "pr-merge: refusing #N — <reason>") unless ALL hold:
+#   - .claude/workflow.yaml has gates.merge: auto
+#   - the PR is open, not a draft, and its base is the trunk (workflow.yaml `trunk:`)
+#   - the required checks (native, web, test) completed with SUCCESS, and no
+#     other check is pending or failed (SKIPPED/NEUTRAL are fine)
+#   - GitHub reports it MERGEABLE
+#   - no review requests changes, and no unresolved review thread is a
+#     blocking one (its first comment starts with `blocking:`, any case; `nit:`
+#     threads stay open by design and don't block)
+#   - the beads issue named in the title `<type>(<id>): ...` is open, at
+#     stage:pr, not needs-human, and its external_ref is this PR's URL
+# Then it merges with --match-head-commit set to the head SHA it checked (so
+# a push in between makes GitHub refuse) and prints the merge commit SHA.
+#
+# Fails closed: any API error or missing field is a refusal. The pr-manager
+# may run this; plain `gh pr merge` stays denied for every agent.
+# Env (tests only): PR_MERGE_WORKFLOW overrides the workflow.yaml path.
+set -euo pipefail
+
+REQUIRED_CHECKS=(native web test)
+
+pr=${1:-}
+[[ $pr =~ ^[0-9]+$ ]] || { echo "usage: pr-merge <pr-number>" >&2; exit 2; }
+
+die() { echo "pr-merge: refusing #$pr — $*" >&2; exit 1; }
+
+workflow=${PR_MERGE_WORKFLOW:-.claude/workflow.yaml}
+[[ -f $workflow ]] || die "no $workflow here (run from the repo root)"
+
+# `key:` at the top level, or `parent:` → `  key:` one level in. Comments stripped.
+yaml_get() {  # $1 = parent or "", $2 = key
+  python3 - "$workflow" "$1" "$2" <<'PY'
+import re, sys
+path, parent, key = sys.argv[1:4]
+inside = parent == ""
+for line in open(path):
+    line = line.split("#", 1)[0].rstrip()
+    if not line:
+        continue
+    if parent and re.match(r"^\S", line):
+        inside = line.startswith(parent + ":")
+        continue
+    m = re.match(r"^(\s*)" + re.escape(key) + r":\s*(\S+)\s*$", line)
+    if inside and m and (parent == "" or m.group(1)):
+        print(m.group(2)); break
+PY
+}
+
+merge_gate=$(yaml_get gates merge)
+[[ $merge_gate == auto ]] || die "gates.merge is '${merge_gate:-unset}', not auto"
+trunk=$(yaml_get "" trunk)
+[[ -n $trunk ]] || die "no trunk: in $workflow"
+
+info=$(gh pr view "$pr" --json state,isDraft,baseRefName,headRefOid,mergeable,statusCheckRollup,reviewDecision,title,url,number) \
+  || die "can't read the PR from GitHub"
+# jq-free field access: q <python expression over `d`> (d = the PR JSON)
+q() { python3 -c 'import json,sys; d=json.loads(sys.stdin.read()); r=eval(sys.argv[1]); print(str(r).lower() if isinstance(r,bool) else ("" if r is None else r))' "$1" <<<"$info"; }
+
+[[ $(q "d['state']") == OPEN ]] || die "PR is $(q "d['state']")"
+[[ $(q "d['isDraft']") == false ]] || die "PR is a draft"
+base=$(q "d['baseRefName']")
+[[ $base == "$trunk" ]] || die "base '$base' is not trunk '$trunk'"
+head=$(q "d['headRefOid']")
+[[ $head =~ ^[0-9a-f]{40}$ ]] || die "no head commit SHA"
+url=$(q "d['url']")
+
+checks="d.get('statusCheckRollup') or []"
+name="(c.get('name') or c.get('context') or '?')"
+pending=$(q "', '.join($name for c in $checks if (c.get('status') or 'COMPLETED') != 'COMPLETED')")
+[[ -z $pending ]] || die "checks still running: $pending"
+failed=$(q "', '.join($name for c in $checks if (c.get('conclusion') or c.get('state') or '') not in ('SUCCESS','SKIPPED','NEUTRAL'))")
+[[ -z $failed ]] || die "checks not green: $failed"
+for need in "${REQUIRED_CHECKS[@]}"; do
+  ok=$(q "any($name == '$need' and (c.get('conclusion') or c.get('state')) == 'SUCCESS' for c in $checks)")
+  [[ $ok == true ]] || die "required check '$need' has not passed"
+done
+
+mergeable=$(q "d['mergeable']")
+[[ $mergeable == MERGEABLE ]] || die "GitHub says mergeable=$mergeable (conflicts, or retry in a few seconds if UNKNOWN)"
+
+[[ $(q "d.get('reviewDecision')") != CHANGES_REQUESTED ]] || die "a review requests changes"
+owner_repo=$(gh repo view --json nameWithOwner -q .nameWithOwner) || die "can't resolve the repository"
+threads=$(gh api graphql -F owner="${owner_repo%/*}" -F name="${owner_repo#*/}" -F pr="$pr" -f query='
+  query($owner:String!,$name:String!,$pr:Int!){repository(owner:$owner,name:$name){pullRequest(number:$pr){
+    reviewThreads(first:100){totalCount nodes{isResolved comments(first:1){nodes{body}}}}
+    latestReviews(first:50){nodes{state}}}}}') || die "can't read review threads"
+unresolved=$(python3 -c '
+import json,sys
+p=json.loads(sys.stdin.read())["data"]["repository"]["pullRequest"]
+t=p["reviewThreads"]
+if t["totalCount"] > len(t["nodes"]): print("too many threads to check"); sys.exit()
+def first_body(x):
+    nodes = (x.get("comments") or {}).get("nodes") or []
+    return (nodes[0].get("body") or "") if nodes else ""
+n=sum(1 for x in t["nodes"] if not x["isResolved"] and first_body(x).lstrip().lower().startswith("blocking:"))
+c=sum(1 for r in p["latestReviews"]["nodes"] if r["state"]=="CHANGES_REQUESTED")
+print(" ".join(s for s in [f"{n} unresolved blocking review thread(s)" if n else "", f"{c} review(s) request changes" if c else ""] if s))
+' <<<"$threads") || die "can't parse review threads"
+[[ -z $unresolved ]] || die "$unresolved"
+
+title=$(q "d['title']")
+[[ $title =~ ^[a-z]+\(([A-Za-z0-9._-]+)\): ]] || die "title '$title' doesn't name a beads issue as <type>(<id>): ..."
+issue=${BASH_REMATCH[1]}
+issue_json=$(br show "$issue" --json 2>/dev/null) || die "can't read beads issue $issue"
+problem=$(python3 -c '
+import json,sys
+d=json.loads(sys.stdin.read()); d=d[0] if isinstance(d,list) else d
+labels=d.get("labels") or []
+url=sys.argv[1]
+if d.get("status")=="closed": print("issue is closed")
+elif "needs-human" in labels: print("issue is needs-human")
+elif "stage:pr" not in labels: print("issue is not at stage:pr ("+", ".join(l for l in labels if l.startswith("stage:"))+")")
+elif (d.get("external_ref") or "") != url: print("issue external_ref is "+repr(d.get("external_ref"))+", not this PR")
+' "$url" <<<"$issue_json") || die "can't parse beads issue $issue"
+[[ -z $problem ]] || die "$issue: $problem"
+
+if ! gh pr merge "$pr" --squash --delete-branch --match-head-commit "$head" >&2; then
+  # In a worktree, --delete-branch's local cleanup can fail after the remote
+  # merge went through: only a PR that is really MERGED counts.
+  state=$(gh pr view "$pr" --json state -q .state) || die "gh pr merge failed, and the PR can't be re-read"
+  [[ $state == MERGED ]] || die "gh pr merge failed (did the head move from ${head:0:7}?)"
+  echo "pr-merge: merged; gh reported an error after merging (local branch cleanup)" >&2
+fi
+sha=$(gh pr view "$pr" --json mergeCommit -q .mergeCommit.oid) || die "merged, but can't read the merge commit"
+[[ -n $sha ]] || die "merged, but GitHub reports no merge commit yet"
+echo "$sha"

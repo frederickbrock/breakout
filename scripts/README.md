@@ -41,3 +41,22 @@ WSLg has no EWMH window manager, so `wmctrl -l` / `wmctrl -c` don't work there, 
 ## Who launches the game
 
 Only the **tester** runs the native game, and only through `native-run.sh`. The **coder** does not launch it: its checks are `cargo build`, `cargo clippy`, `cargo test` and `trunk build`. The one exception is verifying changes to this tooling, and then only through `native-run.sh`.
+
+## Merging a finished PR: `pr-merge`
+
+`scripts/pr-merge <pr-number>` is the only way an agent (the **pr-manager**) merges a code PR;
+plain `gh pr merge` stays denied. It squash-merges with `--delete-branch` and prints the merge
+commit SHA, or refuses with `pr-merge: refusing #N — <reason>` (exit 1) unless **all** of these hold:
+
+- `gates.merge: auto` in `.claude/workflow.yaml`
+- the PR is open, not a draft, and its base is the trunk
+- the required checks `native`, `web` and `test` passed, and nothing else is pending or failing
+- GitHub reports it mergeable
+- no review requests changes, and no unresolved review thread starts with `blocking:` (`nit:` threads
+  stay open by design and don't block)
+- the beads issue in the title (`<type>(<id>): ...`) is open, at `stage:pr`, not `needs-human`,
+  and its `external_ref` is this PR
+
+It merges with `--match-head-commit` set to the head it checked, so a push in between is refused
+by GitHub. Any API error is a refusal. Install: `ln -s <main>/scripts/pr-merge ~/.local/bin/pr-merge`.
+Tests (fake `gh`/`br`, no network): `python3 -m unittest discover -s scripts -p 'test_*.py'`.
