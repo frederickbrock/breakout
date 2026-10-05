@@ -190,14 +190,20 @@ pub struct BlastTuning {
     pub demolition: ContainedBlast,
 }
 
+/// The largest blast radius a tuning file can ask for: each explosion visits
+/// (2r+1)² cells, so a typo like `radius: 1000` must not stall the frame.
+pub const MAX_BLAST_RADIUS: u32 = 10;
+
 impl BlastTuning {
-    /// `kind`'s (radius, chains).
+    /// `kind`'s (radius, chains), the radius clamped to
+    /// [`MAX_BLAST_RADIUS`].
     pub fn of(&self, kind: ExplosiveKind) -> (u32, bool) {
-        match kind {
+        let (radius, chains) = match kind {
             ExplosiveKind::Breach => (self.breach.radius, self.breach.chains),
             ExplosiveKind::Charge => (self.charge.radius, self.charge.chains),
             ExplosiveKind::Demolition => (self.demolition.radius, self.demolition.chains),
-        }
+        };
+        (radius.min(MAX_BLAST_RADIUS), chains)
     }
 }
 

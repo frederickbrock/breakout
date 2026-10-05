@@ -488,3 +488,12 @@ fn blast_kills_roll_for_a_drop_too() {
     // The charge's blast destroys the ceramics next to it: they drop as well.
     assert_eq!(drops_after_clearing("grid:\nCXCG", 1.0), 3);
 }
+
+#[test]
+fn a_huge_blast_radius_is_clamped() {
+    let tuning = parse_tuning("(bricks: (blast: (charge: (radius: 1000))))").unwrap();
+    assert_eq!(
+        tuning.bricks.blast.of(ExplosiveKind::Charge),
+        (MAX_BLAST_RADIUS, true)
+    );
+}
