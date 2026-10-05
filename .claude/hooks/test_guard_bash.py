@@ -8,6 +8,7 @@ import importlib.util
 import json
 import os
 import subprocess
+import tempfile
 import sys
 import unittest
 from pathlib import Path
@@ -148,6 +149,26 @@ class Settings(unittest.TestCase):
                          "force pushes are the hook's job (a deny glob also blocks --force-with-lease)")
         self.assertFalse([r for r in perms["allow"] if "pr-merge" in r or "gh pr merge" in r],
                          "merging is the pr-manager's local rule only")
+
+    def hook_command(self):
+        return self.s["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
+
+    def run_configured(self, project_dir, command):
+        payload = json.dumps({"tool_name": "Bash", "cwd": str(REPO), "tool_input": {"command": command}})
+        return subprocess.run(["sh", "-c", self.hook_command()], input=payload, capture_output=True, text=True,
+                              env={**os.environ, "CLAUDE_PROJECT_DIR": str(project_dir)})
+
+    def test_the_configured_command_blocks_when_the_hook_is_present(self):
+        r = self.run_configured(REPO, "git reset --hard")
+        self.assertEqual(r.returncode, 2, r.stderr)
+        self.assertEqual(self.run_configured(REPO, "cargo test").returncode, 0)
+
+    def test_a_missing_hook_file_does_not_block_every_command(self):
+        # A branch or worktree without the hook (or a renamed file) must not
+        # turn into "every Bash call refused": python3 on a missing file exits 2.
+        with tempfile.TemporaryDirectory() as empty:
+            r = self.run_configured(empty, "cargo test")
+            self.assertEqual(r.returncode, 0, r.stderr)
 
     def test_registers_the_guard_hook(self):
         hooks = self.s["hooks"]["PreToolUse"]

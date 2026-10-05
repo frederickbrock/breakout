@@ -61,7 +61,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-bash.py\""
+            "command": "[ ! -f \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-bash.py\" ] || python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-bash.py\""
           }
         ]
       }
