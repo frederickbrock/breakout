@@ -146,11 +146,32 @@ class PrMerge(unittest.TestCase):
         self.set(pr=green_pr(mergeable="CONFLICTING"))
         self.assert_refused("GitHub says mergeable=CONFLICTING")
 
-    def test_refuses_an_unresolved_thread(self):
+    def threads(self, *threads):
+        """Review threads as (resolved, first comment body)."""
+        nodes = [{"isResolved": r, "comments": {"nodes": [{"body": b}]}} for r, b in threads]
         self.set(threads={"data": {"repository": {"pullRequest": {
-            "reviewThreads": {"totalCount": 2, "nodes": [{"isResolved": True}, {"isResolved": False}]},
+            "reviewThreads": {"totalCount": len(nodes), "nodes": nodes},
             "latestReviews": {"nodes": []}}}}})
-        self.assert_refused("1 unresolved review thread(s)")
+
+    def test_refuses_an_unresolved_blocking_thread(self):
+        self.threads((True, "blocking: fixed"), (False, "  Blocking: the merge conflicts"))
+        self.assert_refused("1 unresolved blocking review thread(s)")
+
+    def test_an_unresolved_nit_thread_does_not_block(self):
+        self.threads((False, "nit: rename this"), (False, "a plain question"))
+        r = self.run_it()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(r.stdout.strip(), MERGE_SHA)
+
+    def test_a_resolved_blocking_thread_does_not_block(self):
+        self.threads((True, "blocking: fixed in abc123"))
+        self.assertEqual(self.run_it().returncode, 0)
+
+    def test_refuses_when_threads_cannot_all_be_seen(self):
+        self.set(threads={"data": {"repository": {"pullRequest": {
+            "reviewThreads": {"totalCount": 150, "nodes": [{"isResolved": True, "comments": {"nodes": []}}]},
+            "latestReviews": {"nodes": []}}}}})
+        self.assert_refused("too many threads to check")
 
     def test_refuses_changes_requested(self):
         self.set(pr=green_pr(reviewDecision="CHANGES_REQUESTED"))

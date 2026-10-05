@@ -52,7 +52,8 @@ commit SHA, or refuses with `pr-merge: refusing #N — <reason>` (exit 1) unless
 - the PR is open, not a draft, and its base is the trunk
 - the required checks `native`, `web` and `test` passed, and nothing else is pending or failing
 - GitHub reports it mergeable
-- no review requests changes and no review thread is unresolved
+- no review requests changes, and no unresolved review thread starts with `blocking:` (`nit:` threads
+  stay open by design and don't block)
 - the beads issue in the title (`<type>(<id>): ...`) is open, at `stage:pr`, not `needs-human`,
   and its `external_ref` is this PR
 

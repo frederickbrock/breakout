@@ -7,7 +7,9 @@
 #   - the required checks (native, web, test) completed with SUCCESS, and no
 #     other check is pending or failed (SKIPPED/NEUTRAL are fine)
 #   - GitHub reports it MERGEABLE
-#   - no review requests changes and no review thread is unresolved
+#   - no review requests changes, and no unresolved review thread is a
+#     blocking one (its first comment starts with `blocking:`, any case; `nit:`
+#     threads stay open by design and don't block)
 #   - the beads issue named in the title `<type>(<id>): ...` is open, at
 #     stage:pr, not needs-human, and its external_ref is this PR's URL
 # Then it merges with --match-head-commit set to the head SHA it checked (so
@@ -83,16 +85,19 @@ mergeable=$(q "d['mergeable']")
 owner_repo=$(gh repo view --json nameWithOwner -q .nameWithOwner) || die "can't resolve the repository"
 threads=$(gh api graphql -F owner="${owner_repo%/*}" -F name="${owner_repo#*/}" -F pr="$pr" -f query='
   query($owner:String!,$name:String!,$pr:Int!){repository(owner:$owner,name:$name){pullRequest(number:$pr){
-    reviewThreads(first:100){totalCount nodes{isResolved}}
+    reviewThreads(first:100){totalCount nodes{isResolved comments(first:1){nodes{body}}}}
     latestReviews(first:50){nodes{state}}}}}') || die "can't read review threads"
 unresolved=$(python3 -c '
 import json,sys
 p=json.loads(sys.stdin.read())["data"]["repository"]["pullRequest"]
 t=p["reviewThreads"]
 if t["totalCount"] > len(t["nodes"]): print("too many threads to check"); sys.exit()
-n=sum(1 for x in t["nodes"] if not x["isResolved"])
+def first_body(x):
+    nodes = (x.get("comments") or {}).get("nodes") or []
+    return (nodes[0].get("body") or "") if nodes else ""
+n=sum(1 for x in t["nodes"] if not x["isResolved"] and first_body(x).lstrip().lower().startswith("blocking:"))
 c=sum(1 for r in p["latestReviews"]["nodes"] if r["state"]=="CHANGES_REQUESTED")
-print(" ".join(s for s in [f"{n} unresolved review thread(s)" if n else "", f"{c} review(s) request changes" if c else ""] if s))
+print(" ".join(s for s in [f"{n} unresolved blocking review thread(s)" if n else "", f"{c} review(s) request changes" if c else ""] if s))
 ' <<<"$threads") || die "can't parse review threads"
 [[ -z $unresolved ]] || die "$unresolved"
 
