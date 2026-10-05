@@ -8,7 +8,7 @@ fills in a few nodes, so you can change the look without touching code.
 
 | File | Use |
 |---|---|
-| `sprite.json` | Sprites: SDXL base + fp16-fix VAE, LoRA `sdxl-boldline` 0.8, ControlNet-Union promax (canny/lineart type, strength 0.8, steps 0–80%) fed by the asset-shape silhouette, 30 steps, cfg 6.5, dpmpp_2m karras |
+| `sprite.json` | Sprites: SDXL base + fp16-fix VAE, LoRA `sdxl-boldline` 0.8, ControlNet-Union promax (canny/lineart type, strength 0.8, steps 0–80%) fed by the asset-shape silhouette, 30 steps, cfg 5.0 (sim-7bu.1 sweep), dpmpp_2m karras |
 | `transparent.json` | Transparent sprites: the `sprite.json` pipeline, then ComfyUI's **built-in** background removal (BiRefNet: `LoadBackgroundRemovalModel` → `RemoveBackground` → `InvertMask` → `JoinImageWithAlpha`) and an RGBA `SaveImage`. No keying, so `artgen process --bg none --trim --size WxH` |
 | `tile_bg.json` | Seamless tiling backgrounds and parallax layers: a private SDXL instance (`unCLIPCheckpointLoader`) + boldline LoRA, with its model and VAE made circular (`SeamlessTile`, `MakeCircularVAE`; seamless-tiling pack). No ControlNet; `--size WxH` for wide layers |
 | `ref_style.json` | Keep a picked look: `sprite.json` plus IP-Adapter plus SDXL (`style transfer`, weight 0.8) fed by `--ref <png>` through `artgen:ref`. The silhouette still sets the shape |
