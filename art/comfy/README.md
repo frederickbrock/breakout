@@ -96,3 +96,10 @@ keeps the object to that shape. Comfy rounds cost $0, count toward
 
 Installed models, node packs and their hashes and licences:
 `~/Projects/ComfyUI/models/MODELS.md` (outside git).
+
+The graphs load SDXL base. sim-7bu.1 A/B'd base against Animagine XL 4.0-Opt and
+Proteus v0.4 on the same seeds (contact sheet `/visual/sim-7bu.1/`). Base with the
+style guide's sprite block kept the graffiti keylines best. Animagine draws clean
+illustrated game bricks but only with booru tags in its own order (no humans, safe,
+…, quality tags last), Euler a, 28 steps and cfg 5, and without the graffiti look.
+Proteus goes painterly or photoreal. Both stay installed for other uses.
