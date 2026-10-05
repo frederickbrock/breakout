@@ -256,3 +256,11 @@ $ARTGEN verify out.png --size 128x24 --alpha
 br list -l art                         # all art issues
 br list -l needs-human                 # things waiting on you
 ```
+
+**Beads sync.** Only the pm commits `.beads/issues.jsonl`, and with
+`beads.sync_commit: trunk-direct` it does so straight to master as
+`chore(beads): sync ...` (no sync PR). If the push is rejected because master
+moved, it merges with `br sync --merge`, rebases and retries once. A push
+that touches only `.beads/**` doesn't start CI or redeploy Pages
+(`paths-ignore` in `.github/workflows/build.yml`). PRs always run the
+required checks.
