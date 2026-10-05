@@ -1,0 +1,250 @@
+{
+  "1": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": {
+      "ckpt_name": "sd_xl_base_1.0.safetensors"
+    },
+    "_meta": {
+      "title": "Load Checkpoint"
+    }
+  },
+  "2": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "sdxl_vae_fp16_fix.safetensors"
+    },
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "3": {
+    "class_type": "LoraLoader",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "clip": [
+        "1",
+        1
+      ],
+      "lora_name": "sdxl-boldline.safetensors",
+      "strength_model": 0.8,
+      "strength_clip": 0.8
+    },
+    "_meta": {
+      "title": "Load LoRA"
+    }
+  },
+  "4": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "",
+      "clip": [
+        "3",
+        1
+      ]
+    },
+    "_meta": {
+      "title": "artgen:prompt"
+    }
+  },
+  "5": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "",
+      "clip": [
+        "3",
+        1
+      ]
+    },
+    "_meta": {
+      "title": "artgen:negative"
+    }
+  },
+  "6": {
+    "class_type": "EmptyLatentImage",
+    "inputs": {
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1
+    },
+    "_meta": {
+      "title": "artgen:size"
+    }
+  },
+  "7": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "example.png"
+    },
+    "_meta": {
+      "title": "artgen:control"
+    }
+  },
+  "8": {
+    "class_type": "ControlNetLoader",
+    "inputs": {
+      "control_net_name": "controlnet-union-sdxl-1.0_promax.safetensors"
+    },
+    "_meta": {
+      "title": "Load ControlNet"
+    }
+  },
+  "9": {
+    "class_type": "SetUnionControlNetType",
+    "inputs": {
+      "control_net": [
+        "8",
+        0
+      ],
+      "type": "canny/lineart/anime_lineart/mlsd"
+    },
+    "_meta": {
+      "title": "Union type"
+    }
+  },
+  "10": {
+    "class_type": "ControlNetApplyAdvanced",
+    "inputs": {
+      "positive": [
+        "4",
+        0
+      ],
+      "negative": [
+        "5",
+        0
+      ],
+      "control_net": [
+        "9",
+        0
+      ],
+      "image": [
+        "7",
+        0
+      ],
+      "strength": 0.8,
+      "start_percent": 0.0,
+      "end_percent": 0.8,
+      "vae": [
+        "2",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Apply ControlNet"
+    }
+  },
+  "11": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "3",
+        0
+      ],
+      "positive": [
+        "10",
+        0
+      ],
+      "negative": [
+        "10",
+        1
+      ],
+      "latent_image": [
+        "6",
+        0
+      ],
+      "seed": 0,
+      "steps": 30,
+      "cfg": 6.5,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "karras",
+      "denoise": 1.0
+    },
+    "_meta": {
+      "title": "artgen:seed"
+    }
+  },
+  "12": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "11",
+        0
+      ],
+      "vae": [
+        "2",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "14": {
+    "class_type": "LoadBackgroundRemovalModel",
+    "inputs": {
+      "bg_removal_name": "birefnet.safetensors"
+    },
+    "_meta": {
+      "title": "Load BiRefNet"
+    }
+  },
+  "15": {
+    "class_type": "RemoveBackground",
+    "inputs": {
+      "bg_removal_model": [
+        "14",
+        0
+      ],
+      "image": [
+        "12",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Remove Background"
+    }
+  },
+  "16": {
+    "class_type": "InvertMask",
+    "inputs": {
+      "mask": [
+        "15",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Invert (Join expects transparency)"
+    }
+  },
+  "17": {
+    "class_type": "JoinImageWithAlpha",
+    "inputs": {
+      "image": [
+        "12",
+        0
+      ],
+      "alpha": [
+        "16",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Join Image with Alpha"
+    }
+  },
+  "18": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "17",
+        0
+      ],
+      "filename_prefix": "artgen/transparent"
+    },
+    "_meta": {
+      "title": "artgen:output"
+    }
+  }
+}

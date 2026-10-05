@@ -9,6 +9,9 @@ fills in a few nodes, so you can change the look without touching code.
 | File | Use |
 |---|---|
 | `sprite.json` | Sprites: SDXL base + fp16-fix VAE, LoRA `sdxl-boldline` 0.8, ControlNet-Union promax (canny/lineart type, strength 0.8, steps 0–80%) fed by the asset-shape silhouette, 30 steps, cfg 6.5, dpmpp_2m karras |
+| `transparent.json` | Transparent sprites: the `sprite.json` pipeline, then ComfyUI's **built-in** background removal (BiRefNet: `LoadBackgroundRemovalModel` → `RemoveBackground` → `InvertMask` → `JoinImageWithAlpha`) and an RGBA `SaveImage`. No keying, so `artgen process --bg none --trim --size WxH` |
+| `tile_bg.json` | Seamless tiling backgrounds and parallax layers: a private SDXL instance (`unCLIPCheckpointLoader`) + boldline LoRA, with its model and VAE made circular (`SeamlessTile`, `MakeCircularVAE`; seamless-tiling pack). No ControlNet; `--size WxH` for wide layers |
+| `ref_style.json` | Keep a picked look: `sprite.json` plus IP-Adapter plus SDXL (`style transfer`, weight 0.8) fed by `--ref <png>` through `artgen:ref`. The silhouette still sets the shape |
 
 `.claude/workflow.yaml` → `art.comfy.workflow` says which file the
 concept-artist uses.
@@ -25,7 +28,14 @@ graph must keep the titled nodes (right-click a node → *Title*):
 | `artgen:negative` | CLIPTextEncode | `text` ← `--negative-file` | |
 | `artgen:size` | EmptyLatentImage | `width`/`height` ← `--size`, or the SDXL bucket for `--control-size` | |
 | `artgen:control` | LoadImage | `image` ← the uploaded control PNG (`--control-size` silhouette or `--control`) | |
+| `artgen:ref` | LoadImage | `image` ← the uploaded `--ref` image (one only) | |
 | `artgen:output` | SaveImage | the image artgen downloads | |
+
+Slots per graph: `sprite.json` and `transparent.json` have all of the
+above except `artgen:ref`. `ref_style.json` adds `artgen:ref` (a LoadImage
+for the `--ref` image, required for that graph). `tile_bg.json` has prompt,
+negative, seed, size and output: no control, so don't pass
+`--control-size`.
 
 `artgen comfy-info --workflow art/comfy/sprite.json` lists the slots a file
 has. A missing required slot, or a flag for a slot the graph lacks, fails
@@ -58,3 +68,31 @@ $ARTGEN gen --backend comfy --workflow art/comfy/sprite.json --issue <id> --n 4 
 240×40 paddle). It draws a rounded-rect silhouette at that aspect ratio, which
 keeps the object to that shape. Comfy rounds cost $0, count toward
 `max_rounds` and not toward `budget_usd`.
+
+## Which graph when
+
+- **A sprite with a transparent background:** `transparent.json` with
+  `--control-size` from the contract. BiRefNet is good at outlines, but it
+  can punch holes where an inner panel matches the background colour. Use
+  the style guide's dark-grey background for light objects, and check each
+  pick on the sheet.
+- **A tiling background or parallax layer:** `tile_bg.json` with `--size`
+  (e.g. `1536x640` for a wide layer). Check it tiled 2×2. How it stays safe:
+  the seamless-tiling pack's copy modes break on ComfyUI 0.38, so it patches
+  conv padding in place. It does so on a **private SDXL instance**: the graph
+  loads the checkpoint with `unCLIPCheckpointLoader`, a loader class no other
+  graph uses, and decodes with that checkpoint's own VAE. ComfyUI's node cache
+  keys on the loader class and its inputs, so the `CheckpointLoaderSimple` and
+  `VAELoader` objects the other graphs share are never touched. Verified: a
+  fixed-seed `sprite.json` round gives a bit-identical image before and after
+  a `tile_bg --keep-loaded` round. Keep the separate loader (and no
+  `VAELoader`) when editing this graph. With `--keep-loaded` both SDXL
+  instances stay in RAM.
+- **Variants that keep an existing look** (a picked concept or a shipped
+  plate): `ref_style.json --ref <png>` plus `--control-size`. Peak VRAM with
+  IP-Adapter and ControlNet is about 11.5 GB of 12. Keep other GPU work off
+  while it runs.
+- **Anything else:** `sprite.json`.
+
+Installed models, node packs and their hashes and licences:
+`~/Projects/ComfyUI/models/MODELS.md` (outside git).
