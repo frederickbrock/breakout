@@ -42,7 +42,20 @@ art:                           # art team (art-pipeline skill); defaults listed 
   assets_dir: assets
   style_guide: art/style.md
   manifest: art/manifest.toml
+  # Default backend per kind of round (user, 2026-10-05, from the sim-4ws.5
+  # comparison in art/concepts/_comparison/). The concept-artist picks the
+  # kind from the brief; `backend` above is the fallback for anything else.
+  backend_by_workflow:
+    sprite: openrouter         # plain sprites
+    transparent: openrouter    # sprites that need a cut-out (Gemini + artgen process --bg key)
+    tile: openrouter           # tiling backgrounds / parallax layers
+    ref: comfy                 # "keep this look" variants from a picked or shipped image
   comfy:
     url: http://127.0.0.1:8188
-    workflow: art/comfy/sprite.json
+    workflow: art/comfy/sprite.json   # default graph for comfy rounds
+    workflows:                 # graph per kind when that kind runs on comfy
+      sprite: art/comfy/sprite.json
+      transparent: art/comfy/transparent.json
+      tile: art/comfy/tile_bg.json
+      ref: art/comfy/ref_style.json
     variations: 4
