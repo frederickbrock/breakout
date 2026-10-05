@@ -19,8 +19,10 @@ fn phase(app: &App, outline: Entity) -> f32 {
 
 fn strip_colors(app: &mut App, outline: Entity) -> Vec<Color> {
     let children: Vec<Entity> = app.world().get::<Children>(outline).unwrap().to_vec();
+    // Only the coded strips (the outline's sparks are children too).
     children
         .into_iter()
+        .filter(|&c| app.world().get::<OutlineStrip>(c).is_some())
         .map(|c| app.world().get::<Sprite>(c).unwrap().color)
         .collect()
 }

@@ -26,6 +26,7 @@ pub(crate) mod explosive;
 pub(crate) mod grid;
 pub(crate) mod outline;
 pub(crate) mod regen;
+pub(crate) mod sparks;
 
 use bevy::prelude::*;
 use rand::seq::SliceRandom;
@@ -210,6 +211,7 @@ impl Plugin for BricksPlugin {
             regen::RegenPlugin,
             explosive::ExplosivePlugin,
             outline::OutlinePlugin,
+            sparks::SparksPlugin,
         ));
     }
 }
