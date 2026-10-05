@@ -1,7 +1,7 @@
 //! A run: starting it, ending it, and its score, lives and HUD.
 //!
 //! [`start_run`] (on entering `AppState::InGame`, i.e. first launch and every
-//! restart) resets [`Score`] and [`Lives`] (to [`STARTING_LIVES`]), sets the
+//! restart) resets [`Score`] and [`Lives`] (to `Tuning.ball.lives`), sets the
 //! `BallSpeed` and builds the board from the campaign's first level
 //! ([`CampaignLevels`] via [`campaign_level`], else the built-in random
 //! board, read fresh each run so an edited level applies at the next Start),
@@ -30,10 +30,7 @@ use crate::campaign::{sector_number, spawn_board, CurrentLevel, LevelStarted};
 use crate::collision::BallCollisionSignals;
 use crate::game_state::{AppState, GameOutcome};
 use crate::levels::{campaign_level, CampaignLevels, LevelDef};
-use crate::paddle::{
-    paddle_field, prong, Paddle, PADDLE_HEIGHT, PADDLE_LINEAR_DAMPING, PADDLE_MARGIN_BOTTOM,
-    PADDLE_MASS, PADDLE_WIDTH,
-};
+use crate::paddle::{paddle_field, prong, Paddle, PADDLE_HEIGHT, PADDLE_MARGIN_BOTTOM};
 use crate::plate::{BackingPlate, PLATE_PADDING, PLATE_Z};
 use crate::theme;
 use crate::tuning::Tuning;
@@ -101,7 +98,7 @@ pub(crate) fn start_run(
     (mut ball_speed, tuning): (ResMut<BallSpeed>, Res<Tuning>),
 ) {
     score.0 = 0;
-    lives.0 = STARTING_LIVES;
+    lives.0 = tuning.ball.lives;
     current.0 = 0;
     *signals = BallCollisionSignals::default();
     let mut def = campaign_level(campaign.as_deref(), 0).unwrap_or_else(LevelDef::fallback);
@@ -109,15 +106,16 @@ pub(crate) fn start_run(
         // The built-in random board: its power-up count is tunable.
         def.extra_powerups = tuning.bricks.reactor_bricks;
     }
-    spawn_run_entities(&mut commands, &ball_look);
+    spawn_run_entities(&mut commands, &ball_look, &tuning);
     spawn_board(&mut commands, &def, 1, &mut ball_speed, &tuning);
     commands.trigger(RestartGame);
     commands.trigger(LevelStarted { index: 0 });
 }
 
-/// The run's paddle, ball and HUD (the board is spawned separately, per
-/// level).
-pub(crate) fn spawn_run_entities(commands: &mut Commands, ball_look: &BallLook) {
+/// The run's paddle (sized and weighted from `tuning`), ball and HUD (the
+/// board is spawned separately, per level).
+pub(crate) fn spawn_run_entities(commands: &mut Commands, ball_look: &BallLook, tuning: &Tuning) {
+    let paddle = &tuning.paddle;
     let paddle_start = Vec3::new(
         0.0,
         -PLAYFIELD_HEIGHT / 2.0 + PADDLE_HEIGHT / 2.0 + PADDLE_MARGIN_BOTTOM,
@@ -129,14 +127,14 @@ pub(crate) fn spawn_run_entities(commands: &mut Commands, ball_look: &BallLook) 
         Visibility::default(),
         Transform::from_translation(paddle_start),
         RigidBody::Dynamic,
-        Collider::rectangle(PADDLE_WIDTH, PADDLE_HEIGHT),
-        Mass(PADDLE_MASS),
+        Collider::rectangle(paddle.width, PADDLE_HEIGHT),
+        Mass(paddle.mass),
         LockedAxes::new().lock_translation_y().lock_rotation(),
-        LinearDamping(PADDLE_LINEAR_DAMPING),
+        LinearDamping(paddle.linear_damping),
         Restitution::ZERO,
         ConstantForce(Vec2::ZERO),
         Paddle {
-            width: PADDLE_WIDTH,
+            width: paddle.width,
         },
         children![prong(-1.0), paddle_field(), prong(1.0)],
     ));
@@ -169,7 +167,7 @@ pub(crate) fn spawn_run_entities(commands: &mut Commands, ball_look: &BallLook) 
     spawn_hud_line(
         commands,
         "LIVES\n",
-        &STARTING_LIVES.to_string(),
+        &tuning.ball.lives.to_string(),
         HUD_X,
         PLAYFIELD_HEIGHT / 2.0 - HUD_MARGIN - HUD_BLOCK_SPACING,
         LivesText,

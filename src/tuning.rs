@@ -8,11 +8,17 @@
 //! loads, and whatever it leaves out keeps its default. Distances and speeds
 //! are in world units (already scaled by `GAME_SCALE`).
 //!
-//! Readers so far: bricks (hits per class, the random fill, the fallback
-//! board's power-ups, regen heal time; new bricks and new heal timers use
-//! the current values) and power-ups (drop gravity, Super-Sizer's duration,
-//! width multiplier and spawn weight, re-applied to the spawner when `Tuning`
-//! changes).
+//! Readers:
+//! - the ball: speed, ramp, min vertical share
+//! - the paddle: size, mass, damping, keyboard force, mouse follow; mass and
+//!   damping are re-applied when `Tuning` changes
+//! - lives
+//! - bricks: hits per class, the random fill, the fallback board's
+//!   power-ups, regen heal time; new bricks and new heal timers use the
+//!   current values
+//! - power-ups: drop gravity, Super-Sizer's duration, width multiplier (of
+//!   the tuned paddle width) and spawn weight, re-applied to the spawner when
+//!   `Tuning` changes
 //!
 //! Two plugins, split like the levels:
 //! - [`add_game`](crate) inits `Tuning` to its defaults, so the headless tests
@@ -32,7 +38,9 @@ use bevy::asset::{AssetLoadFailedEvent, AssetLoader, LoadContext};
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::ball::{BallSpeed, BALL_MIN_VERTICAL_FRACTION, BALL_SPEED_SCALE};
+use crate::ball::{
+    BallSpeed, BALL_MIN_VERTICAL_FRACTION, BALL_SPEED_SCALE, SPEED_RAMP_MAX, SPEED_RAMP_STEP,
+};
 use crate::bricks::{BrickClass, ExplosiveKind, FILL_WEIGHTS, REACTOR_BRICKS};
 use crate::controls::{FOLLOW_GAIN, MAX_FOLLOW_SPEED, MAX_GAP_PER_FRAME};
 use crate::paddle::{PADDLE_FORCE, PADDLE_LINEAR_DAMPING, PADDLE_MASS, PADDLE_WIDTH};
@@ -56,8 +64,13 @@ pub struct Tuning {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct BallTuning {
-    /// Speed factor when a level doesn't set `speed_factor:`.
+    /// Speed factor of campaign round 1 when a level doesn't set
+    /// `speed_factor:`.
     pub speed_factor: f32,
+    /// Added to that factor for each later round (the speed ramp).
+    pub ramp_step: f32,
+    /// The ramp's highest factor.
+    pub ramp_max: f32,
     /// World units/s per unit of speed factor.
     pub speed_per_factor: f32,
     /// The smallest share of the ball's speed that is vertical.
@@ -70,6 +83,8 @@ impl Default for BallTuning {
     fn default() -> Self {
         Self {
             speed_factor: BALL_SPEED_SCALE,
+            ramp_step: SPEED_RAMP_STEP,
+            ramp_max: SPEED_RAMP_MAX,
             speed_per_factor: BallSpeed::PER_FACTOR,
             min_vertical_fraction: BALL_MIN_VERTICAL_FRACTION,
             lives: STARTING_LIVES,

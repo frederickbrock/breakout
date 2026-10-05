@@ -48,7 +48,7 @@ use bevy::asset::AssetMetaCheck;
 use bevy::prelude::*;
 use collision::{on_ball_bounce, on_ball_collision, BallCollisionSignals};
 use game_state::{AppState, GameStatePlugin, PlayState};
-use paddle::{paddle_movement, place_paddle_pieces, PaddleMovementSet};
+use paddle::{apply_paddle_tuning, paddle_movement, place_paddle_pieces, PaddleMovementSet};
 use run::{restart_from_game_over, start_run, update_hud, Lives, Score, STARTING_LIVES};
 use world::{setup_level, GAME_SCALE};
 
@@ -172,6 +172,10 @@ fn add_game(app: &mut App) {
             place_paddle_pieces,
         )
             .chain(),
+    )
+    .add_systems(
+        Update,
+        apply_paddle_tuning.run_if(resource_changed::<tuning::Tuning>),
     );
 }
 

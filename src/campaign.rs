@@ -103,7 +103,7 @@ pub(crate) fn spawn_board(
     ball_speed: &mut BallSpeed,
     tuning: &Tuning,
 ) {
-    *ball_speed = BallSpeed::for_level(def, round);
+    *ball_speed = BallSpeed::for_level(def, round, &tuning.ball);
     let board = build_board(def, &mut rand::rng(), &tuning.bricks);
     spawn_bricks(commands, &board, def.cols());
 }

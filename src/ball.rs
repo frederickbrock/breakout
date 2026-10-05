@@ -27,6 +27,7 @@ use crate::collision::BallCollisionSignals;
 use crate::game_state::{AppState, GameOutcome};
 use crate::paddle::{Paddle, PADDLE_HEIGHT};
 use crate::run::{end_run, Lives};
+use crate::tuning::{BallTuning, Tuning};
 use crate::world::{GAME_SCALE, PLAYFIELD_HEIGHT};
 
 pub(crate) const BALL_SIZE: f32 = 15.0 * GAME_SCALE;
@@ -44,10 +45,12 @@ pub(crate) const SPEED_RAMP_STEP: f32 = 0.1;
 pub(crate) const SPEED_RAMP_MAX: f32 = 2.5;
 
 /// The default speed factor for campaign round `round` (counted from 1):
-/// `min(BALL_SPEED_SCALE + SPEED_RAMP_STEP × (round − 1), SPEED_RAMP_MAX)`.
-pub(crate) fn speed_factor(round: usize) -> f32 {
+/// `min(start + step × (round − 1), max)`, with the start factor, step and
+/// max from `Tuning.ball` (by default [`BALL_SPEED_SCALE`],
+/// [`SPEED_RAMP_STEP`] and [`SPEED_RAMP_MAX`]).
+pub(crate) fn speed_factor(round: usize, ball: &BallTuning) -> f32 {
     let steps = round.saturating_sub(1) as f32;
-    (BALL_SPEED_SCALE + SPEED_RAMP_STEP * steps).min(SPEED_RAMP_MAX)
+    (ball.speed_factor + ball.ramp_step * steps).min(ball.ramp_max)
 }
 
 /// Gap between the anchored ball and the paddle, so the launch doesn't start
@@ -88,15 +91,24 @@ impl BallSpeed {
 
     /// From a level's speed factor: 300 x factor (the default factor
     /// [`BALL_SPEED_SCALE`] gives [`BALL_SPEED`]).
+    #[cfg(test)]
     pub(crate) fn from_factor(factor: f32) -> Self {
         Self(Self::PER_FACTOR * factor)
     }
 
     /// The speed for a level played as campaign round `round` (from 1): its
     /// `speed_factor` if it sets one, else the round's ramp value
-    /// ([`speed_factor`]). The one place a level's ball speed is computed.
-    pub(crate) fn for_level(def: &crate::levels::LevelDef, round: usize) -> Self {
-        Self::from_factor(def.speed_factor.unwrap_or_else(|| speed_factor(round)))
+    /// ([`speed_factor`]), times `ball.speed_per_factor`. The one place a
+    /// level's ball speed is computed.
+    pub(crate) fn for_level(
+        def: &crate::levels::LevelDef,
+        round: usize,
+        ball: &BallTuning,
+    ) -> Self {
+        let factor = def
+            .speed_factor
+            .unwrap_or_else(|| speed_factor(round, ball));
+        Self(ball.speed_per_factor * factor)
     }
 }
 
@@ -144,7 +156,7 @@ pub(crate) fn record_ball_approach(
 pub(crate) fn ball_movement(
     mut commands: Commands,
     mut next_state: ResMut<NextState<AppState>>,
-    (mut lives, speed): (ResMut<Lives>, Res<BallSpeed>),
+    (mut lives, speed, tuning): (ResMut<Lives>, Res<BallSpeed>, Res<Tuning>),
     mut signals: ResMut<BallCollisionSignals>,
     paddle_query: Query<(&Transform, &Paddle), Without<Ball>>,
     brick_query: Query<(), With<Brick>>,
@@ -176,7 +188,7 @@ pub(crate) fn ball_movement(
     // component so it can't get stuck in a purely horizontal bounce loop.
     if ball_velocity.0 != Vec2::ZERO {
         let mut v = ball_velocity.0.normalize() * speed;
-        let min_y = speed * BALL_MIN_VERTICAL_FRACTION;
+        let min_y = speed * tuning.ball.min_vertical_fraction;
         if v.y.abs() < min_y {
             let y_sign = if v.y < 0.0 { -1.0 } else { 1.0 };
             let x_sign = if v.x < 0.0 { -1.0 } else { 1.0 };
