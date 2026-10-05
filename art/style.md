@@ -115,7 +115,26 @@ that wants full scenery and no key colour.
 
 For the ComfyUI backend (`art.backend: comfy`, `art/comfy/`). SDXL reads comma
 tags, not prose or hex codes, so this says the same as the preamble above in
-tags. **Positive**, first in every prompt:
+tags. There are two positive blocks: one for **sprites** and one for
+**backgrounds**. The background block carries the scene lighting and the hangar
+palette; on a sprite those tags leak in as dark hangar interiors, rooms and
+vehicles (sim-4ws.5 comparison), so the sprite block leaves them out.
+
+**Positive (sprites)**, first in every sprite prompt (sim-7bu.1):
+
+```
+sci-fi space-age game art, graffiti line-art style,
+bold clean contour outlines, dark keyline, offset inner line in off-white,
+warm orange or muted teal, flat colour blocking, strong value contrast,
+crisp hard white highlight strokes, edge shine, cel shading,
+smooth rounded steel forms, flowing contour lines,
+strong silhouette, readable at small size
+```
+
+The brick's own colour and material come from the brief's subject tags, not
+from the preamble.
+
+**Positive (backgrounds)**, first in every background or parallax-layer prompt:
 
 ```
 sci-fi space-age game art, graffiti line-art style,
@@ -139,7 +158,7 @@ single isolated object, centered, whole object in frame, orthographic front view
 plain flat light grey background, no scenery
 ```
 
-**Negative**, passed with `--negative-file`:
+**Negative**, passed with `--negative-file`. Backgrounds use this block:
 
 ```
 spray paint, drips, overspray, mist, speckle, stencil, graffiti tags,
@@ -149,7 +168,19 @@ heavy bloom, busy background, scenery, multiple objects, cropped, character,
 person, face, creature, blurry, noisy, gradient background, drop shadow
 ```
 
-The brief's subject tags go between the preamble and the isolation tags, and
+Sprites use the same block plus the tags that leaked into sprites in the
+sim-4ws.5 comparison:
+
+```
+spray paint, drips, overspray, mist, speckle, stencil, graffiti tags,
+lettering, text, letters, numbers, logo, watermark, signature, border, frame,
+ui, photo, photorealistic, painterly brushwork, fantasy, lens flare,
+heavy bloom, busy background, scenery, multiple objects, cropped, character,
+person, face, creature, blurry, noisy, gradient background, drop shadow,
+hangar, interior, room, environment, spaceship, vehicle, machinery
+```
+
+The brief's subject tags go between the sprite preamble and the isolation tags, and
 the asset contract's size goes to `--control-size`.
 
 ## Do / Don't
