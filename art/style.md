@@ -119,11 +119,13 @@ tags. There are two positive blocks: one for **sprites** and one for
 **backgrounds**. The background block carries the scene lighting and the hangar
 palette; on a sprite those tags leak in as dark hangar interiors, rooms and
 vehicles (sim-4ws.5 comparison), so the sprite block leaves them out.
+Neither block names the style: CLIP reads "graffiti" as spray paint, so the
+outline, keyline and highlight tags carry the look on their own.
 
 **Positive (sprites)**, first in every sprite prompt (sim-7bu.1):
 
 ```
-sci-fi space-age game art, graffiti line-art style,
+sci-fi space-age game art,
 bold clean contour outlines, dark keyline, offset inner line in off-white,
 warm orange or muted teal, flat colour blocking, strong value contrast,
 crisp hard white highlight strokes, edge shine, cel shading,
@@ -137,7 +139,7 @@ from the preamble.
 **Positive (backgrounds)**, first in every background or parallax-layer prompt:
 
 ```
-sci-fi space-age game art, graffiti line-art style,
+sci-fi space-age game art,
 bold clean contour outlines, dark keyline, offset inner line in off-white,
 warm orange or muted teal, flat colour blocking, strong value contrast,
 crisp hard white highlight strokes, edge shine, cel shading, stylised lighting,
