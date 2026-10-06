@@ -155,8 +155,8 @@
         0
       ],
       "seed": 0,
-      "steps": 30,
-      "cfg": 5.0,
+      "steps": 50,
+      "cfg": 10.0,
       "sampler_name": "dpmpp_2m",
       "scheduler": "karras",
       "denoise": 1.0
