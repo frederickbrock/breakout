@@ -155,7 +155,7 @@ For a mostly light object, say *plain flat dark grey background* instead.
 
 ```
 single isolated object, centered, whole object in frame, orthographic front view,
-plain flat light grey background, no scenery
+plain flat light grey background
 ```
 
 **Negative**, passed with `--negative-file`. Backgrounds use this block:
