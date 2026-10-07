@@ -129,6 +129,21 @@ fn falling(app: &mut App) -> Vec<(Entity, Vec2, PowerUpKind, f32)> {
         .collect()
 }
 
+/// Makes `brick` carry `kind` (in its registered colours).
+fn carry(app: &mut App, brick: Entity, kind: PowerUpKind) {
+    let (color, tint) = match kind {
+        PowerUpKind::SuperSizer => (theme::POWER_UP, Color::WHITE),
+        PowerUpKind::Collapse => (theme::POWER_UP_COLLAPSE, theme::POWER_UP_COLLAPSE),
+    };
+    app.world_mut()
+        .entity_mut(brick)
+        .insert(PowerUpBrick { kind, color, tint });
+}
+
+fn falling_kinds(app: &mut App) -> Vec<PowerUpKind> {
+    falling(app).into_iter().map(|f| f.2).collect()
+}
+
 fn break_brick(app: &mut App, brick: Entity) {
     hit(app, brick);
     hit(app, brick);
@@ -150,7 +165,10 @@ fn every_reactor_brick_and_only_those_carry_a_power_up() {
                 assert_eq!(class, BrickClass::Reactor);
                 assert_eq!(health, 2);
                 assert_eq!(entity.get::<Sprite>().unwrap().color, theme::REACTOR);
-                assert!(power_up_brick.kind == PowerUpKind::SuperSizer);
+                assert!(matches!(
+                    power_up_brick.kind,
+                    PowerUpKind::SuperSizer | PowerUpKind::Collapse
+                ));
             }
             None => {
                 assert_ne!(class, BrickClass::Reactor);
@@ -218,7 +236,10 @@ fn breaking_a_power_up_brick_drops_its_power_up_where_it_stood() {
     assert_eq!(dropped.len(), 1);
     let (_, pos, kind, gravity) = dropped[0];
     assert_eq!(pos, at);
-    assert!(kind == PowerUpKind::SuperSizer);
+    assert!(matches!(
+        kind,
+        PowerUpKind::SuperSizer | PowerUpKind::Collapse
+    ));
     assert_eq!(gravity, BASE_GRAVITY);
 
     // The next drop this run is heavier.
@@ -237,6 +258,7 @@ fn breaking_a_power_up_brick_drops_its_power_up_where_it_stood() {
 fn catching_a_dropped_power_up_widens_the_paddle() {
     let mut app = app();
     let brick = power_up_bricks(&mut app)[0];
+    carry(&mut app, brick, PowerUpKind::SuperSizer);
     break_brick(&mut app, brick);
     let (power_up, ..) = falling(&mut app)[0];
     let paddle = app
@@ -315,4 +337,73 @@ fn flagged_and_reactor_bricks_are_equipped_once() {
     app.update();
     assert!(before == kinds(&mut app));
     assert_eq!(power_up_bricks(&mut app).len(), 2);
+}
+
+#[test]
+fn collapse_drops_at_most_once_per_level_and_again_after_level_started() {
+    let mut app = app_with_level(crate::levels::parse_level("grid:\nPPPC").unwrap());
+    let reactors = power_up_bricks(&mut app);
+    assert_eq!(reactors.len(), 3);
+    for &brick in &reactors {
+        carry(&mut app, brick, PowerUpKind::Collapse);
+    }
+
+    break_brick(&mut app, reactors[0]);
+    assert_eq!(falling_kinds(&mut app), [PowerUpKind::Collapse]);
+
+    // Collapse already dropped this level: the second reactor re-picks.
+    break_brick(&mut app, reactors[1]);
+    let kinds = falling_kinds(&mut app);
+    assert_eq!(kinds.len(), 2);
+    assert_eq!(
+        kinds
+            .iter()
+            .filter(|k| **k == PowerUpKind::Collapse)
+            .count(),
+        1
+    );
+    assert!(kinds.contains(&PowerUpKind::SuperSizer));
+
+    // A new level makes it available again (and clears the falling drops).
+    app.world_mut()
+        .trigger(crate::campaign::LevelStarted { index: 0 });
+    app.world_mut().flush();
+    app.update();
+    assert_eq!(count::<With<PowerUp>>(&mut app), 0);
+    break_brick(&mut app, reactors[2]);
+    assert_eq!(falling_kinds(&mut app), [PowerUpKind::Collapse]);
+}
+
+#[test]
+fn a_collapse_drop_is_coloured_apart_from_super_sizer() {
+    assert_ne!(theme::POWER_UP_COLLAPSE, theme::POWER_UP);
+    assert_ne!(theme::POWER_UP_COLLAPSE, theme::UNTINTED);
+    let mut app = app_with_level(crate::levels::parse_level("grid:\nPPC").unwrap());
+    let reactors = power_up_bricks(&mut app);
+    carry(&mut app, reactors[0], PowerUpKind::Collapse);
+    carry(&mut app, reactors[1], PowerUpKind::SuperSizer);
+    break_brick(&mut app, reactors[0]);
+    break_brick(&mut app, reactors[1]);
+    let mut looks: Vec<(PowerUpKind, Color, IconTint)> = app
+        .world_mut()
+        .query::<(&PowerUp, &Sprite, &IconTint)>()
+        .iter(app.world())
+        .map(|(p, s, t)| (p.kind, s.color, *t))
+        .collect();
+    looks.sort_by_key(|(kind, ..)| *kind == PowerUpKind::Collapse);
+    assert_eq!(
+        looks,
+        [
+            (
+                PowerUpKind::SuperSizer,
+                theme::POWER_UP,
+                IconTint(Color::WHITE)
+            ),
+            (
+                PowerUpKind::Collapse,
+                theme::POWER_UP_COLLAPSE,
+                IconTint(theme::POWER_UP_COLLAPSE)
+            ),
+        ]
+    );
 }

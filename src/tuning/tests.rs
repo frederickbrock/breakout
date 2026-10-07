@@ -257,10 +257,15 @@ fn the_super_sizer_weight_follows_tuning() {
         .super_sizer
         .weight = 0.0;
     app.update();
-    assert!(
-        app.world().resource::<PowerUpSpawner>().pick().is_none(),
-        "Super-Sizer is the only kind, now at weight 0"
-    );
+    // Other kinds (Collapse) can still be picked; Super-Sizer never is.
+    let spawner = app.world().resource::<PowerUpSpawner>();
+    for _ in 0..100 {
+        assert_ne!(
+            spawner.pick().map(|p| p.kind),
+            Some(crate::powerups::PowerUpKind::SuperSizer),
+            "Super-Sizer is at weight 0"
+        );
+    }
 }
 
 // ---- consumers (sim-dj6.2): ball, paddle and lives read Tuning ----

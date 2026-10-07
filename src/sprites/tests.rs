@@ -145,6 +145,26 @@ fn falling_power_ups_get_the_icon_or_keep_their_colour() {
 }
 
 #[test]
+fn a_tinted_power_up_keeps_its_tint_when_skinned() {
+    use crate::powerups::{test_spawn_power_up, IconTint};
+    let mut app = app_with_sprites(&[]);
+    let tinted = test_spawn_power_up(&mut app);
+    app.world_mut()
+        .entity_mut(tinted)
+        .insert(IconTint(theme::POWER_UP_COLLAPSE));
+    let plain = test_spawn_power_up(&mut app);
+    app.update();
+    let icon = app.world().resource::<GameSprites>().power_up.clone();
+    let sprite = app.world().get::<Sprite>(tinted).unwrap();
+    assert_eq!(sprite.image, icon);
+    assert_eq!(sprite.color, theme::POWER_UP_COLLAPSE);
+    assert_eq!(
+        app.world().get::<Sprite>(plain).unwrap().color,
+        theme::UNTINTED
+    );
+}
+
+#[test]
 fn time_capsule_icons_use_the_power_up_image() {
     use crate::powerups::capsules::CapsuleIcon;
     let mut app = app_with_sprites(&[]);

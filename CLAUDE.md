@@ -64,6 +64,7 @@ One line per file; each module's details live in its own `//!` doc comment.
 - `src/spawner.rs` — `Spawner<T>`, a generic weighted registry of spawnable kinds.
 - `src/powerups/mod.rs` — the power-up framework: drops, pickup and `ActiveEffects`.
 - `src/powerups/super_sizer.rs` — Super-Sizer, and the pattern for adding a power-up.
+- `src/powerups/collapse.rs` — Collapse: every column's bricks fall to fill the gaps below (staggered drop, `BrickLanded`), at most once per level.
 - `src/powerups/capsules.rs` — time capsules: each active power-up's time left, in the right panel.
 - `src/script_manager/mod.rs` — `ScriptPlugin`, Lua scripting (native only).
 - `src/test_support.rs` — shared headless test helpers (`app`, `tap`, `click`, `hit`, ...).
@@ -82,7 +83,8 @@ One line per file; each module's details live in its own `//!` doc comment.
   `BrickDestroyed { brick, position }` *before* despawning, so observers can still read
   the brick; a hit it survives triggers `BrickDamaged { brick }` instead (regen reacts to
   that; blasts fire it too). `BrickDestroyed.by_blast` marks blast kills, which don't set
-  off another blast (the chain is already resolved). Other modules (power-ups) hook brick breaks through that event rather than
+  off another blast (the chain is already resolved). `BrickCell` can change mid-level (Collapse moves bricks down), so key
+  per-brick logic on its current value; `BoardSize` is the level grid's cols and rows. Other modules (power-ups) hook brick breaks through that event rather than
   editing `on_ball_collision`. When a brick broke and none are left the level is cleared (`LevelCleared`); after the last level the run is won. Tests
   fake a ball contact with `test_support::hit(app, brick)`, which triggers `CollisionStart`
   exactly as Avian does (`hit_moving` also sets the ball's velocity; `brick_of(app, class)`
