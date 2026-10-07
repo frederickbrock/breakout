@@ -122,19 +122,31 @@ vehicles (sim-4ws.5 comparison), so the sprite block leaves them out.
 Neither block names the style: CLIP reads "graffiti" as spray paint, so the
 outline, keyline and highlight tags carry the look on their own.
 
-**Positive (sprites)**, first in every sprite prompt (sim-7bu.1):
+**Sprite prompt order** (sim-7bu.1): **subject first**, then the sprite block,
+then the isolation tags. CLIP weights the start of each 75-token chunk most;
+with the style first, the subject landed at tokens 73–77, on the chunk
+boundary, and the material was lost (tungsten came out as a blank grey slab).
 
-```
-sci-fi space-age game art,
-bold clean contour outlines, dark keyline, offset inner line in off-white,
-warm orange or muted teal, flat colour blocking, strong value contrast,
-crisp hard white highlight strokes, edge shine, cel shading,
-smooth rounded steel forms, flowing contour lines,
-strong silhouette, readable at small size
-```
+1. **Subject**: `breakout arcade game brick`, then the material, its colour
+   and its shape tags, e.g. `breakout arcade game brick, heavy dark-gold
+   tungsten, thick bevel, rectangular, beveled edges, seam line`. Don't use
+   *plate* or *tile*; they pull toward dishes and trays.
+2. **Positive (sprites)**:
 
-The brick's own colour and material come from the brief's subject tags, not
-from the preamble.
+   ```
+   sci-fi space-age game art,
+   bold clean contour outlines, dark keyline, offset inner line in off-white,
+   flat colour blocking, strong value contrast,
+   crisp hard white highlight strokes, edge shine, cel shading,
+   flowing contour lines,
+   strong silhouette, readable at small size
+   ```
+
+   The block carries no colour and no material (no *warm orange or muted
+   teal*, no *steel*). Those tags overrode the subject, so every brick came out
+   grey steel with orange accents. The brick's colour and material come only
+   from the subject tags.
+3. **Isolation tags** (below).
 
 **Positive (backgrounds)**, first in every background or parallax-layer prompt:
 
@@ -171,7 +183,8 @@ person, face, creature, blurry, noisy, gradient background, drop shadow
 ```
 
 Sprites use the same block plus the tags that leaked into sprites in the
-sim-4ws.5 comparison:
+sim-4ws.5 comparison, plus the literal readings of "brick" (wall courses,
+toy-brick studs; sim-7bu.1):
 
 ```
 spray paint, drips, overspray, mist, speckle, stencil, graffiti tags,
@@ -179,11 +192,12 @@ lettering, text, letters, numbers, logo, watermark, signature, border, frame,
 ui, photo, photorealistic, painterly brushwork, fantasy, lens flare,
 heavy bloom, busy background, scenery, multiple objects, cropped, character,
 person, face, creature, blurry, noisy, gradient background, drop shadow,
-hangar, interior, room, environment, spaceship, vehicle, machinery
+hangar, interior, room, environment, spaceship, vehicle, machinery,
+brick wall, masonry, lego, studs, toy
 ```
 
-The brief's subject tags go between the sprite preamble and the isolation tags, and
-the asset contract's size goes to `--control-size`.
+The asset contract's size goes to `--control-size`. Settings live in the
+graphs (cfg 10, 50 steps; `art/comfy/README.md`).
 
 ## Do / Don't
 
