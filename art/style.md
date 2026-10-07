@@ -122,13 +122,18 @@ vehicles (sim-4ws.5 comparison), so the sprite block leaves them out.
 Neither block names the style: CLIP reads "graffiti" as spray paint, so the
 outline, keyline and highlight tags carry the look on their own.
 
-**Sprite prompt order** (sim-7bu.1): **subject first**, then the sprite block,
-then the isolation tags. CLIP weights the start of each 75-token chunk most;
+**Trigger first** (sim-7bu.4): every SDXL prompt, sprite or background, starts
+with `stlbrk_graffiti`, the trigger token of the project's own LoRA that all
+comfy graphs load (`art/lora/graffiti-v1/`).
+
+**Sprite prompt order** (sim-7bu.1): the trigger, then the **subject**, then the
+sprite block, then the isolation tags. CLIP weights the start of each 75-token chunk most;
 with the style first, the subject landed at tokens 73–77, on the chunk
 boundary, and the material was lost (tungsten came out as a blank grey slab).
 
-1. **Subject**: `breakout arcade game brick`, then the material, its colour
-   and its shape tags, e.g. `breakout arcade game brick, heavy dark-gold
+1. **Subject**: `stlbrk_graffiti, breakout arcade game brick`, then the
+   material, its colour and its shape tags, e.g. `stlbrk_graffiti, breakout
+   arcade game brick, heavy dark-gold
    tungsten, thick bevel, rectangular, beveled edges, seam line`. Don't use
    *plate* or *tile*; they pull toward dishes and trays.
 2. **Positive (sprites)**:
@@ -151,7 +156,7 @@ boundary, and the material was lost (tungsten came out as a blank grey slab).
 **Positive (backgrounds)**, first in every background or parallax-layer prompt:
 
 ```
-sci-fi space-age game art,
+stlbrk_graffiti, sci-fi space-age game art,
 bold clean contour outlines, dark keyline, offset inner line in off-white,
 warm orange or muted teal, flat colour blocking, strong value contrast,
 crisp hard white highlight strokes, edge shine, cel shading, stylised lighting,

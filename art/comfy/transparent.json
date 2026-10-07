@@ -28,7 +28,7 @@
         "1",
         1
       ],
-      "lora_name": "sdxl-boldline.safetensors",
+      "lora_name": "stlbrk_graffiti_v1-step00001500.safetensors",
       "strength_model": 0.8,
       "strength_clip": 0.8
     },
