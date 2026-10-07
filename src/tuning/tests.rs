@@ -411,3 +411,21 @@ fn super_sizer_multiplies_the_tuned_paddle_width_by_the_tuned_multiplier() {
     let paddle = crate::test_support::paddle(&mut app);
     assert_eq!(app.world().get::<Paddle>(paddle).unwrap().width, 300.0);
 }
+
+// ---- dev console save format (sim-dj6.5) ----
+
+#[test]
+fn the_dev_console_save_text_reads_back_to_the_same_tuning() {
+    let text = tuning_file_text(&Tuning::default());
+    assert!(
+        text.starts_with("// Game tuning:"),
+        "keeps the comment header"
+    );
+    assert_eq!(parse_tuning(&text), Ok(Tuning::default()));
+
+    let mut tuned = Tuning::default();
+    tuned.paddle.force = 12345.5;
+    tuned.ball.ramp_max = 3.25;
+    tuned.ball.lives = 7;
+    assert_eq!(parse_tuning(&tuning_file_text(&tuned)), Ok(tuned));
+}

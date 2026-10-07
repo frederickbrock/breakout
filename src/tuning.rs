@@ -294,6 +294,32 @@ impl Default for SuperSizerTuning {
     }
 }
 
+/// The header written above the values when the dev console saves the file.
+#[cfg(any(
+    test,
+    all(feature = "dev", debug_assertions, not(target_arch = "wasm32"))
+))]
+const SAVED_HEADER: &str = "\
+// Game tuning: every build (native and web) loads this at startup, and it
+// holds the shipped defaults (src/tuning.rs). Natively, saving it while the
+// game runs reloads it. Leave a field out and it keeps its compiled default.
+// Distances and speeds are world units (1920x1080 world).
+// Last written by the dev console (save).
+";
+
+/// `tuning` as the text of a tuning file: a comment header, then pretty RON
+/// that [`parse_tuning`] reads back to the same values. Only built with the
+/// dev console (and for tests).
+#[cfg(any(
+    test,
+    all(feature = "dev", debug_assertions, not(target_arch = "wasm32"))
+))]
+pub fn tuning_file_text(tuning: &Tuning) -> String {
+    let config = ron::ser::PrettyConfig::new().struct_names(false);
+    let body = ron::ser::to_string_pretty(tuning, config).unwrap_or_default();
+    format!("{SAVED_HEADER}{body}\n")
+}
+
 /// Parses a tuning file (RON). Missing fields take their defaults.
 pub fn parse_tuning(text: &str) -> Result<Tuning, ron::error::SpannedError> {
     ron::from_str(text)

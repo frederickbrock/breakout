@@ -58,6 +58,7 @@ One line per file; each module's details live in its own `//!` doc comment.
 - `src/plate.rs` — `BackingPlate`: the dark rounded plates behind the HUD and the power-up capsules.
 - `src/theme.rs` — the Steelbreak palette; every colour the game draws with.
 - `src/tuning.rs` — `Tuning`: tunable numbers as a resource, loaded (and hot-reloaded) from `assets/game.tuning.ron` by `TuningPlugin` (main-only).
+- `src/dev_console/mod.rs` — `DevConsolePlugin`: the native debug-only egui panel (`) that edits `Tuning` live and saves it (feature `dev`; compiled out of release and wasm).
 - `src/sprites.rs` — image assets: `GameSprites`, the background and sprite skinning (brick damage plates included).
 - `src/parallax.rs` — `ParallaxPlugin`: the deep-space layers and planet drifting down behind the playfield well (`LAYERS` table).
 - `src/particles/mod.rs` — the bevy_enoki VFX layer: per-class brick bursts and damage, explosive blasts, glass glints, ball trail, bounce sparks, paddle flare.
