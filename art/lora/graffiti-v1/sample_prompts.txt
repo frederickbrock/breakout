@@ -1,0 +1,4 @@
+stlbrk_graffiti, a ringed gas giant planet with orange and teal bands, dark space background --w 1024 --h 1024 --d 1 --s 28 --l 6
+stlbrk_graffiti, a rounded blue metal plate with bolts and a thick dark outline --w 1344 --h 768 --d 2 --s 28 --l 6
+stlbrk_graffiti, a cracked green metal brick, white glint, dark outline --w 1344 --h 768 --d 3 --s 28 --l 6
+stlbrk_graffiti, a glowing cyan energy orb in a ringed steel socket --w 1024 --h 1024 --d 4 --s 28 --l 6
