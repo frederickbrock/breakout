@@ -103,6 +103,7 @@ impl Plugin for ControlsPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ControlSettings>()
             .init_resource::<PaddleTarget>()
+            .init_resource::<PointerCaptured>()
             .add_observer(clear_target_on_restart)
             .add_systems(
                 Update,
@@ -113,15 +114,22 @@ impl Plugin for ControlsPlugin {
     }
 }
 
+/// The pointer is busy with an on-screen UI (the native dev console), so the
+/// paddle doesn't follow it. Always false unless such a UI sets it.
+#[derive(Resource, Debug, Default)]
+pub struct PointerCaptured(pub bool);
+
 /// Sets the paddle target when the cursor moves over the window (Mouse mode
-/// only). Does nothing without a window or camera, e.g. in headless tests.
+/// only), unless a UI has the pointer ([`PointerCaptured`]). Does nothing
+/// without a window or camera, e.g. in headless tests.
 fn track_cursor(
     settings: Res<ControlSettings>,
+    captured: Res<PointerCaptured>,
     mut target: ResMut<PaddleTarget>,
     window: Query<&Window, With<PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform)>,
 ) {
-    if settings.paddle != PaddleControl::Mouse {
+    if settings.paddle != PaddleControl::Mouse || captured.0 {
         return;
     }
     let (Ok(window), Ok((camera, camera_transform))) = (window.single(), camera.single()) else {

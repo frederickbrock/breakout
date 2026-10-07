@@ -21,7 +21,7 @@
 use bevy::prelude::*;
 
 use crate::ball::BallSpeed;
-use crate::bricks::grid::spawn_bricks;
+use crate::bricks::grid::{spawn_bricks, BoardSize};
 use crate::collision::BallCollisionSignals;
 use crate::game_state::{AppState, GameOutcome, PlayState};
 use crate::levels::{build_board, campaign_level, CampaignLevels, LevelDef};
@@ -105,7 +105,14 @@ pub(crate) fn spawn_board(
 ) {
     *ball_speed = BallSpeed::for_level(def, round, &tuning.ball);
     let board = build_board(def, &mut rand::rng(), &tuning.bricks);
-    spawn_bricks(commands, &board, def.cols());
+    spawn_bricks(
+        commands,
+        &board,
+        BoardSize {
+            cols: def.cols(),
+            rows: def.rows(),
+        },
+    );
 }
 
 /// A centred panel with `text`, over the frozen game.

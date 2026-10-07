@@ -272,3 +272,12 @@ source = "titanium_cracked=r1/v2, regen_cracked=r1/v6"
 model = "google/gemini-2.5-flash-image"
 prompt_file = "art/prompts/sim-usq.5-r1.txt"
 processing = ["process --bg flood --trim --size 160x60 --fit stretch (titanium)", "process --bg flood --tolerance 25 --trim --size 160x60 --fit stretch (regen; plate outline stops the flood on the green background)"]
+
+[[asset]]
+id = "ball_bright_rim"
+issue = "sim-usq.6"
+files = ["assets/sprites/ball.png"]
+source = "r2/v2"
+model = "google/gemini-2.5-flash-image"
+prompt_file = "art/prompts/sim-usq.6-r2.txt"
+processing = ["numpy: masked levels lift of the grey body inside the ring (r<0.29 of the image width; keylines, off-white ring/seam, glint and orange bounce excluded), k=0.55", "process --bg flood --trim --size 60x60 --fit stretch"]

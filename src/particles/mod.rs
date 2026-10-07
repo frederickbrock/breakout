@@ -15,6 +15,7 @@
 //! | `PaddleHit` | two `paddle_flare` spawners on the paddle, one running to each end | `EMITTER` |
 //! | `BrickExploded` | the variant's blast ([`blast_parts`]): charge round, breach a "+" of four jets, demolition big + debris + lingering smoke | `BLAST_RED` / `BLAST_ORANGE` / `BLAST_DEBRIS` / smoke |
 //! | `ShieldDeflected` | `glass_glint` burst at the contact point | `GLASS_GLINT` + `GLASS_GLINT_LIGHT` |
+//! | `BrickLanded` (Collapse) | `collapse_dust` puff at the brick's bottom edge | `SMOKE` |
 //!
 //! **Per-class hit and break bursts** (sim-rdl.7.8). Each brick material has
 //! its own pair of effect files and its own particle sheet:
@@ -67,13 +68,14 @@
 
 use crate::ball::{Anchored, Ball};
 use crate::bricks::explosive::BrickExploded;
-use crate::bricks::grid::{Brick, BrickHealth, BrickMaxHits};
+use crate::bricks::grid::{Brick, BrickHealth, BrickMaxHits, BRICK_HEIGHT};
 use crate::bricks::{BrickClass, ExplosiveKind};
 use crate::collision::{
     BallBounced, BounceSurface, BrickDamaged, BrickDestroyed, PaddleHit, ShieldDeflected,
 };
 use crate::game_state::{AppState, PlayState};
 use crate::paddle::{Paddle, PADDLE_HEIGHT};
+use crate::powerups::collapse::BrickLanded;
 use crate::theme;
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
@@ -92,6 +94,7 @@ const DEMOLITION_PATH: &str = "particles/blast_demolition.particle.ron";
 const DEBRIS_PATH: &str = "particles/blast_debris.particle.ron";
 const BLAST_SMOKE_PATH: &str = "particles/blast_smoke.particle.ron";
 const GLINT_PATH: &str = "particles/glass_glint.particle.ron";
+const DUST_PATH: &str = "particles/collapse_dust.particle.ron";
 
 /// In front of bricks (z 0) and the HUD's backdrop, behind menus.
 const PARTICLE_Z: f32 = 0.6;
@@ -124,6 +127,8 @@ pub struct ParticleEffects {
     pub debris: Handle<Particle2dEffect>,
     pub blast_smoke: Handle<Particle2dEffect>,
     pub glint: Handle<Particle2dEffect>,
+    /// A collapsing brick's landing puff.
+    pub dust: Handle<Particle2dEffect>,
     /// Each class's own hit and break bursts (explosive variants share).
     pub class_hit: HashMap<BrickClass, Handle<Particle2dEffect>>,
     pub class_break: HashMap<BrickClass, Handle<Particle2dEffect>>,
@@ -296,6 +301,7 @@ fn load_effects(
         debris: assets.load(DEBRIS_PATH),
         blast_smoke: assets.load(BLAST_SMOKE_PATH),
         glint: assets.load(GLINT_PATH),
+        dust: assets.load(DUST_PATH),
         class_hit: per_class(class_hit_path),
         class_break: per_class(class_break_path),
     });
@@ -390,6 +396,7 @@ impl Plugin for VfxPlugin {
             .add_observer(flare_on_paddle_hit)
             .add_observer(blast_on_explosion)
             .add_observer(glint_on_deflect)
+            .add_observer(dust_on_landing)
             .add_systems(
                 Update,
                 (
@@ -763,6 +770,30 @@ fn glint_on_deflect(
             burst(material.clone(), effects.glint.clone(), on.position),
         ));
     }
+}
+
+/// Marks a collapse landing's dust puff.
+#[derive(Component)]
+pub struct LandingDust;
+
+/// A collapsing brick touched down: a puff of dust at its bottom edge.
+fn dust_on_landing(
+    on: On<BrickLanded>,
+    mut commands: Commands,
+    effects: Option<Res<ParticleEffects>>,
+    materials: Option<Res<ParticleMaterials>>,
+) {
+    let (Some(effects), Some(materials)) = (effects, materials) else {
+        return;
+    };
+    commands.spawn((
+        LandingDust,
+        burst(
+            materials.smoke.clone(),
+            effects.dust.clone(),
+            on.position - Vec2::Y * BRICK_HEIGHT / 2.0,
+        ),
+    ));
 }
 
 /// Bricks whose health changed this frame.

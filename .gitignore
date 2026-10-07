@@ -1,3 +1,5 @@
 /target
 /dist
 /art/concepts
+# Sound pipeline review rounds (served at /audio/ by game-asset-web), like art/concepts
+/audio/concepts

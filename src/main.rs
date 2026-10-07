@@ -18,6 +18,7 @@ mod bricks;
 mod campaign;
 mod collision;
 mod controls;
+mod dev_console;
 mod frame;
 mod game_state;
 mod levels;
@@ -92,6 +93,7 @@ fn main() {
     )
     .add_plugins(PhysicsPlugins::default())
     .add_plugins(script_manager::ScriptPlugin)
+    .add_plugins(dev_console::DevConsolePlugin)
     .add_plugins(sprites::SpritesPlugin)
     .add_plugins(levels::LevelsPlugin)
     .add_plugins(tuning::TuningPlugin)

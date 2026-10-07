@@ -58,12 +58,14 @@ One line per file; each module's details live in its own `//!` doc comment.
 - `src/plate.rs` — `BackingPlate`: the dark rounded plates behind the HUD and the power-up capsules.
 - `src/theme.rs` — the Steelbreak palette; every colour the game draws with.
 - `src/tuning.rs` — `Tuning`: tunable numbers as a resource, loaded (and hot-reloaded) from `assets/game.tuning.ron` by `TuningPlugin` (main-only).
+- `src/dev_console/mod.rs` — `DevConsolePlugin`: the native debug-only egui panel (`) that edits `Tuning` live and saves it (feature `dev`; compiled out of release and wasm).
 - `src/sprites.rs` — image assets: `GameSprites`, the background and sprite skinning (brick damage plates included).
 - `src/parallax.rs` — `ParallaxPlugin`: the deep-space layers and planet drifting down behind the playfield well (`LAYERS` table).
 - `src/particles/mod.rs` — the bevy_enoki VFX layer: per-class brick bursts and damage, explosive blasts, glass glints, ball trail, bounce sparks, paddle flare.
 - `src/spawner.rs` — `Spawner<T>`, a generic weighted registry of spawnable kinds.
 - `src/powerups/mod.rs` — the power-up framework: drops, pickup and `ActiveEffects`.
 - `src/powerups/super_sizer.rs` — Super-Sizer, and the pattern for adding a power-up.
+- `src/powerups/collapse.rs` — Collapse: every column's bricks fall to fill the gaps below (staggered drop, `BrickLanded`), at most once per level.
 - `src/powerups/capsules.rs` — time capsules: each active power-up's time left, in the right panel.
 - `src/script_manager/mod.rs` — `ScriptPlugin`, Lua scripting (native only).
 - `src/test_support.rs` — shared headless test helpers (`app`, `tap`, `click`, `hit`, ...).
@@ -82,7 +84,8 @@ One line per file; each module's details live in its own `//!` doc comment.
   `BrickDestroyed { brick, position }` *before* despawning, so observers can still read
   the brick; a hit it survives triggers `BrickDamaged { brick }` instead (regen reacts to
   that; blasts fire it too). `BrickDestroyed.by_blast` marks blast kills, which don't set
-  off another blast (the chain is already resolved). Other modules (power-ups) hook brick breaks through that event rather than
+  off another blast (the chain is already resolved). `BrickCell` can change mid-level (Collapse moves bricks down), so key
+  per-brick logic on its current value; `BoardSize` is the level grid's cols and rows. Other modules (power-ups) hook brick breaks through that event rather than
   editing `on_ball_collision`. When a brick broke and none are left the level is cleared (`LevelCleared`); after the last level the run is won. Tests
   fake a ball contact with `test_support::hit(app, brick)`, which triggers `CollisionStart`
   exactly as Avian does (`hit_moving` also sets the ball's velocity; `brick_of(app, class)`

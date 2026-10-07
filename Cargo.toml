@@ -26,6 +26,9 @@ bevy = { version = "0.19.1", features = ["file_watcher"] }
 # Lua scripting is native-only: `lua54` compiles mlua's bundled Lua C sources,
 # which do not build for wasm32-unknown-unknown. On wasm, ScriptPlugin is a no-op.
 bevy_mod_scripting = { version = "0.21.0", features = ["lua54"] }
+# The native dev console (src/dev_console/, feature `dev`, debug builds only):
+# egui sliders over `Tuning`. bevy_egui 0.42 targets bevy 0.19 (0.43 is an rc).
+bevy_egui = { version = "0.42", optional = true, default-features = false, features = ["render", "default_fonts"] }
 
 # Browser (wasm32) build. avian2d's default `parallel` feature pulls rayon +
 # bevy/multi_threaded, which do not build on wasm32-unknown-unknown, so we
@@ -42,6 +45,12 @@ web-sys = { version = "0.3", features = ["Window", "Event", "EventTarget"] }
 # Size-tuned profile for the web build only: index.html points trunk's
 # `--release` build at it (`data-cargo-profile-release`), so native
 # `cargo build --release` keeps the default release profile.
+[features]
+default = ["dev"]
+# The native dev console (only in debug builds; never on wasm, where
+# bevy_egui isn't a dependency at all).
+dev = ["dep:bevy_egui"]
+
 [profile.wasm-release]
 inherits = "release"
 opt-level = "z"

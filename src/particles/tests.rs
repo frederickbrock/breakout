@@ -42,6 +42,7 @@ fn the_shipped_effect_files_parse() {
         DEBRIS_PATH,
         BLAST_SMOKE_PATH,
         GLINT_PATH,
+        DUST_PATH,
     ] {
         let text = std::fs::read_to_string(format!("assets/{path}")).unwrap();
         let effect: Particle2dEffect =
@@ -68,6 +69,7 @@ fn app_with_vfx() -> App {
         debris: Handle::default(),
         blast_smoke: Handle::default(),
         glint: Handle::default(),
+        dust: Handle::default(),
         class_hit: all_classes()
             .into_iter()
             .map(|c| (c, effect_handle(c, Burst::Hit)))
@@ -623,4 +625,25 @@ fn without_the_vfx_resources_nothing_spawns() {
     hit(&mut app, charge);
     app.update();
     assert_eq!(count::<Spawners>(&mut app), 0);
+}
+
+#[test]
+fn a_collapsing_brick_puffs_dust_where_it_lands() {
+    let mut app = app_with_vfx();
+    let at = Vec2::new(30.0, 100.0);
+    app.world_mut().trigger(BrickLanded { position: at });
+    app.world_mut().flush();
+    let puffs: Vec<Vec3> = app
+        .world_mut()
+        .query_filtered::<&Transform, (With<LandingDust>, With<DespawnOnExit<AppState>>)>()
+        .iter(app.world())
+        .map(|t| t.translation)
+        .collect();
+    assert_eq!(puffs.len(), 1);
+    assert_eq!(puffs[0].truncate(), at - Vec2::Y * BRICK_HEIGHT / 2.0);
+
+    let mut app = crate::test_support::app(); // no VFX resources: nothing to draw with
+    app.world_mut().trigger(BrickLanded { position: at });
+    app.world_mut().flush();
+    assert_eq!(count::<With<LandingDust>>(&mut app), 0);
 }

@@ -50,7 +50,7 @@ use crate::bricks::{damage_look, BrickClass, DamageLook};
 use crate::frame::{FramePanel, FramePiece};
 use crate::paddle::{PaddleField, PaddleProng};
 use crate::powerups::capsules::CapsuleIcon;
-use crate::powerups::PowerUp;
+use crate::powerups::{IconTint, PowerUp};
 use crate::theme;
 use crate::world::{PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH};
 use bevy::platform::collections::HashMap;
@@ -393,13 +393,17 @@ fn skin_power_ups(
     mut commands: Commands,
     sprites: Res<GameSprites>,
     images: Res<Assets<Image>>,
-    mut power_ups: Query<(Entity, &mut Sprite), UnskinnedPowerUpIcon>,
+    mut power_ups: Query<(Entity, &mut Sprite, Option<&IconTint>), UnskinnedPowerUpIcon>,
 ) {
     let Some(image) = loaded(&sprites.power_up, &images) else {
         return;
     };
-    for (entity, mut sprite) in &mut power_ups {
+    for (entity, mut sprite, tint) in &mut power_ups {
         apply(&mut sprite, image);
+        // A kind with its own colour (Collapse) keeps it on the skinned icon.
+        if let Some(tint) = tint {
+            sprite.color = tint.0;
+        }
         commands.entity(entity).insert(Skinned);
     }
 }
