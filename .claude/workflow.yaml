@@ -59,3 +59,7 @@ art:                           # art team (art-pipeline skill); defaults listed 
       tile: art/comfy/tile_bg.json
       ref: art/comfy/ref_style.json
     variations: 4
+    # Sprite rounds on comfy use workflows.ref (ref_style.json) with a reference
+    # from `artgen ref-pick` (same-family shipped asset; brief `ref:` overrides,
+    # `ref: none` opts out). false = the plain sprite graph, no ref (sim-7bu.2).
+    ref_default: true
