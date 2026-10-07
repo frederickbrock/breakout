@@ -115,10 +115,43 @@ that wants full scenery and no key colour.
 
 For the ComfyUI backend (`art.backend: comfy`, `art/comfy/`). SDXL reads comma
 tags, not prose or hex codes, so this says the same as the preamble above in
-tags. **Positive**, first in every prompt:
+tags. There are two positive blocks: one for **sprites** and one for
+**backgrounds**. The background block carries the scene lighting and the hangar
+palette; on a sprite those tags leak in as dark hangar interiors, rooms and
+vehicles (sim-4ws.5 comparison), so the sprite block leaves them out.
+Neither block names the style: CLIP reads "graffiti" as spray paint, so the
+outline, keyline and highlight tags carry the look on their own.
+
+**Sprite prompt order** (sim-7bu.1): **subject first**, then the sprite block,
+then the isolation tags. CLIP weights the start of each 75-token chunk most;
+with the style first, the subject landed at tokens 73–77, on the chunk
+boundary, and the material was lost (tungsten came out as a blank grey slab).
+
+1. **Subject**: `breakout arcade game brick`, then the material, its colour
+   and its shape tags, e.g. `breakout arcade game brick, heavy dark-gold
+   tungsten, thick bevel, rectangular, beveled edges, seam line`. Don't use
+   *plate* or *tile*; they pull toward dishes and trays.
+2. **Positive (sprites)**:
+
+   ```
+   sci-fi space-age game art,
+   bold clean contour outlines, dark keyline, offset inner line in off-white,
+   flat colour blocking, strong value contrast,
+   crisp hard white highlight strokes, edge shine, cel shading,
+   flowing contour lines,
+   strong silhouette, readable at small size
+   ```
+
+   The block carries no colour and no material (no *warm orange or muted
+   teal*, no *steel*). Those tags overrode the subject, so every brick came out
+   grey steel with orange accents. The brick's colour and material come only
+   from the subject tags.
+3. **Isolation tags** (below).
+
+**Positive (backgrounds)**, first in every background or parallax-layer prompt:
 
 ```
-sci-fi space-age game art, graffiti line-art style,
+sci-fi space-age game art,
 bold clean contour outlines, dark keyline, offset inner line in off-white,
 warm orange or muted teal, flat colour blocking, strong value contrast,
 crisp hard white highlight strokes, edge shine, cel shading, stylised lighting,
@@ -136,10 +169,10 @@ For a mostly light object, say *plain flat dark grey background* instead.
 
 ```
 single isolated object, centered, whole object in frame, orthographic front view,
-plain flat light grey background, no scenery
+plain flat light grey background
 ```
 
-**Negative**, passed with `--negative-file`:
+**Negative**, passed with `--negative-file`. Backgrounds use this block:
 
 ```
 spray paint, drips, overspray, mist, speckle, stencil, graffiti tags,
@@ -149,8 +182,22 @@ heavy bloom, busy background, scenery, multiple objects, cropped, character,
 person, face, creature, blurry, noisy, gradient background, drop shadow
 ```
 
-The brief's subject tags go between the preamble and the isolation tags, and
-the asset contract's size goes to `--control-size`.
+Sprites use the same block plus the tags that leaked into sprites in the
+sim-4ws.5 comparison, plus the literal readings of "brick" (wall courses,
+toy-brick studs; sim-7bu.1):
+
+```
+spray paint, drips, overspray, mist, speckle, stencil, graffiti tags,
+lettering, text, letters, numbers, logo, watermark, signature, border, frame,
+ui, photo, photorealistic, painterly brushwork, fantasy, lens flare,
+heavy bloom, busy background, scenery, multiple objects, cropped, character,
+person, face, creature, blurry, noisy, gradient background, drop shadow,
+hangar, interior, room, environment, spaceship, vehicle, machinery,
+brick wall, masonry, lego, studs, toy
+```
+
+The asset contract's size goes to `--control-size`. Settings live in the
+graphs (cfg 10, 50 steps; `art/comfy/README.md`).
 
 ## Do / Don't
 

@@ -8,7 +8,7 @@ fills in a few nodes, so you can change the look without touching code.
 
 | File | Use |
 |---|---|
-| `sprite.json` | Sprites: SDXL base + fp16-fix VAE, LoRA `sdxl-boldline` 0.8, ControlNet-Union promax (canny/lineart type, strength 0.8, steps 0–80%) fed by the asset-shape silhouette, 30 steps, cfg 6.5, dpmpp_2m karras |
+| `sprite.json` | Sprites: SDXL base + fp16-fix VAE, LoRA `sdxl-boldline` 0.8, ControlNet-Union promax (canny/lineart type, strength 0.8, steps 0–80%) fed by the asset-shape silhouette, 50 steps, cfg 10 (sim-7bu.1 sweep, user pick), dpmpp_2m karras |
 | `transparent.json` | Transparent sprites: the `sprite.json` pipeline, then ComfyUI's **built-in** background removal (BiRefNet: `LoadBackgroundRemovalModel` → `RemoveBackground` → `InvertMask` → `JoinImageWithAlpha`) and an RGBA `SaveImage`. No keying, so `artgen process --bg none --trim --size WxH` |
 | `tile_bg.json` | Seamless tiling backgrounds and parallax layers: a private SDXL instance (`unCLIPCheckpointLoader`) + boldline LoRA, with its model and VAE made circular (`SeamlessTile`, `MakeCircularVAE`; seamless-tiling pack). No ControlNet; `--size WxH` for wide layers |
 | `ref_style.json` | Keep a picked look: `sprite.json` plus IP-Adapter plus SDXL (`style transfer`, weight 0.8) fed by `--ref <png>` through `artgen:ref`. The silhouette still sets the shape |
@@ -96,3 +96,10 @@ keeps the object to that shape. Comfy rounds cost $0, count toward
 
 Installed models, node packs and their hashes and licences:
 `~/Projects/ComfyUI/models/MODELS.md` (outside git).
+
+The graphs load SDXL base. sim-7bu.1 A/B'd base against Animagine XL 4.0-Opt and
+Proteus v0.4 on the same seeds (contact sheet `/visual/sim-7bu.1/`). Base with the
+style guide's sprite block kept the graffiti keylines best. Animagine draws clean
+illustrated game bricks but only with booru tags in its own order (no humans, safe,
+…, quality tags last), Euler a, 28 steps and cfg 5, and without the graffiti look.
+Proteus goes painterly or photoreal. Both stay installed for other uses.
