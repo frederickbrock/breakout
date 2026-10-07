@@ -257,6 +257,17 @@ br list -l art                         # all art issues
 br list -l needs-human                 # things waiting on you
 ```
 
+**Agent permissions.** `.claude/settings.json` is committed, so every
+worktree gets the same allowlist (cargo, trunk, br, git, `gh pr` without
+merge, the native-run scripts, xdotool, the asset server). It denies
+`gh pr merge` and registers `.claude/hooks/guard-bash.py`, which blocks force
+pushes (`--force-with-lease` is allowed on task branches, never to
+master/main), `git reset --hard`, `git clean -f`, whole-tree discards,
+`rm -r` outside the repo and /tmp (and on .git, .beads, / or ~), and
+`br delete`, with a one-line reason. Per-worktree `.claude/settings.local.json`
+keeps only role or machine rules, e.g. `pr-merge *` for the pr-manager.
+`gh api` is left to prompt: a glob can't restrict it to GET requests.
+
 **Beads sync.** Only the pm commits `.beads/issues.jsonl`, and with
 `beads.sync_commit: trunk-direct` it does so straight to master as
 `chore(beads): sync ...` (no sync PR). If the push is rejected because master

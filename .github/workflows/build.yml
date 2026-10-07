@@ -52,6 +52,9 @@ jobs:
       - run: cargo clippy --all-targets -- -D warnings
       # Headless ECS tests on MinimalPlugins; no window needed.
       - run: cargo test
+      # The committed agent settings parse, and the Bash guard hook blocks
+      # what it should (stdlib Python; see .claude/hooks/).
+      - run: python3 -m unittest discover -s .claude/hooks -p 'test_*.py'
 
   web:
     runs-on: ubuntu-latest
