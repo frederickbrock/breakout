@@ -15,12 +15,12 @@ ball speed. The game reads it into a format-independent `LevelDef`
   `SECTOR NN // name` card and starts the next; clearing the last wins. A level
   that fails to load is skipped (logged); with none valid the run plays the
   built-in random board.
-- The shipped `01-random.level` is 7 rows × 10 of `?` with `powerups: 6`,
-  which is the classic random board. The game also has this board built in
+- The game has a built-in random board (7 rows × 10 of `?`, `powerups: 6`)
   and falls back to it whenever there is no valid level.
-- The shipped campaign is `01-random` → `02-nextlevel` ("The Abyss", 9 rows of
-  `?`, `powerups: 3`) → `03-andromada` ("Andromada", two titanium-framed random
-  blocks split by a gap row, `powerups: 6`).
+- The shipped campaign is the galaxy campaign: 25 planet levels in five
+  galaxies of five (Milky Way, Andromeda, Triangulum, Large Magellanic Cloud,
+  Sombrero), each group under a `# Galaxy: <name>` comment in `campaign.txt`.
+  See [Galaxy campaign](#galaxy-campaign).
 
 On the web, trunk copies the whole `assets/` folder into `dist/`
 (`index.html`'s `copy-dir`), so `assets/levels/` ships with the build.
@@ -122,7 +122,7 @@ line and the column, and the campaign skips that level (with no valid level
 left, the run plays the built-in random board). It never crashes. For example:
 
 ```
-Failed to load asset 'levels/01-random.level' with asset loader '...LevelLoader': line 9, column 3: unknown symbol 'Z'
+Failed to load asset 'levels/01-milky-way-1-mercury.level' with asset loader '...LevelLoader': line 9, column 3: unknown symbol 'Z'
 ```
 
 | Problem | Message (after `line L, column C:`) |
@@ -138,6 +138,50 @@ Failed to load asset 'levels/01-random.level' with asset loader '...LevelLoader'
 | Only `.` cells | `the grid has no bricks` |
 
 Lines and columns count from 1; columns count characters of the original line.
+
+## Galaxy campaign
+
+Each level is a planet, named by `name:`. Files are
+`<gg>-<galaxy-slug>-<n>-<planet-slug>.level` (e.g. `01-milky-way-3-earth.level`).
+The Milky Way's five are real Solar System planets; the other galaxies' are
+invented, each with a plausible element profile.
+
+A planet's bricks come from the elements it is most likely made of:
+
+| Element group (examples) | Brick |
+|---|---|
+| rock, silicates, clay, carbonates | `ceramic` (`C`) |
+| iron, nickel, titanium, iron oxide | `titanium` (`T`) |
+| dense or heavy metals: tungsten, platinum group, metallic core | `tungsten` (`G`) |
+| silica sand, water/ice, glassy crust | `shield` glass (`S`) |
+| volatiles: light gas (hydrogen, methane, ammonia, CO2 frost) | `explosive` charge (`X`) |
+| volatiles: sulfur, sulfuric acid | `explosive` breach (`B`) |
+| volatiles: gas under deep pressure (metallic hydrogen, dense CO2) | `explosive` demolition (`D`) |
+| radioactives: uranium, thorium, a hot core | `reactor` (`P`, drops a power-up) |
+| organics, life, biofilm | `regen` alloy (`R`) |
+
+Refinements every level follows:
+
+- A denser or older layer of the same element is the same class with more
+  hits, via a legend entry: pressure-hardened rock `ceramic hits=2`, a dense
+  iron mantle `titanium hits=3`, the compressed heart of a core
+  `tungsten hits=5`, ancient growth `regen hits=3`.
+- `?` stands for mixed material (regolith, dust, debris) and is at most 20% of
+  a level's bricks, so the theme shows.
+
+Every level file:
+
+- starts with a comment naming the planet's main elements and the brick each
+  became;
+- sets `powerups:` and no `speed_factor` (the speed ramp belongs to the galaxy
+  structure);
+- is harder than the one before it in its galaxy (more hits, shields, tougher
+  layouts).
+
+Each galaxy has at least one level with deliberate negative space: ≥25% of the
+cells are `.`, and some row has a run of 2+ `.` with bricks on both sides (a
+ring, a silhouette, channels, a hollow core). `src/levels/tests.rs` checks
+these rules on every shipped level.
 
 ## Hot reload (native)
 

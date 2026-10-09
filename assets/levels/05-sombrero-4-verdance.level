@@ -1,0 +1,23 @@
+# Verdance (Sombrero IV): a living world kept warm by a radioactive core.
+# Elements -> bricks:
+#   forests and biofilm     -> regen (R); the old growth regen hits=3 (r)
+#   oceans                  -> shield glass (S)
+#   silicate crust          -> ceramic hits=2 (k)
+#   iron mantle             -> titanium (T)
+#   uranium core            -> reactor (P)
+#   ? = mixed spores (random)
+name: Verdance
+powerups: 4
+legend:
+  r = regen hits=3
+  k = ceramic hits=2
+grid:
+RRSSRRSSRR
+rRRSSSSRRr
+rrRRRRRRrr
+kkk?kk?kkk
+kTTTTTTTTk
+kTTPPPPTTk
+kTTTTTTTTk
+kkkkkkkkkk
+SSSSSSSSSS

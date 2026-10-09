@@ -1,0 +1,17 @@
+# Ferrum (Andromeda III): a bare iron world split by deep rift valleys.
+# Elements -> bricks:
+#   iron-nickel crust     -> titanium (T)
+#   platinum-group veins  -> tungsten (G)
+#   silicate rubble       -> ceramic (C)
+name: Ferrum
+powerups: 3
+grid:
+TTT....TTT
+TGT....TGT
+TTT.CC.TTT
+C...TT...C
+C..TGGT..C
+C...TT...C
+TTT.CC.TTT
+TGT....TGT
+TTT....TTT

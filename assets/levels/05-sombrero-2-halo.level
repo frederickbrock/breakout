@@ -1,0 +1,17 @@
+# Halo (Sombrero II): a gas giant of hydrogen and ammonia with a pressure-crushed heart.
+# Elements -> bricks:
+#   hydrogen and helium         -> explosive charge (X)
+#   ammonia-ice cloud bands     -> shield glass (S)
+#   metallic hydrogen           -> explosive demolition (D)
+#   dense core                  -> tungsten (G)
+#   ? = mixed cloud debris (random)
+name: Halo
+powerups: 3
+grid:
+XXXXXXXXXX
+SSSSSSSSSS
+XX?XXXX?XX
+SSSSSSSSSS
+DDDDDDDDDD
+DDDGGGGDDD
+DDDDDDDDDD

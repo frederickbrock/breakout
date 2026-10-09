@@ -1,0 +1,19 @@
+# Lattice (Large Magellanic Cloud III): a crystal world grown into a lattice of
+# glass spars with open channels between them.
+# Elements -> bricks:
+#   silica crystal spars -> shield glass (S)
+#   iron nodes           -> titanium (T)
+#   silicate rock        -> ceramic (C)
+#   ? = mixed shards (random)
+name: Lattice
+powerups: 3
+grid:
+T..T..T..T
+S..S..S..S
+TCCTCCTCCT
+S..S..S..S
+T..T?.T..T
+S..S..S..S
+TCCTCCTCCT
+S..S..S..S
+T..T..T..T

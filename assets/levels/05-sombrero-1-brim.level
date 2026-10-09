@@ -1,0 +1,14 @@
+# Brim (Sombrero I): a dusty ring world of carbonate rock with ice in its rings.
+# Elements -> bricks:
+#   carbonates and clay -> ceramic (C)
+#   iron dust           -> titanium (T)
+#   ring ice            -> shield glass (S)
+#   ? = mixed dust (random)
+name: Brim
+powerups: 2
+grid:
+CCCCCCCCCC
+CC?CTTC?CC
+SSSSSSSSSS
+CCTCCCCTCC
+CCCC??CCCC

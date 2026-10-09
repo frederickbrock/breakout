@@ -1,0 +1,22 @@
+# Jupiter: banded clouds over an ocean of metallic hydrogen and a dense core.
+# Elements -> bricks:
+#   ammonia-ice cloud bands            -> shield glass (S)
+#   hydrogen and helium (light gas)    -> explosive charge (X)
+#   metallic hydrogen (deep pressure)  -> explosive demolition (D)
+#   rock-metal core                    -> tungsten (G)
+#   the compressed heart of the core   -> tungsten hits=5 (k)
+#   ? = mixed cloud debris (random)
+name: Jupiter
+powerups: 4
+legend:
+  k = tungsten hits=5
+grid:
+SXSXSXSXSX
+XSXSXSXSXS
+SS?SSSS?SS
+XXXXXXXXXX
+DDDDDDDDDD
+DDDGGGGDDD
+DDGGkkGGDD
+DDDGGGGDDD
+DDDDDDDDDD

@@ -1,0 +1,18 @@
+# Earth: a living shell of oceans and crust around a metallic core,
+# drawn as a planet silhouette with an open mantle.
+# Elements -> bricks:
+#   life and biofilm          -> regen (R)
+#   ocean water and ice caps  -> shield glass (S)
+#   silicate crust            -> ceramic (C)
+#   metallic iron-nickel core -> tungsten (G)
+name: Earth
+powerups: 3
+grid:
+...RRRR...
+.SSCCCCSS.
+RSC....CSR
+RC..GG..CR
+RC..GG..CR
+RSC....CSR
+.SSCCCCSS.
+...RRRR...

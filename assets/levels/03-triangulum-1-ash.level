@@ -1,0 +1,13 @@
+# Ash (Triangulum I): a soot-black carbon world with methane trapped in the dust.
+# Elements -> bricks:
+#   carbonates and graphite -> ceramic (C)
+#   methane pockets         -> explosive charge (X)
+#   ? = mixed soot (random)
+name: Ash
+powerups: 2
+grid:
+CCCCCCCCCC
+CXCCC?CCXC
+CCCCCCCCCC
+C?CCXXCC?C
+CCCCCCCCCC

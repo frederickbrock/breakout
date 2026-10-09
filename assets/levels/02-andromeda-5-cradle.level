@@ -1,0 +1,22 @@
+# Cradle (Andromeda V): an ocean world thick with reefs, over a dense iron core.
+# Elements -> bricks:
+#   ocean water               -> shield glass (S)
+#   reefs and biofilm         -> regen (R); the old reefs regen hits=3 (r)
+#   silicate seabed           -> ceramic (C)
+#   iron-nickel core          -> titanium hits=3 (k)
+#   ? = mixed sediment (random)
+name: Cradle
+powerups: 4
+legend:
+  r = regen hits=3
+  k = titanium hits=3
+grid:
+SSSSSSSSSS
+RSRSRSRSRS
+SRSRSRSRSR
+rrRRrrRRrr
+CCC?CC?CCC
+CCkkkkkkCC
+CkkkkkkkkC
+CCkkkkkkCC
+CCCCCCCCCC

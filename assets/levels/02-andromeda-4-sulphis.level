@@ -1,0 +1,19 @@
+# Sulphis (Andromeda IV): a volcanic moon of acid lakes and lava rock over a hot core.
+# Elements -> bricks:
+#   sulfur and sulfuric acid -> explosive breach (B)
+#   basalt lava rock         -> ceramic hits=2 (k)
+#   iron mantle              -> titanium (T)
+#   thorium-hot core         -> reactor (P)
+#   ? = mixed ash (random)
+name: Sulphis
+powerups: 2
+legend:
+  k = ceramic hits=2
+grid:
+BkkBkkBkkB
+kkkkkkkkkk
+kTTTBBTTTk
+kT?TPPT?Tk
+kTTTTTTTTk
+kkBkkkkBkk
+kkkkkkkkkk

@@ -1,0 +1,14 @@
+# Ember (Large Magellanic Cloud I): a young lava world with sulfur vents.
+# Elements -> bricks:
+#   basalt and silicate crust -> ceramic (C)
+#   sulfur vents              -> explosive breach (B)
+#   iron flows                -> titanium (T)
+#   ? = mixed cinder (random)
+name: Ember
+powerups: 2
+grid:
+CCCCCCCCCC
+CBCC?CCCBC
+CCCTTTTCCC
+C?CCBBCC?C
+CCCCCCCCCC

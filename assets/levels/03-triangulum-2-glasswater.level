@@ -1,0 +1,16 @@
+# Glasswater (Triangulum II): silica dunes fused to glass by a close star.
+# Elements -> bricks:
+#   silica sand and glassy crust  -> shield glass (S)
+#   clay beds                     -> ceramic (C)
+#   CO2 sealed deep in the sand   -> explosive demolition (D)
+#   iron oxide seams              -> titanium (T)
+#   ? = mixed sand (random)
+name: Glasswater
+powerups: 3
+grid:
+SSSSSSSSSS
+CSCSCSCSCS
+CCDCCCCDCC
+TTTTTTTTTT
+C?CSSSSC?C
+CCCCCCCCCC

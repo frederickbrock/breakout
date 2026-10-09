@@ -1,0 +1,13 @@
+# Vesper (Andromeda I): a dry desert world of sandstone and rust.
+# Elements -> bricks:
+#   silicate sandstone and clay -> ceramic (C)
+#   iron oxide dunes            -> titanium (T)
+#   ? = mixed dust (random)
+name: Vesper
+powerups: 2
+grid:
+CCCCCCCCCC
+CTCTCTCTCT
+C?CCCCCC?C
+TCTCTCTCTC
+CCCCCCCCCC
