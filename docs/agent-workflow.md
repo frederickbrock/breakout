@@ -64,6 +64,7 @@ flowchart LR
 | 3 | Asset PR ready | pr-manager | **Merge** it (if `gates.merge: human`) |
 | 4 | Coder issue for wiring the art | pm | **Approve the spec** (always required) |
 | 5 | Code PR green | pr-manager | **Merge** it |
+| 6 | Polish or feel work | you → pm | Write or edit a **feel brief** in [`docs/vision/`](vision/README.md), then ask the pm to spec it |
 | — | Anything escalated (`needs-human`) | pm / art-director | Decide: raise a limit, clarify, or drop |
 
 Everything between those points runs on its own.
@@ -213,6 +214,17 @@ keep them rare and cheap:
 
 The pm counts bounces and their causes over the next ~15 closed issues and
 compares them against the 30/116 (23 conflicts) baseline.
+
+**Vision and feel briefs** (sim-w60.1). Your taste lives in
+[`docs/vision/`](vision/README.md): [`vision.md`](vision/vision.md) (pillars,
+target feel, references, anti-goals) and one brief per moment, written from
+[`feel-brief-template.md`](vision/feel-brief-template.md). There are stubs to
+rewrite: [paddle hit](vision/briefs/paddle-hit.md),
+[brick break](vision/briefs/brick-break.md),
+[ball trail](vision/briefs/ball-trail.md). For polish or feel work the pm
+reads that folder first and turns a brief into a small epic whose acceptance
+criteria use the brief's concrete levers (numbers, not adjectives). Where the
+docs are silent it asks you instead of inventing taste.
 
 ---
 
