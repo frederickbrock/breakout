@@ -1,66 +1,19 @@
 <!-- br-agent-instructions-v1 -->
+# Shared agent rules (breakout)
 
----
+Rust + Bevy 0.19 + Avian2D, one crate (`sim`). Web build (trunk) is primary, native is secondary.
 
-## Beads Workflow Integration
+- Build: `cargo build`; web: `trunk build`
+- Test: `cargo test` (headless ECS tests)
+- Lint: `cargo clippy --all-targets -- -D warnings`
+- Run natively as an agent: `scripts/native-run.sh --label <issue-id>`, never a bare `cargo run`
 
-This project uses [beads_rust](https://github.com/Dicklesworthstone/beads_rust) (`br`/`bd`) for issue tracking. Issues are stored in `.beads/` and tracked in git.
+## Beads (`br`)
 
-### Essential Commands
+Issues live in `.beads/`. The team protocol is the `beads-queue` skill (stages,
+claim, hand-off, bounce, escalate). Follow it, not generic `br` docs.
 
-```bash
-# View ready issues (open, unblocked, not deferred)
-br ready              # or: bd ready
-
-# List and search
-br list --status=open # All open issues
-br show <id>          # Full issue details with dependencies
-br search "keyword"   # Full-text search
-
-# Create and update
-br create --title="..." --description="..." --type=task --priority=2
-br update <id> --status=in_progress
-br close <id> --reason="Completed"
-br close <id1> <id2>  # Close multiple issues at once
-
-# Sync with git
-br sync --flush-only  # Export DB to JSONL
-br sync --status      # Check sync status
-```
-
-### Workflow Pattern
-
-1. **Start**: Run `br ready` to find actionable work
-2. **Claim**: Use `br update <id> --status=in_progress`
-3. **Work**: Implement the task
-4. **Complete**: Use `br close <id>`
-5. **Sync**: Always run `br sync --flush-only` at session end
-
-### Key Concepts
-
-- **Dependencies**: Issues can block other issues. `br ready` shows only open, unblocked work.
-- **Priority**: P0=critical, P1=high, P2=medium, P3=low, P4=backlog (use numbers 0-4, not words)
-- **Types**: task, bug, feature, epic, chore, docs, question
-- **Blocking**: `br dep add <issue> <depends-on>` to add dependencies
-
-### Session Protocol
-
-**Before ending any session, run this checklist:**
-
-```bash
-git status              # Check what changed
-git add <files>         # Stage code changes
-br sync --flush-only    # Export beads changes to JSONL
-git commit -m "..."     # Commit everything
-git push                # Push to remote
-```
-
-### Best Practices
-
-- Check `br ready` at session start to find available work
-- Update status as you work (in_progress → closed)
-- Create new issues with `br create` when you discover tasks
-- Use descriptive titles and set appropriate priority/type
-- Always sync before ending session
-
+- Workers never `git add`, commit or push `.beads/`. Only the pm syncs `.beads/issues.jsonl`.
+- Never `br close` your own issue. The pr-manager closes it after the merge.
+- Pass `--actor "<role>@<worktree>"` on every `br` write.
 <!-- end-br-agent-instructions -->
