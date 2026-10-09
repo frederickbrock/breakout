@@ -185,6 +185,35 @@ stateDiagram-v2
     prstage --> [*]: merged (you, or auto)
 ```
 
+**Fewer bounces** (sim-ikx.4). On 2026-10-04, 23 of 30 bounces were master
+conflicts that appeared while a PR waited in review, test or pr. Four rules
+keep them rare and cheap:
+
+1. **Rebase before hand-off.** Before moving an issue to `stage:review`, the
+   coder rebases onto `origin/<base>` and re-runs the checks if anything came
+   in. A conflict it can't resolve cleanly is escalated and never pushed broken.
+   An already-pushed task branch is updated with `--force-with-lease`; the guard
+   hook allows that on task branches only, never plain `--force` and never on
+   master.
+2. **`Touched:` in every spec.** The pm lists the files or modules a task is
+   expected to change in *Notes for the coder*. For older specs, the coder
+   writes its own estimate into the `[claim]` comment.
+3. **No overlapping work.** The coder doesn't claim a ready issue whose
+   `Touched:` set intersects the changed files of an open PR at review, test
+   or pr. It takes the next non-overlapping issue. If every one overlaps it
+   waits, and its tick report says so: `waiting: sim-x overlaps PR #N
+   (src/main.rs)`. Rework is exempt and is always taken first.
+4. **Light re-check for rebase-only reworks.** A rework that only resolves a
+   master conflict is handed off as `[rebase-only]`, with a `git range-diff`.
+   - **Reviewer:** reviews just the conflict resolution; any other change gets
+     a full review.
+   - **Tester:** skips the re-test when CI is green and no resolved file is in
+     an area an acceptance criterion covers; otherwise re-tests only those
+     criteria.
+
+The pm counts bounces and their causes over the next ~15 closed issues and
+compares them against the 30/116 (23 conflicts) baseline.
+
 ---
 
 ## 5. Getting good results from AI art (new-to-this guide)
