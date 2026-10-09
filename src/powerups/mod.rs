@@ -209,23 +209,29 @@ fn drop_power_up(
     tuning: Res<Tuning>,
     bricks: Query<&PowerUpBrick>,
 ) {
-    let Ok(power_up_brick) = bricks.get(on.brick) else {
-        return;
-    };
-    let (kind, color, tint) = if spawner.is_available(power_up_brick.kind) {
-        (
-            power_up_brick.kind,
-            power_up_brick.color,
-            power_up_brick.tint,
-        )
-    } else {
-        let Some(pick) = spawner.pick() else {
-            return;
-        };
-        (pick.kind, pick.color, pick.tint)
+    let fall = &tuning.powerups;
+    // A power-up brick drops its own kind (or a random one if that kind isn't
+    // available right now); any other brick drops a random kind with
+    // `drop_chance` (0 by default). Blast kills roll too.
+    let own = bricks
+        .get(on.brick)
+        .ok()
+        .filter(|brick| spawner.is_available(brick.kind))
+        .map(|brick| (brick.kind, brick.color, brick.tint));
+    let (kind, color, tint) = match own {
+        Some(own) => own,
+        None => {
+            let ordinary = bricks.get(on.brick).is_err();
+            if ordinary && (fall.drop_chance <= 0.0 || rand::random::<f32>() >= fall.drop_chance) {
+                return;
+            }
+            let Some(pick) = spawner.pick() else {
+                return;
+            };
+            (pick.kind, pick.color, pick.tint)
+        }
     };
     spawner.record(kind);
-    let fall = &tuning.powerups;
     let gravity =
         (fall.drop_gravity + drops.0 as f32 * fall.drop_gravity_step).min(fall.max_drop_gravity);
     drops.0 += 1;

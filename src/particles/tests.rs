@@ -647,3 +647,25 @@ fn a_collapsing_brick_puffs_dust_where_it_lands() {
     app.world_mut().flush();
     assert_eq!(count::<With<LandingDust>>(&mut app), 0);
 }
+
+#[test]
+fn a_bigger_blast_stretches_its_effect_and_radius_one_leaves_it_alone() {
+    let text = std::fs::read_to_string(format!("assets/{CHARGE_PATH}")).unwrap();
+    let base: Particle2dEffect = ron::de::from_str(&text).unwrap();
+    let same = scaled_blast(&base, 1);
+    assert_eq!(
+        same.linear_speed.as_ref().map(|s| s.0),
+        base.linear_speed.as_ref().map(|s| s.0)
+    );
+    let big = scaled_blast(&base, 2);
+    let (b, s) = (
+        base.linear_speed.as_ref().unwrap().0,
+        big.linear_speed.as_ref().unwrap().0,
+    );
+    assert!((s - 2.0 * b).abs() < 1e-3, "{s} vs {b}");
+    if let (EmissionShape::Circle(b), EmissionShape::Circle(s)) =
+        (&base.emission_shape, &big.emission_shape)
+    {
+        assert!((s - 2.0 * b).abs() < 1e-3);
+    }
+}

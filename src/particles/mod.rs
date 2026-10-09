@@ -728,13 +728,31 @@ pub fn blast_parts(kind: ExplosiveKind) -> Vec<BlastPart> {
 #[derive(Component)]
 pub struct BlastBurst;
 
+/// A blast effect stretched for a `radius`-cell blast: its particles travel
+/// `radius` times as fast (so as far) and start from a circle `radius` times
+/// as wide. Radius 1 is the effect as drawn.
+pub fn scaled_blast(base: &Particle2dEffect, radius: u32) -> Particle2dEffect {
+    let k = radius.max(1) as f32;
+    let mut effect = base.clone();
+    if let Some(speed) = effect.linear_speed.as_mut() {
+        speed.0 *= k;
+    }
+    if let EmissionShape::Circle(r) = &mut effect.emission_shape {
+        *r *= k;
+    }
+    effect
+}
+
 /// Each explosion, the chain's included (one `BrickExploded` per exploding
-/// brick, in chain order), plays its variant's blast where it went off.
+/// brick, in chain order), plays its variant's blast where it went off. A
+/// tuned radius above 1 plays a stretched copy of each effect
+/// ([`scaled_blast`], freed with its spawner).
 fn blast_on_explosion(
     on: On<BrickExploded>,
     mut commands: Commands,
     effects: Option<Res<ParticleEffects>>,
     materials: Option<Res<ParticleMaterials>>,
+    mut assets: Option<ResMut<Assets<Particle2dEffect>>>,
 ) {
     let (Some(effects), Some(materials)) = (effects, materials) else {
         return;
@@ -742,10 +760,17 @@ fn blast_on_explosion(
     for (effect, tint, angle) in blast_parts(on.kind) {
         let at = Transform::from_translation(on.position.extend(PARTICLE_Z))
             .with_rotation(Quat::from_rotation_z(angle));
-        commands.spawn((
-            BlastBurst,
-            burst_at(materials.blast(tint), effects.blast(effect), at),
-        ));
+        let base = effects.blast(effect);
+        // Without the loaded asset (headless tests, still loading) the file's
+        // own size is used.
+        let handle = match (on.radius, assets.as_deref_mut()) {
+            (r, Some(assets)) if r > 1 => match assets.get(&base).cloned() {
+                Some(effect) => assets.add(scaled_blast(&effect, r)),
+                None => base,
+            },
+            _ => base,
+        };
+        commands.spawn((BlastBurst, burst_at(materials.blast(tint), handle, at)));
     }
 }
 

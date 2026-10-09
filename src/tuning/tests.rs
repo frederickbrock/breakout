@@ -429,3 +429,71 @@ fn the_dev_console_save_text_reads_back_to_the_same_tuning() {
     tuned.ball.lives = 7;
     assert_eq!(parse_tuning(&tuning_file_text(&tuned)), Ok(tuned));
 }
+
+// ---- new tunables (sim-dj6.4) ----
+
+#[test]
+fn a_partial_blast_entry_keeps_that_kinds_own_chaining_rule() {
+    let tuning =
+        parse_tuning("(bricks: (blast: (demolition: (radius: 2), breach: (radius: 3))))").unwrap();
+    assert_eq!(
+        tuning.bricks.blast.of(ExplosiveKind::Demolition),
+        (2, false)
+    );
+    assert_eq!(tuning.bricks.blast.of(ExplosiveKind::Breach), (3, true));
+    assert_eq!(tuning.bricks.blast.of(ExplosiveKind::Charge), (1, true));
+    assert_eq!(tuning.powerups.drop_chance, 0.0);
+}
+
+/// Falling power-ups after breaking every brick of a level started with
+/// `drop_chance`.
+fn drops_after_clearing(grid: &str, drop_chance: f32) -> usize {
+    use crate::powerups::PowerUp;
+    let mut tuning = Tuning::default();
+    tuning.powerups.drop_chance = drop_chance;
+    let level = crate::levels::parse_level(grid).unwrap();
+    let mut app = run_tuned(tuning, Some(vec![level]));
+    // Leave one tungsten standing so the level isn't cleared (that would
+    // clear the falling drops), then break everything else.
+    loop {
+        let targets: Vec<Entity> = app
+            .world_mut()
+            .query::<(Entity, &BrickClass)>()
+            .iter(app.world())
+            .filter(|(_, c)| **c != BrickClass::Tungsten)
+            .map(|(e, _)| e)
+            .collect();
+        let Some(&brick) = targets.first() else {
+            break;
+        };
+        crate::test_support::hit_moving(&mut app, brick, Vec2::new(0.0, -450.0));
+    }
+    crate::test_support::count::<With<PowerUp>>(&mut app)
+}
+
+#[test]
+fn drop_chance_one_drops_from_every_ordinary_brick_and_zero_from_none() {
+    assert_eq!(drops_after_clearing("grid:\nCCCTG", 1.0), 4);
+    assert_eq!(drops_after_clearing("grid:\nCCCTG", 0.0), 0);
+}
+
+#[test]
+fn reactor_drops_are_unchanged_by_drop_chance() {
+    // A reactor always drops; ordinary bricks don't at chance 0.
+    assert_eq!(drops_after_clearing("grid:\nPCCG", 0.0), 1);
+}
+
+#[test]
+fn blast_kills_roll_for_a_drop_too() {
+    // The charge's blast destroys the ceramics next to it: they drop as well.
+    assert_eq!(drops_after_clearing("grid:\nCXCG", 1.0), 3);
+}
+
+#[test]
+fn a_huge_blast_radius_is_clamped() {
+    let tuning = parse_tuning("(bricks: (blast: (charge: (radius: 1000))))").unwrap();
+    assert_eq!(
+        tuning.bricks.blast.of(ExplosiveKind::Charge),
+        (MAX_BLAST_RADIUS, true)
+    );
+}
