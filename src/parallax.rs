@@ -190,6 +190,13 @@ pub(crate) const GLOW_BREATH_TOP: f32 = 0.35;
 pub(crate) const GLOW_BREATH_SECS: f32 = 5.0;
 /// The brightest a strike gets: capped below full so the brick area stays
 /// calm (the art also dims the forks behind the brick rows).
+///
+/// Why 0.85: style.md keeps the background under ~12% contrast behind the
+/// brick area. The glow is the mask's alpha times this tint alpha, and the
+/// placeholder `space_l1_glow.png` peaks at alpha 0.47. So a strike tops out
+/// at about 0.85 × 0.47 ≈ 0.40 composited, on the brightest forks only, and
+/// most of the mask is far dimmer. Re-check this value against the cap when
+/// the sim-rdl.10 mask replaces the placeholder: a brighter mask needs a lower peak.
 pub(crate) const GLOW_PEAK: f32 = 0.85;
 /// Seconds between strikes (random in this range), the flicker's length
 /// and flash count ranges, and the fade back to breathing.
@@ -246,9 +253,12 @@ pub(crate) fn breathing(t: f32) -> f32 {
 
 /// The glow's brightness at `t`: breathing, pushed toward [`GLOW_PEAK`] by
 /// any strike under way. Always in `GLOW_FLOOR..=GLOW_PEAK`.
-pub(crate) fn glow_intensity(t: f32, strikes: &[Strike]) -> f32 {
+pub(crate) fn glow_intensity<'a>(t: f32, strikes: impl IntoIterator<Item = &'a Strike>) -> f32 {
     let base = breathing(t);
-    let push = strikes.iter().map(|s| s.envelope(t)).fold(0.0, f32::max);
+    let push = strikes
+        .into_iter()
+        .map(|s| s.envelope(t))
+        .fold(0.0, f32::max);
     base + (GLOW_PEAK - base) * push
 }
 
@@ -407,8 +417,7 @@ fn pulse_glow(
 ) {
     let t = time.elapsed_secs();
     schedule.advance(t);
-    let strikes: Vec<Strike> = schedule.strikes.iter().copied().collect();
-    let color = theme::NEBULA_GLOW.with_alpha(glow_intensity(t, &strikes));
+    let color = theme::NEBULA_GLOW.with_alpha(glow_intensity(t, &schedule.strikes));
     for (piece, mut sprite) in &mut layers {
         if LAYERS[piece.layer].glow && sprite.color != color {
             sprite.color = color;
