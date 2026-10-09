@@ -213,8 +213,8 @@ fn the_glow_never_leaves_its_floor_and_cap() {
     for i in 0..30_000 {
         let t = i as f32 * 0.01;
         schedule.advance(t);
-        let strikes: Vec<Strike> = schedule.strikes.iter().copied().collect();
-        let g = glow_intensity(t, &strikes);
+        // The schedule's deque goes straight in, as `pulse_glow` passes it (no per-frame Vec).
+        let g = glow_intensity(t, &schedule.strikes);
         assert!(
             (GLOW_FLOOR - 1e-5..=GLOW_PEAK + 1e-5).contains(&g),
             "{g} at {t}"
