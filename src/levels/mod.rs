@@ -69,9 +69,9 @@ pub struct CellDef {
 #[derive(Asset, TypePath, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct LevelDef {
     pub name: String,
-    /// `speed_factor: F`: the ball's speed is 300 x F world units/s. `None`
-    /// uses the per-round ramp, `ball::speed_factor` (by default 1.8 = 540
-    /// in round 1, +0.1 a round, capped at 2.5; set in `Tuning.ball`).
+    /// `speed_factor: F`: the ball's speed is 400 x F world units/s. `None`
+    /// uses the per-round ramp, `ball::speed_factor` (by default 1.8 = 720
+    /// in round 1, +0.125 a round, capped at 2.5; set in `Tuning.ball`).
     pub speed_factor: Option<f32>,
     /// `powerups: N`: this many random bricks become power-up bricks.
     pub extra_powerups: usize,

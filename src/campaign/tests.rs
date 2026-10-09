@@ -189,11 +189,11 @@ fn score_and_lives_carry_over_and_power_ups_and_speed_reset_per_level() {
         PADDLE_WIDTH
     );
     assert_eq!(count::<With<Capsule>>(&mut app), 0);
-    assert_eq!(app.world().resource::<BallSpeed>().0, 600.0);
+    assert_eq!(app.world().resource::<BallSpeed>().0, 800.0);
     tap(&mut app, KeyCode::Space);
     let ball = ball(&mut app);
     let speed = app.world().get::<LinearVelocity>(ball).unwrap().0.length();
-    assert!((speed - 600.0).abs() < 1e-2, "{speed}");
+    assert!((speed - 800.0).abs() < 1e-2, "{speed}");
 }
 
 /// The served ball's measured speed.
@@ -207,15 +207,15 @@ fn served_speed(app: &mut App) -> f32 {
 fn without_a_speed_factor_each_round_serves_faster() {
     let ramped = || vec![level("name: One\ngrid:\nC"), level("name: Two\ngrid:\n.C")];
     let mut app = app_with_campaign(ramped());
-    // Round 1: today's 540.
+    // Round 1: 720.
     let speed = served_speed(&mut app);
-    assert!((speed - 540.0).abs() < 5.4, "{speed}");
+    assert!((speed - 720.0).abs() < 7.2, "{speed}");
 
     clear(&mut app);
     wait_out_card(&mut app);
-    // Round 2: 570, sizes untouched.
+    // Round 2: 770, sizes untouched.
     let speed = served_speed(&mut app);
-    assert!((speed - 570.0).abs() < 1e-2, "{speed}");
+    assert!((speed - 770.0).abs() < 1e-2, "{speed}");
     let paddle = paddle(&mut app);
     assert_eq!(
         app.world().get::<Paddle>(paddle).unwrap().width,
@@ -232,7 +232,7 @@ fn without_a_speed_factor_each_round_serves_faster() {
     app.update();
     assert_eq!(current(&app), 0);
     let speed = served_speed(&mut app);
-    assert!((speed - 540.0).abs() < 1e-2, "{speed}");
+    assert!((speed - 720.0).abs() < 1e-2, "{speed}");
 }
 
 #[test]
@@ -250,7 +250,7 @@ fn assert_fresh_first_level(app: &mut App) {
     assert_eq!(cells(app), [BrickCell { row: 0, col: 0 }]);
     assert_eq!(app.world().resource::<Score>().0, 0);
     assert_eq!(app.world().resource::<Lives>().0, STARTING_LIVES);
-    assert_eq!(app.world().resource::<BallSpeed>().0, 300.0);
+    assert_eq!(app.world().resource::<BallSpeed>().0, 400.0);
     assert_eq!(count::<With<SectorCard>>(app), 0);
     app.update();
     assert_eq!(sector(app), "01");

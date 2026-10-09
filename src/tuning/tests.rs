@@ -366,13 +366,13 @@ fn the_tuned_start_factor_sets_the_speed_unless_the_level_sets_one() {
     tuning.ball.speed_factor = 2.0;
     let level = crate::levels::parse_level("grid:\nC").unwrap();
     let app = run_with(tuning.clone(), Some(vec![level]));
-    assert_eq!(app.world().resource::<BallSpeed>().0, 600.0);
+    assert_eq!(app.world().resource::<BallSpeed>().0, 800.0);
 
     let fixed = crate::levels::parse_level("speed_factor: 1.0\ngrid:\nC").unwrap();
     let app = run_with(tuning, Some(vec![fixed]));
     assert_eq!(
         app.world().resource::<BallSpeed>().0,
-        300.0,
+        400.0,
         "the level wins"
     );
 }

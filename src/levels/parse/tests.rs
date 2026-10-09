@@ -27,7 +27,7 @@ fn ok(text: &str) -> LevelDef {
 const EXAMPLE: &str = "\
 # comments start with #
 name: Rainbow Bands
-speed_factor: 1.5      # optional; ball speed = 300 x factor; default 1.8 (today's 540)
+speed_factor: 1.5      # optional; ball speed = 400 x factor; default 1.8 (720)
 powerups: 6            # optional; N extra random bricks get a power-up; default 0
 legend:                # optional; add or override symbols for this file
   k = titanium hits=4

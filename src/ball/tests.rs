@@ -241,7 +241,14 @@ fn the_ball_speed_resource_drives_serve_and_renormalisation() {
 
 #[test]
 fn the_speed_factor_ramps_per_round_and_caps() {
-    for (round, factor) in [(1, 1.8), (2, 1.9), (5, 2.2), (8, 2.5), (20, 2.5)] {
+    for (round, factor) in [
+        (1, 1.8),
+        (2, 1.925),
+        (5, 2.3),
+        (6, 2.425),
+        (7, 2.5),
+        (20, 2.5),
+    ] {
         assert!(
             (speed_factor(round, &BallTuning::default()) - factor).abs() < 1e-5,
             "round {round}: {}",
@@ -257,20 +264,37 @@ fn the_speed_factor_ramps_per_round_and_caps() {
         (BallSpeed::from_factor(speed_factor(1, &BallTuning::default())).0 - BALL_SPEED).abs()
             < 1e-3
     );
-    assert!(
-        (BallSpeed::from_factor(speed_factor(8, &BallTuning::default())).0 - 750.0).abs() < 1e-3
-    );
+}
+
+#[test]
+fn the_ramped_speed_is_720_then_770_and_caps_at_1000_from_round_7() {
+    let ramped = crate::levels::parse_level("grid:\nC").unwrap();
+    let speed = |round| BallSpeed::for_level(&ramped, round, &BallTuning::default()).0;
+    for (round, expected) in [
+        (1, 720.0),
+        (2, 770.0),
+        (6, 970.0),
+        (7, 1000.0),
+        (8, 1000.0),
+        (30, 1000.0),
+    ] {
+        assert!(
+            (speed(round) - expected).abs() < 1e-3,
+            "round {round}: {}",
+            speed(round)
+        );
+    }
 }
 
 #[test]
 fn a_levels_speed_factor_overrides_the_ramp() {
     let ramped = crate::levels::parse_level("grid:\nC").unwrap();
     let fixed = crate::levels::parse_level("speed_factor: 2.0\ngrid:\nC").unwrap();
-    assert!((BallSpeed::for_level(&ramped, 2, &BallTuning::default()).0 - 570.0).abs() < 1e-3);
-    assert!((BallSpeed::for_level(&ramped, 1, &BallTuning::default()).0 - 540.0).abs() < 1e-3);
+    assert!((BallSpeed::for_level(&ramped, 2, &BallTuning::default()).0 - 770.0).abs() < 1e-3);
+    assert!((BallSpeed::for_level(&ramped, 1, &BallTuning::default()).0 - 720.0).abs() < 1e-3);
     for round in [1, 2, 9] {
         assert!(
-            (BallSpeed::for_level(&fixed, round, &BallTuning::default()).0 - 600.0).abs() < 1e-3
+            (BallSpeed::for_level(&fixed, round, &BallTuning::default()).0 - 800.0).abs() < 1e-3
         );
     }
 }
