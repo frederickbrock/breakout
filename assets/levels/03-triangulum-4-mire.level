@@ -1,0 +1,19 @@
+# Mire (Triangulum IV): a warm swamp world rotting under methane fog.
+# Elements -> bricks:
+#   methane fog            -> explosive charge (X)
+#   standing water         -> shield glass (S)
+#   organics and swamp life -> regen (R)
+#   clay mud               -> ceramic hits=2 (k)
+#   ? = mixed muck (random)
+name: Mire
+powerups: 3
+legend:
+  k = ceramic hits=2
+grid:
+XSXSXXSXSX
+RRRRRRRRRR
+RSSRRRRSSR
+kkkk??kkkk
+kRRkkkkRRk
+kkkkkkkkkk
+SSSSSSSSSS

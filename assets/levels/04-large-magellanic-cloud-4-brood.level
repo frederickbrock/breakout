@@ -1,0 +1,21 @@
+# Brood (Large Magellanic Cloud IV): a jungle world overgrown down to the bedrock.
+# Elements -> bricks:
+#   life and biofilm      -> regen (R); the ancient growth regen hits=3 (r)
+#   water                 -> shield glass (S)
+#   silicate bedrock      -> ceramic hits=2 (k)
+#   iron core             -> titanium (T)
+#   ? = mixed spores (random)
+name: Brood
+powerups: 4
+legend:
+  r = regen hits=3
+  k = ceramic hits=2
+grid:
+RRRRRRRRRR
+RrRSSSSRrR
+rrRR??RRrr
+SSrrrrrrSS
+kkkkkkkkkk
+kTTTkkTTTk
+kTTTTTTTTk
+kkkkkkkkkk

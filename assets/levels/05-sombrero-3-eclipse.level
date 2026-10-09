@@ -1,0 +1,19 @@
+# Eclipse (Sombrero III): a hollow glass-and-iron shell, half in shadow, around a
+# tungsten core held on spokes.
+# Elements -> bricks:
+#   glassy crust     -> shield glass (S)
+#   iron shell       -> titanium (T)
+#   tungsten core    -> tungsten (G)
+#   ? = mixed shards (random)
+name: Eclipse
+powerups: 3
+grid:
+..SSSSSS..
+.STTTTTTS.
+ST..T...TS
+ST..T...TS
+STTTGG??TS
+ST...T..TS
+ST...T..TS
+.STTTTTTS.
+..SSSSSS..

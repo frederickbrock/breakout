@@ -1,5 +1,39 @@
 # Campaign order: one level file (in this folder) per line. A run plays them in order; clearing the last one wins.
 # The web build can't list directories, so every level must be listed here.
-01-random.level
-02-nextlevel.level
-03-andromada.level
+# Five galaxies of five planets each, easiest first; each planet's bricks follow
+# the element -> brick table in docs/levels.md.
+
+# Galaxy: Milky Way
+01-milky-way-1-mercury.level
+01-milky-way-2-mars.level
+01-milky-way-3-earth.level
+01-milky-way-4-venus.level
+01-milky-way-5-jupiter.level
+
+# Galaxy: Andromeda
+02-andromeda-1-vesper.level
+02-andromeda-2-thule.level
+02-andromeda-3-ferrum.level
+02-andromeda-4-sulphis.level
+02-andromeda-5-cradle.level
+
+# Galaxy: Triangulum
+03-triangulum-1-ash.level
+03-triangulum-2-glasswater.level
+03-triangulum-3-hollow.level
+03-triangulum-4-mire.level
+03-triangulum-5-anvil.level
+
+# Galaxy: Large Magellanic Cloud
+04-large-magellanic-cloud-1-ember.level
+04-large-magellanic-cloud-2-rime.level
+04-large-magellanic-cloud-3-lattice.level
+04-large-magellanic-cloud-4-brood.level
+04-large-magellanic-cloud-5-crucible.level
+
+# Galaxy: Sombrero
+05-sombrero-1-brim.level
+05-sombrero-2-halo.level
+05-sombrero-3-eclipse.level
+05-sombrero-4-verdance.level
+05-sombrero-5-nucleus.level

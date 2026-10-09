@@ -91,7 +91,7 @@ impl LevelDef {
     }
 
     /// The built-in random board: 7x10 of `?`, `powerups: 6`, the default
-    /// speed. Identical to `assets/levels/01-random.level`.
+    /// speed. A run plays it when no campaign level is valid.
     pub fn fallback() -> Self {
         let random = CellDef {
             class: ClassSpec::Random,

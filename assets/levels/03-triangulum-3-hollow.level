@@ -1,0 +1,18 @@
+# Hollow (Triangulum III): a shattered shell world, a crust ring around an empty
+# core with one radioactive heart still glowing at the centre.
+# Elements -> bricks:
+#   silicate crust   -> ceramic (C)
+#   iron shell       -> titanium (T)
+#   uranium heart    -> reactor (P)
+name: Hollow
+powerups: 2
+grid:
+..CCCCCC..
+.CTTTTTTC.
+CT......TC
+CT......TC
+CT..PP..TC
+CT......TC
+CT......TC
+.CTTTTTTC.
+..CCCCCC..

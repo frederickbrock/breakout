@@ -1,0 +1,23 @@
+# Crucible (Large Magellanic Cloud V): a super-earth crushed under deep pressure
+# around a radioactive core.
+# Elements -> bricks:
+#   pressurised CO2 and ammonia -> explosive demolition (D)
+#   iron-nickel mantle          -> titanium hits=3 (k)
+#   metallic core               -> tungsten (G)
+#   thorium and uranium         -> reactor (P)
+#   glassy crust                -> shield glass (S)
+#   ? = mixed rock (random)
+name: Crucible
+powerups: 4
+legend:
+  k = titanium hits=3
+grid:
+SSSSSSSSSS
+DkkDkkDkkD
+kkkkkkkkkk
+kkGGGGGGkk
+kGG?PP?GGk
+kGGPGGPGGk
+kkGGGGGGkk
+kkkkkkkkkk
+DkkDkkDkkD

@@ -1,0 +1,21 @@
+# Venus: sulfuric-acid clouds over a crushing CO2 atmosphere and hard basalt.
+# Elements -> bricks:
+#   sulfuric acid clouds          -> explosive breach (B)
+#   silicate cloud dust           -> ceramic (C)
+#   CO2 at 90 bar (deep pressure) -> explosive demolition (D)
+#   pressure-hardened basalt      -> ceramic hits=2 (k)
+#   iron mantle                   -> titanium (T)
+#   metallic core                 -> tungsten (G)
+#   ? = mixed rock (random)
+name: Venus
+powerups: 3
+legend:
+  k = ceramic hits=2
+grid:
+BCBCBCBCBC
+CBCBCBCBCB
+kkkDkkDkkk
+kTTTkkTTTk
+kTGT??TGTk
+kTTTkkTTTk
+kkkkkkkkkk

@@ -1,0 +1,19 @@
+# Anvil (Triangulum V): a dense metal world, the stripped core of a dead giant.
+# Elements -> bricks:
+#   iron-nickel mantle       -> titanium (T)
+#   tungsten and platinum    -> tungsten (G); the densest platinum tungsten hits=5 (k)
+#   uranium seams            -> reactor (P)
+#   ? = mixed slag (random)
+name: Anvil
+powerups: 4
+legend:
+  k = tungsten hits=5
+grid:
+TTTTTTTTTT
+TGGTTTTGGT
+TG?GTTG?GT
+TTGGGGGGTT
+TGGkPPkGGT
+TGGkkkkGGT
+TTGGGGGGTT
+TTTTTTTTTT

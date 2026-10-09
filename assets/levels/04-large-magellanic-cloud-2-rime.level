@@ -1,0 +1,16 @@
+# Rime (Large Magellanic Cloud II): an ice giant of frozen volatiles over a rocky core.
+# Elements -> bricks:
+#   water and ammonia ice  -> shield glass (S)
+#   methane and hydrogen   -> explosive charge (X)
+#   rocky core             -> ceramic (C)
+#   iron in the core       -> titanium (T)
+#   ? = mixed slush (random)
+name: Rime
+powerups: 3
+grid:
+SXSXSXSXSX
+SSSSSSSSSS
+X?XXXXXX?X
+SSCCCCCCSS
+SCCTTTTCCS
+SCCC??CCCS

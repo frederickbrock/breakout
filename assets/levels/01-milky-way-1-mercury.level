@@ -1,0 +1,13 @@
+# Mercury: a small scorched rock wrapped around an oversized iron core.
+# Elements -> bricks:
+#   silicate crust            -> ceramic (C)
+#   iron-nickel core          -> titanium (T)
+#   ? = mixed regolith (random)
+name: Mercury
+powerups: 2
+grid:
+CCCCCCCCCC
+CC??CC??CC
+CTTTTTTTTC
+CTTTTTTTTC
+CCCCCCCCCC

@@ -1,0 +1,16 @@
+# Mars: rust-red desert over basalt, a water-ice polar cap, CO2 frost.
+# Elements -> bricks:
+#   water-ice polar cap       -> shield glass (S)
+#   iron oxide (the red dust) -> titanium (T)
+#   basalt and silicate rock  -> ceramic (C)
+#   CO2 frost (light gas)     -> explosive charge (X)
+#   ? = mixed regolith (random)
+name: Mars
+powerups: 3
+grid:
+SSSSSSSSSS
+TTTTTTTTTT
+TCCXCCXCCT
+CC?CCCC?CC
+CCCTTTTCCC
+CCTTTTTTCC

@@ -1,0 +1,15 @@
+# Thule (Andromeda II): a frozen ocean world over silicate bedrock.
+# Elements -> bricks:
+#   water-ice sheets              -> shield glass (S)
+#   silicate bedrock              -> ceramic (C)
+#   ammonia and methane slush     -> explosive charge (X)
+#   ? = mixed ice debris (random)
+name: Thule
+powerups: 3
+grid:
+SSSSSSSSSS
+SCSCSSCSCS
+CCXCC?CXCC
+CCCCCCCCCC
+C?CXCCXC?C
+CCCCCCCCCC

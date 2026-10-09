@@ -1,0 +1,28 @@
+# Nucleus (Sombrero V): the galaxy's heart world, a crushing pressure shell around
+# a radioactive tungsten core, sealed in glass and overgrown with living alloy.
+# Elements -> bricks:
+#   glassy crust                -> shield glass (S)
+#   living alloy                -> regen hits=3 (r)
+#   sulfuric acid pockets       -> explosive breach (B)
+#   deep-pressure gas           -> explosive demolition (D)
+#   iron-nickel mantle          -> titanium hits=3 (k)
+#   tungsten core               -> tungsten hits=5 (g)
+#   uranium and thorium         -> reactor (P)
+#   ? = mixed debris (random)
+name: Nucleus
+powerups: 5
+legend:
+  r = regen hits=3
+  k = titanium hits=3
+  g = tungsten hits=5
+grid:
+SSSSSSSSSS
+rSrSrrSrSr
+BkkDkkDkkB
+kkggggggkk
+kgg?PP?ggk
+kggPggPggk
+kkggggggkk
+BkkDkkDkkB
+rrrrrrrrrr
+SSSSSSSSSS
