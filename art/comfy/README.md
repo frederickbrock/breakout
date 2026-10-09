@@ -92,6 +92,12 @@ keeps the object to that shape. Comfy rounds cost $0, count toward
   plate): `ref_style.json --ref <png>` plus `--control-size`. Peak VRAM with
   IP-Adapter and ControlNet is about 11.5 GB of 12. Keep other GPU work off
   while it runs.
+  artgen prepares the reference before upload (`--ref-prep`, default from
+  `art.comfy.ref_prep`, else `auto`). `auto` floods a `#00FF00`/`#FF00FF` key
+  background to plain light grey (`#d0d0d0`), so the key doesn't bleed into
+  every image (sim-2vw). Any other reference is sent unchanged. `grey` does
+  the same and then makes the reference greyscale. `none` sends it as-is.
+  `round-N/ref.png` is the prepared image.
 - **Anything else:** `sprite.json`.
 
 Installed models, node packs and their hashes and licences:
