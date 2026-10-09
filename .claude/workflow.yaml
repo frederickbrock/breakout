@@ -56,6 +56,10 @@ art:                           # art team (art-pipeline skill); defaults listed 
     # artgen ref-pick's family pick; a brief's ref: line still overrides it.
     # Relative to the main checkout (art/concepts is git-ignored there).
     ref_image: art/concepts/sim-73n.3/round-4/v1.png
+    # How artgen prepares a ref before upload (--ref-prep): grey = flood a #00FF00/#FF00FF
+    # key background to light grey, then greyscale, so the ref gives the line treatment and
+    # the subject tags decide colour (user pick C7 in the sim-2vw A/B, with weight 0.6).
+    ref_prep: grey
     workflow: art/comfy/sprite.json   # default graph for comfy rounds
     workflows:                 # graph per kind when that kind runs on comfy
       sprite: art/comfy/sprite.json

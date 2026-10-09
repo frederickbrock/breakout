@@ -11,7 +11,7 @@ fills in a few nodes, so you can change the look without touching code.
 | `sprite.json` | Sprites: SDXL base + fp16-fix VAE, LoRA `stlbrk_graffiti_v1-step00001500` 0.8 (the project's own graffiti LoRA, sim-7bu.4; recipe in `art/lora/graffiti-v1/`), ControlNet-Union promax (canny/lineart type, strength 0.8, steps 0–80%) fed by the asset-shape silhouette, 50 steps, cfg 10 (sim-7bu.1 sweep, user pick), dpmpp_2m karras |
 | `transparent.json` | Transparent sprites: the `sprite.json` pipeline, then ComfyUI's **built-in** background removal (BiRefNet: `LoadBackgroundRemovalModel` → `RemoveBackground` → `InvertMask` → `JoinImageWithAlpha`) and an RGBA `SaveImage`. No keying, so `artgen process --bg none --trim --size WxH` |
 | `tile_bg.json` | Seamless tiling backgrounds and parallax layers: a private SDXL instance (`unCLIPCheckpointLoader`) + the graffiti LoRA (step 1500 @ 0.8), with its model and VAE made circular (`SeamlessTile`, `MakeCircularVAE`; seamless-tiling pack). No ControlNet; `--size WxH` for wide layers |
-| `ref_style.json` | Keep a picked look: `sprite.json` plus IP-Adapter plus SDXL (`style transfer`, weight 0.8) fed by `--ref <png>` through `artgen:ref`. The silhouette still sets the shape |
+| `ref_style.json` | Keep a picked look: `sprite.json` plus IP-Adapter plus SDXL (`style transfer`, weight 0.6, steps 0–100%) fed by `--ref <png>` through `artgen:ref`, greyscaled first (`art.comfy.ref_prep: grey`). The silhouette still sets the shape |
 
 `.claude/workflow.yaml` → `art.comfy.workflow` says which file the
 concept-artist uses.
@@ -92,6 +92,12 @@ keeps the object to that shape. Comfy rounds cost $0, count toward
   plate): `ref_style.json --ref <png>` plus `--control-size`. Peak VRAM with
   IP-Adapter and ControlNet is about 11.5 GB of 12. Keep other GPU work off
   while it runs.
+  artgen prepares the reference before upload (`--ref-prep`, default from
+  `art.comfy.ref_prep`, else `auto`). `auto` floods a `#00FF00`/`#FF00FF` key
+  background to plain light grey (`#d0d0d0`), so the key doesn't bleed into
+  every image (sim-2vw). Any other reference is sent unchanged. `grey` does
+  the same and then makes the reference greyscale. `none` sends it as-is.
+  `round-N/ref.png` is the prepared image.
 - **Anything else:** `sprite.json`.
 
 Installed models, node packs and their hashes and licences:
@@ -111,3 +117,11 @@ stage 2 = ± IP-Adapter ref, ± boldline/lineart-style-xl stacked). The winner w
 **step 1500 @ 0.8 with the IP-Adapter reference** (r43–45). Prompts start with the
 trigger `stlbrk_graffiti` (style.md). `sdxl-boldline` and `lineart-style-xl` stay
 installed but aren't loaded by default. The recipe is in `art/lora/graffiti-v1/`.
+
+`ref_style.json`'s IP-Adapter settings come from the sim-2vw A/B (`/visual/sim-2vw/ab.html`:
+7 settings × violet brick, green capsule, red explosive brick, titanium plate, × 2 seeds).
+A full-colour reference at 0.8 pulled every sprite toward the pinned reference's navy and teal.
+Lower weights (0.6, 0.4), `strong style transfer` and `end_at 0.6` only weakened that a bit.
+The installed IPAdapter_plus has no `style transfer precise`. A **greyscale** reference keeps
+the graffiti line treatment and lets the subject tags set the colour. The user picked
+greyscale at **0.6**: weight 0.6 here, and `art.comfy.ref_prep: grey` in workflow.yaml.
