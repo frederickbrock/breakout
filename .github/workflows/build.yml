@@ -83,8 +83,38 @@ jobs:
         with:
           path: dist/
 
-  deploy-pages:
+  # Loads the built site in headless Chromium (software WebGL2) and checks
+  # it reaches the menu and starts a level with no console errors, panics or
+  # failed requests (scripts/web_smoke.py; known-harmless noise in
+  # scripts/web-smoke.allow). Not a required check yet.
+  web-smoke:
     needs: web
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: dist/
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-1.55.0-${{ runner.os }}
+      - run: uv run --with playwright==1.55.0 playwright install --with-deps chromium
+      - run: uv run scripts/web_smoke.py dist --prefix "/${{ github.event.repository.name }}/" --out web-smoke-out
+        env:
+          CHROMIUM: bundled
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: web-smoke
+          path: web-smoke-out/
+          if-no-files-found: warn
+
+  deploy-pages:
+    needs: [web, web-smoke]
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     permissions:
