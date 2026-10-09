@@ -1,0 +1,194 @@
+# stlbrk_graffiti_v1 training set: 38 graffiti-era concept picks (sim-7bu.4).
+# file = name in ~/Projects/lora/dataset/10_stlbrk/ (10 repeats); source = the concept pick it was
+# built from (main checkout, art/concepts is git-ignored); caption = the .txt next to it.
+# Built by build_dataset.py (keyed onto the void colour, cropped, centred). No images committed.
+
+[[image]]
+file = "01_sim-rdl.10_r1v3.png"
+source = "art/concepts/sim-rdl.10/round-1/v3.png"
+caption = "stlbrk_graffiti, a towering stylized cloud pillar with thick flowing wild-style contour lines, off-white, orange and teal bands, black space"
+
+[[image]]
+file = "02_sim-rdl.10_r1v5.png"
+source = "art/concepts/sim-rdl.10/round-1/v5.png"
+caption = "stlbrk_graffiti, a scattering of cartoon clouds with thick dark outlines and layered off-white, orange and teal bands, dark navy space"
+
+[[image]]
+file = "03_sim-rdl.10_r1v8.png"
+source = "art/concepts/sim-rdl.10/round-1/v8.png"
+caption = "stlbrk_graffiti, a round planet with swirling orange, teal and cream bands, thick dark outline, dark navy space"
+
+[[image]]
+file = "04_sim-rdl.10_r1v9.png"
+source = "art/concepts/sim-rdl.10/round-1/v9.png"
+caption = "stlbrk_graffiti, a round banded planet in orange, teal and cream with a bold dark keyline, dark navy space"
+
+[[image]]
+file = "05_sim-rdl.10_r1v10.png"
+source = "art/concepts/sim-rdl.10/round-1/v10.png"
+caption = "stlbrk_graffiti, a small striped planet with a cream outline ring, orange and teal stripes, dark navy space"
+
+[[image]]
+file = "06_sim-rdl.10_r2v1.png"
+source = "art/concepts/sim-rdl.10/round-2/v1.png"
+caption = "stlbrk_graffiti, a glowing magenta and cream sunburst surrounded by layered outlined clouds, a banded planet in the corner, dark space"
+
+[[image]]
+file = "07_sim-rdl.10_r2v2.png"
+source = "art/concepts/sim-rdl.10/round-2/v2.png"
+caption = "stlbrk_graffiti, a cream sun ringed by outlined clouds with white lightning bolts, a banded planet in the corner, dark space"
+
+[[image]]
+file = "08_sim-rdl.10_r2v4.png"
+source = "art/concepts/sim-rdl.10/round-2/v4.png"
+caption = "stlbrk_graffiti, a tall cloud pillar with thick offset contour lines in orange, teal and cream, white lightning bolts, black space"
+
+[[image]]
+file = "09_sim-rdl.10_r2v7.png"
+source = "art/concepts/sim-rdl.10/round-2/v7.png"
+caption = "stlbrk_graffiti, two sleek spaceships flying along glowing cyan and magenta ribbon lines in front of a banded planet, bold outlines"
+
+[[image]]
+file = "10_sim-rdl.10_r2v8.png"
+source = "art/concepts/sim-rdl.10/round-2/v8.png"
+caption = "stlbrk_graffiti, a banded planet framed by curved metal panels and flowing purple and teal ribbons, bold outlines"
+
+[[image]]
+file = "11_sim-rdl.10_r2v9.png"
+source = "art/concepts/sim-rdl.10/round-2/v9.png"
+caption = "stlbrk_graffiti, outlined clouds and a banded planet with a bright magenta energy burst, dark space"
+
+[[image]]
+file = "12_sim-rdl.10_r2v10.png"
+source = "art/concepts/sim-rdl.10/round-2/v10.png"
+caption = "stlbrk_graffiti, outlined clouds and a banded planet with a bright magenta energy burst, dark space"
+
+[[image]]
+file = "13_sim-usq.2_r1v1.png"
+source = "art/concepts/sim-usq.2/round-1/v1.png"
+caption = "stlbrk_graffiti, a metallic sphere split into dark and light halves with thin orange contour lines, bold black outline"
+
+[[image]]
+file = "14_sim-usq.2_r1v2.png"
+source = "art/concepts/sim-usq.2/round-1/v2.png"
+caption = "stlbrk_graffiti, a dark metal sphere in a ringed socket with a glossy highlight and thin orange contour lines, bold black outline"
+
+[[image]]
+file = "15_sim-usq.2_r1v4.png"
+source = "art/concepts/sim-usq.2/round-1/v4.png"
+caption = "stlbrk_graffiti, a glossy grey steel ball with a cream wave line across it, hard white glint, thick black outline"
+
+[[image]]
+file = "16_sim-usq.6_r2v2.png"
+source = "art/concepts/sim-usq.6/round-2/v2.png"
+caption = "stlbrk_graffiti, a steel ball with a cream wave line, a double off-white ring around it, hard white glint, thick black outline"
+
+[[image]]
+file = "17_sim-usq.2_r2v1.png"
+source = "art/concepts/sim-usq.2/round-2/v1.png"
+caption = "stlbrk_graffiti, a grey metal emitter prong with a round lens, bolted plates, thick black outline"
+
+[[image]]
+file = "18_sim-usq.2_r2v3.png"
+source = "art/concepts/sim-usq.2/round-2/v3.png"
+caption = "stlbrk_graffiti, a rounded metal bar filled with cyan wavy energy lines and white highlights, thick black outline"
+
+[[image]]
+file = "19_sim-usq.2_r2v4.png"
+source = "art/concepts/sim-usq.2/round-2/v4.png"
+caption = "stlbrk_graffiti, a rounded metal bar filled with cyan wavy energy lines and white highlights, thick black outline"
+
+[[image]]
+file = "20_sim-usq.2_r2v6.png"
+source = "art/concepts/sim-usq.2/round-2/v6.png"
+caption = "stlbrk_graffiti, a purple faceted gem set in a square bolted steel frame, thick black outline"
+
+[[image]]
+file = "21_sim-usq.1_r1v1.png"
+source = "art/concepts/sim-usq.1/round-1/v1.png"
+caption = "stlbrk_graffiti, a rounded grey steel plate with corner bolts, offset double outline, white glint, thick black keyline"
+
+[[image]]
+file = "22_sim-usq.1_r1v2.png"
+source = "art/concepts/sim-usq.1/round-1/v2.png"
+caption = "stlbrk_graffiti, a rounded grey steel plate with corner bolts, offset double outline, white glint, thick black keyline"
+
+[[image]]
+file = "23_sim-usq.1_r4v1.png"
+source = "art/concepts/sim-usq.1/round-4/v1.png"
+caption = "stlbrk_graffiti, a rounded golden-yellow metal plate with bolts, horizontal seam, cream edge highlight, thick dark outline"
+
+[[image]]
+file = "24_sim-usq.1_r4v2.png"
+source = "art/concepts/sim-usq.1/round-4/v2.png"
+caption = "stlbrk_graffiti, a rounded red metal plate with yellow hazard stripes at the corners, glossy streaks, thick dark outline"
+
+[[image]]
+file = "25_sim-usq.1_r4v3.png"
+source = "art/concepts/sim-usq.1/round-4/v3.png"
+caption = "stlbrk_graffiti, a cracked grey steel plate with bolts and a jagged crack line, thick dark outline"
+
+[[image]]
+file = "26_sim-usq.1_r4v4.png"
+source = "art/concepts/sim-usq.1/round-4/v4.png"
+caption = "stlbrk_graffiti, a cracked terracotta tile plate with a broken corner, pale rim, thick dark outline"
+
+[[image]]
+file = "27_sim-usq.1_r4v6.png"
+source = "art/concepts/sim-usq.1/round-4/v6.png"
+caption = "stlbrk_graffiti, a cracked purple plate with a glowing violet seam line, thick dark outline"
+
+[[image]]
+file = "28_sim-usq.1_r4v8.png"
+source = "art/concepts/sim-usq.1/round-4/v8.png"
+caption = "stlbrk_graffiti, a rounded green metal plate with fine crack lines and a small hatch, cream rim, thick dark outline"
+
+[[image]]
+file = "29_sim-usq.1_r4v9.png"
+source = "art/concepts/sim-usq.1/round-4/v9.png"
+caption = "stlbrk_graffiti, a pale cyan glass panel with hexagon cracks in a steel frame, thick dark outline"
+
+[[image]]
+file = "30_sim-usq.1_r4v12.png"
+source = "art/concepts/sim-usq.1/round-4/v12.png"
+caption = "stlbrk_graffiti, a shattered purple plate with glowing violet cracks, thick dark outline"
+
+[[image]]
+file = "31_sim-usq.3_r1v2.png"
+source = "art/concepts/sim-usq.3/round-1/v2.png"
+caption = "stlbrk_graffiti, a rounded rectangular frame in orange and cream with a black inner outline, empty centre"
+
+[[image]]
+file = "32_sim-usq.3_r1v5.png"
+source = "art/concepts/sim-usq.3/round-1/v5.png"
+caption = "stlbrk_graffiti, an oval frame with red and orange hazard stripes and cream edge lines, empty centre"
+
+[[image]]
+file = "33_sim-usq.3_r1v10.png"
+source = "art/concepts/sim-usq.3/round-1/v10.png"
+caption = "stlbrk_graffiti, a round cyan porthole ring with four bolts and a white sparkle, empty centre"
+
+[[image]]
+file = "34_sim-usq.3_r1v12.png"
+source = "art/concepts/sim-usq.3/round-1/v12.png"
+caption = "stlbrk_graffiti, an oval purple frame with cream inner line and cyan diamond studs, empty centre"
+
+[[image]]
+file = "35_sim-usq.3_r2v2.png"
+source = "art/concepts/sim-usq.3/round-2/v2.png"
+caption = "stlbrk_graffiti, an orange rounded frame with white side tabs and corner marks, empty centre"
+
+[[image]]
+file = "36_sim-usq.3_r3v4.png"
+source = "art/concepts/sim-usq.3/round-3/v4.png"
+caption = "stlbrk_graffiti, a wide purple and orange rounded frame with a cream inner line, empty centre"
+
+[[image]]
+file = "37_sim-73n.3_r4v1.png"
+source = "art/concepts/sim-73n.3/round-4/v1.png"
+caption = "stlbrk_graffiti, a dark navy wall panel with rounded capsule shapes, inlaid flowing contour lines in orange, teal and off-white"
+
+[[image]]
+file = "38_sim-73n.3_r4v4.png"
+source = "art/concepts/sim-73n.3/round-4/v4.png"
+caption = "stlbrk_graffiti, a dark navy wall panel with rounded capsule shapes, inlaid flowing contour lines in orange, teal and off-white"

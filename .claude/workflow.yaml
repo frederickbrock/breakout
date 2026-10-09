@@ -52,6 +52,10 @@ art:                           # art team (art-pipeline skill); defaults listed 
     ref: comfy                 # "keep this look" variants from a picked or shipped image
   comfy:
     url: http://127.0.0.1:8188
+    # Pinned reference for ref_style sprite rounds (user pick, sim-7bu.4): wins over
+    # artgen ref-pick's family pick; a brief's ref: line still overrides it.
+    # Relative to the main checkout (art/concepts is git-ignored there).
+    ref_image: art/concepts/sim-73n.3/round-4/v1.png
     workflow: art/comfy/sprite.json   # default graph for comfy rounds
     workflows:                 # graph per kind when that kind runs on comfy
       sprite: art/comfy/sprite.json
