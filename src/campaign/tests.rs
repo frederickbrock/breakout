@@ -105,12 +105,15 @@ fn clear_from_above(app: &mut App) {
 }
 
 #[test]
-fn the_shipped_campaign_plays_random_then_the_abyss_then_andromada_and_wins() {
-    let mut app = app_with_campaign(shipped_campaign());
-    for (next, card) in [(1, "SECTOR 02 // The Abyss"), (2, "SECTOR 03 // Andromada")] {
+fn the_shipped_campaign_plays_every_planet_in_order_and_wins() {
+    let levels = shipped_campaign();
+    assert_eq!(levels.len(), 25);
+    let mut app = app_with_campaign(levels.clone());
+    for (next, def) in levels.iter().enumerate().skip(1) {
+        let card = format!("SECTOR {:02} // {}", next + 1, def.name);
         clear_from_above(&mut app);
-        assert_eq!(play_state(&app), Some(PlayState::LevelClear));
-        assert!(texts(&mut app).contains(&card.to_string()), "{card}");
+        assert_eq!(play_state(&app), Some(PlayState::LevelClear), "{card}");
+        assert!(texts(&mut app).contains(&card), "{card}");
         wait_out_card(&mut app);
         assert_eq!(current(&app), next);
         assert!(count::<With<Brick>>(&mut app) > 0, "{card}: board spawned");

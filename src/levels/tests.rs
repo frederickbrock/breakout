@@ -53,40 +53,120 @@ fn restart(app: &mut App) {
 }
 
 #[test]
-fn the_shipped_random_level_is_the_fallback_board() {
+fn the_fallback_board_is_seven_rows_of_random_with_six_power_ups() {
+    let rows = ["??????????"; 7].join("\n");
     assert_eq!(
-        parse_level(include_str!("../../assets/levels/01-random.level")),
+        parse_level(&format!("name: Random\npowerups: 6\ngrid:\n{rows}")),
         Ok(LevelDef::fallback())
     );
 }
 
-#[test]
-fn the_shipped_campaign_starts_with_the_random_level() {
-    let campaign = parse_campaign(include_str!("../../assets/levels/campaign.txt"));
+/// A shipped galaxy: its `# Galaxy:` name and its levels' files and defs.
+struct Galaxy {
+    name: String,
+    levels: Vec<(String, LevelDef)>,
+}
+
+/// `campaign.txt` split into galaxies at its `# Galaxy: <name>` comments,
+/// every level parsed with the real parser.
+fn shipped_galaxies() -> Vec<Galaxy> {
+    let manifest = include_str!("../../assets/levels/campaign.txt");
+    let mut galaxies: Vec<Galaxy> = Vec::new();
+    for line in manifest.lines().map(str::trim) {
+        if let Some(name) = line.strip_prefix("# Galaxy:") {
+            galaxies.push(Galaxy {
+                name: name.trim().to_string(),
+                levels: Vec::new(),
+            });
+        } else if !line.is_empty() && !line.starts_with('#') {
+            let path = format!("assets/levels/{line}");
+            let text = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{path}: {e}"));
+            let def = parse_level(&text).unwrap_or_else(|e| panic!("{path}: {e}"));
+            let galaxy = galaxies
+                .last_mut()
+                .unwrap_or_else(|| panic!("{line} is listed before any # Galaxy: comment"));
+            galaxy.levels.push((line.to_string(), def));
+        }
+    }
+    let listed: Vec<String> = galaxies
+        .iter()
+        .flat_map(|g| g.levels.iter().map(|(file, _)| file.clone()))
+        .collect();
     assert_eq!(
-        campaign.levels.first().map(String::as_str),
-        Some("01-random.level")
+        listed,
+        parse_campaign(manifest).levels,
+        "the galaxy groups are the campaign"
     );
+    galaxies
+}
+
+/// Deliberate negative space: at least 25% of the cells are empty, and some
+/// row has a run of 2+ empty cells with bricks on both sides of it.
+fn has_negative_space(def: &LevelDef) -> bool {
+    let cells = def.rows() * def.cols();
+    let empty = def.grid.iter().flatten().filter(|c| c.is_none()).count();
+    let enclosed_gap = def.grid.iter().any(|row| {
+        let line: String = row
+            .iter()
+            .map(|c| if c.is_some() { 'b' } else { '.' })
+            .collect();
+        let inner = line.trim_matches('.');
+        inner.split('b').any(|run| run.len() >= 2)
+    });
+    empty * 4 >= cells && enclosed_gap
 }
 
 #[test]
-fn every_shipped_campaign_level_parses_in_order() {
-    let campaign = parse_campaign(include_str!("../../assets/levels/campaign.txt"));
-    let names: Vec<String> = campaign
+fn the_shipped_campaign_is_five_galaxies_of_five_valid_themed_levels() {
+    let galaxies = shipped_galaxies();
+    let names: Vec<&str> = galaxies.iter().map(|g| g.name.as_str()).collect();
+    assert_eq!(
+        names,
+        [
+            "Milky Way",
+            "Andromeda",
+            "Triangulum",
+            "Large Magellanic Cloud",
+            "Sombrero"
+        ]
+    );
+    for galaxy in &galaxies {
+        assert_eq!(galaxy.levels.len(), 5, "{}: 5 levels", galaxy.name);
+        assert!(
+            galaxy.levels.iter().any(|(_, def)| has_negative_space(def)),
+            "{}: a level with negative space",
+            galaxy.name
+        );
+        for (file, def) in &galaxy.levels {
+            let bricks: Vec<&CellDef> = def.grid.iter().flatten().flatten().collect();
+            assert!(!bricks.is_empty(), "{file} has a brick");
+            let random = bricks
+                .iter()
+                .filter(|c| c.class == ClassSpec::Random)
+                .count();
+            assert!(
+                random * 5 <= bricks.len(),
+                "{file}: {random} of {} bricks are '?' (max 20%)",
+                bricks.len()
+            );
+            assert_eq!(def.speed_factor, None, "{file} sets no speed_factor");
+        }
+    }
+    let milky_way: Vec<&str> = galaxies[0]
         .levels
         .iter()
-        .map(|file| {
-            let path = format!("assets/levels/{file}");
-            let text = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{path}: {e}"));
-            let def = parse_level(&text).unwrap_or_else(|e| panic!("{path}: {e}"));
-            assert!(
-                def.grid.iter().flatten().any(Option::is_some),
-                "{path} has a brick"
-            );
-            def.name
-        })
+        .map(|(_, d)| d.name.as_str())
         .collect();
-    assert_eq!(names, ["Random", "The Abyss", "Andromada"]);
+    assert_eq!(milky_way, ["Mercury", "Mars", "Earth", "Venus", "Jupiter"]);
+}
+
+#[test]
+fn negative_space_needs_enough_empty_cells_and_an_enclosed_gap() {
+    // 50% empty, but only as a gap row and side margins: no enclosed run.
+    assert!(!has_negative_space(&level("grid:\nCCCC\n....\n.CC.\n....")));
+    // An enclosed run of 2, but under 25% empty.
+    assert!(!has_negative_space(&level("grid:\nC..C\nCCCC\nCCCC")));
+    assert!(has_negative_space(&level("grid:\nC..C\nCCCC")));
 }
 
 #[test]
