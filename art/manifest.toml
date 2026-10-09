@@ -281,3 +281,20 @@ source = "r2/v2"
 model = "google/gemini-2.5-flash-image"
 prompt_file = "art/prompts/sim-usq.6-r2.txt"
 processing = ["numpy: masked levels lift of the grey body inside the ring (r<0.29 of the image width; keylines, off-white ring/seam, glint and orange bounce excluded), k=0.55", "process --bg flood --trim --size 60x60 --fit stretch"]
+
+[[asset]]
+id = "parallax_space_layers"
+issue = "sim-rdl.10"
+files = ["assets/parallax/space_l0.png", "assets/parallax/space_l1.png", "assets/parallax/space_l2.png", "assets/parallax/space_l1_glow.png", "assets/parallax/planet.png"]
+source = "space_l1=r2/v9, space_l1_glow=r2/v9, space_l2=r1/v6, planet=r1/v9 (space_l0 is procedural, styled after r1/v2)"
+model = "google/gemini-2.5-flash-image"
+prompt_file = "art/prompts/sim-rdl.10-r2.txt"
+prompt_file_r1 = "art/prompts/sim-rdl.10-r1.txt"
+prompt_file_r2 = "art/prompts/sim-rdl.10-r2.txt"
+processing = [
+  "art/prompts/sim-rdl.10-build.py (run: uv run --with pillow --with numpy --with scipy python art/prompts/sim-rdl.10-build.py <concepts>/sim-rdl.10 assets/parallax)",
+  "L0: drawn procedurally (dots, crosses, rings, tiny outlined galaxies, wrapped at the top/bottom edge so it tiles vertically)",
+  "L1/L2: cut out of the black concept background (luma key + closing), planet removed from r2/v9, burst violet turned dusty blue (the glow layer carries the violet), placed inside the 1440x2160 canvas with faded cut edges (seamless by construction), dimmed to 55-62% alpha, RGB palette-quantised to 96 colours",
+  "glow: bolts + burst of r2/v9 as a white mask (alpha = intensity), aligned with L1's top band",
+  "planet: r1/v9 disc cut with a 4x-supersampled circle mask, 520 px in a 640x640 transparent canvas",
+]

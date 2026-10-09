@@ -1,0 +1,149 @@
+v1: L1 clouds + glow core A
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Deep-space background art for a game, graffiti line-art style: bold keyline contours, FLAT colour bands, hard highlight strokes on edges, cel-like lighting from the upper left, NO spray paint, NO photographic texture, NO blur, NO soft airbrush gradients, no tiny dust speckle. Palette: near-black void #0a0e15, rust and orange (#ffab4d family), cream, dusty blue (#a9dcff family); a violet/magenta energy glow is allowed ONLY as flat dim muted bands (clearly dimmer and less saturated than a bright violet), no cyan. Dark, calm, low contrast overall (a game sits on top), nothing resembling a ball, brick or pickup, no text. PORTRAIT canvas, taller than wide (about 2:3), content filling the whole canvas edge to edge, no white margins. Reference images show only the graffiti line treatment / shapes to keep, nothing photographic. LAYER L1 (clouds with glow core). Layout: an energy nebula in the upper left with a bright core, a few large outlined cloud masses around it and down the left side, a big empty dark centre, and one dim outlined planet at the lower right cut off by the right edge. The nebula core is drawn as graffiti glow: stacked flat glow bands (cream centre, orange, muted violet outer band), hard highlight strokes, and a few OUTLINED forked lightning bolts (keyline plus bright inner line) arcing out through the cloud masses. Clouds have keyline contours and flat rust/cream/dusty-blue bands. No planet in this layer, plain dark void elsewhere, dimmer clouds lower down.
+
+v2: L1 clouds + glow core B
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Deep-space background art for a game, graffiti line-art style: bold keyline contours, FLAT colour bands, hard highlight strokes on edges, cel-like lighting from the upper left, NO spray paint, NO photographic texture, NO blur, NO soft airbrush gradients, no tiny dust speckle. Palette: near-black void #0a0e15, rust and orange (#ffab4d family), cream, dusty blue (#a9dcff family); a violet/magenta energy glow is allowed ONLY as flat dim muted bands (clearly dimmer and less saturated than a bright violet), no cyan. Dark, calm, low contrast overall (a game sits on top), nothing resembling a ball, brick or pickup, no text. PORTRAIT canvas, taller than wide (about 2:3), content filling the whole canvas edge to edge, no white margins. Reference images show only the graffiti line treatment / shapes to keep, nothing photographic. LAYER L1 (clouds with glow core). Layout: an energy nebula in the upper left with a bright core, a few large outlined cloud masses around it and down the left side, a big empty dark centre, and one dim outlined planet at the lower right cut off by the right edge. The nebula core is drawn as graffiti glow: stacked flat glow bands (cream centre, orange, muted violet outer band), hard highlight strokes, and a few OUTLINED forked lightning bolts (keyline plus bright inner line) arcing out through the cloud masses. Clouds have keyline contours and flat rust/cream/dusty-blue bands. No planet in this layer, plain dark void elsewhere, dimmer clouds lower down.
+
+v3: L1 clouds + glow core C
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Deep-space background art for a game, graffiti line-art style: bold keyline contours, FLAT colour bands, hard highlight strokes on edges, cel-like lighting from the upper left, NO spray paint, NO photographic texture, NO blur, NO soft airbrush gradients, no tiny dust speckle. Palette: near-black void #0a0e15, rust and orange (#ffab4d family), cream, dusty blue (#a9dcff family); a violet/magenta energy glow is allowed ONLY as flat dim muted bands (clearly dimmer and less saturated than a bright violet), no cyan. Dark, calm, low contrast overall (a game sits on top), nothing resembling a ball, brick or pickup, no text. PORTRAIT canvas, taller than wide (about 2:3), content filling the whole canvas edge to edge, no white margins. Reference images show only the graffiti line treatment / shapes to keep, nothing photographic. LAYER L1 (clouds with glow core). Layout: an energy nebula in the upper left with a bright core, a few large outlined cloud masses around it and down the left side, a big empty dark centre, and one dim outlined planet at the lower right cut off by the right edge. The nebula core is drawn as graffiti glow: stacked flat glow bands (cream centre, orange, muted violet outer band), hard highlight strokes, and a few OUTLINED forked lightning bolts (keyline plus bright inner line) arcing out through the cloud masses. Clouds have keyline contours and flat rust/cream/dusty-blue bands. No planet in this layer, plain dark void elsewhere, dimmer clouds lower down.
+
+v4: lightning mask A
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Deep-space background art for a game, graffiti line-art style: bold keyline contours, FLAT colour bands, hard highlight strokes on edges, cel-like lighting from the upper left, NO spray paint, NO photographic texture, NO blur, NO soft airbrush gradients, no tiny dust speckle. Palette: near-black void #0a0e15, rust and orange (#ffab4d family), cream, dusty blue (#a9dcff family); a violet/magenta energy glow is allowed ONLY as flat dim muted bands (clearly dimmer and less saturated than a bright violet), no cyan. Dark, calm, low contrast overall (a game sits on top), nothing resembling a ball, brick or pickup, no text. PORTRAIT canvas, taller than wide (about 2:3), content filling the whole canvas edge to edge, no white margins. Reference images show only the graffiti line treatment / shapes to keep, nothing photographic. LIGHTNING / GLOW MASK layer: pure WHITE and light-grey graphics on a PURE BLACK background, nothing else, no colour, no clouds, no planet. Same composition as the cloud layer: a bright outlined glow core in the upper left drawn as stacked flat white/grey glow bands, with several outlined forked lightning bolts arcing out of it across the upper two thirds of the canvas, dimmer and sparser lower down, the lower centre almost empty black. Hard-edged forked bolts with thick and thin strokes, flat bands, no soft blur.
+
+v5: lightning mask B
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Deep-space background art for a game, graffiti line-art style: bold keyline contours, FLAT colour bands, hard highlight strokes on edges, cel-like lighting from the upper left, NO spray paint, NO photographic texture, NO blur, NO soft airbrush gradients, no tiny dust speckle. Palette: near-black void #0a0e15, rust and orange (#ffab4d family), cream, dusty blue (#a9dcff family); a violet/magenta energy glow is allowed ONLY as flat dim muted bands (clearly dimmer and less saturated than a bright violet), no cyan. Dark, calm, low contrast overall (a game sits on top), nothing resembling a ball, brick or pickup, no text. PORTRAIT canvas, taller than wide (about 2:3), content filling the whole canvas edge to edge, no white margins. Reference images show only the graffiti line treatment / shapes to keep, nothing photographic. LIGHTNING / GLOW MASK layer: pure WHITE and light-grey graphics on a PURE BLACK background, nothing else, no colour, no clouds, no planet. Same composition as the cloud layer: a bright outlined glow core in the upper left drawn as stacked flat white/grey glow bands, with several outlined forked lightning bolts arcing out of it across the upper two thirds of the canvas, dimmer and sparser lower down, the lower centre almost empty black. Hard-edged forked bolts with thick and thin strokes, flat bands, no soft blur.
+
+v6: lightning mask C
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Deep-space background art for a game, graffiti line-art style: bold keyline contours, FLAT colour bands, hard highlight strokes on edges, cel-like lighting from the upper left, NO spray paint, NO photographic texture, NO blur, NO soft airbrush gradients, no tiny dust speckle. Palette: near-black void #0a0e15, rust and orange (#ffab4d family), cream, dusty blue (#a9dcff family); a violet/magenta energy glow is allowed ONLY as flat dim muted bands (clearly dimmer and less saturated than a bright violet), no cyan. Dark, calm, low contrast overall (a game sits on top), nothing resembling a ball, brick or pickup, no text. PORTRAIT canvas, taller than wide (about 2:3), content filling the whole canvas edge to edge, no white margins. Reference images show only the graffiti line treatment / shapes to keep, nothing photographic. LIGHTNING / GLOW MASK layer: pure WHITE and light-grey graphics on a PURE BLACK background, nothing else, no colour, no clouds, no planet. Same composition as the cloud layer: a bright outlined glow core in the upper left drawn as stacked flat white/grey glow bands, with several outlined forked lightning bolts arcing out of it across the upper two thirds of the canvas, dimmer and sparser lower down, the lower centre almost empty black. Hard-edged forked bolts with thick and thin strokes, flat bands, no soft blur.
+
+v7: planet A
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Deep-space background art for a game, graffiti line-art style: bold keyline contours, FLAT colour bands, hard highlight strokes on edges, cel-like lighting from the upper left, NO spray paint, NO photographic texture, NO blur, NO soft airbrush gradients, no tiny dust speckle. Palette: near-black void #0a0e15, rust and orange (#ffab4d family), cream, dusty blue (#a9dcff family); a violet/magenta energy glow is allowed ONLY as flat dim muted bands (clearly dimmer and less saturated than a bright violet), no cyan. Dark, calm, low contrast overall (a game sits on top), nothing resembling a ball, brick or pickup, no text. PORTRAIT canvas, taller than wide (about 2:3), content filling the whole canvas edge to edge, no white margins. Reference images show only the graffiti line treatment / shapes to keep, nothing photographic. LAYER L3 (planet): ONE large dim outlined planet, cel-lit from the upper left with a cream crescent highlight and a dark shadow side at lower right, flat colour bands in rust, orange and dusty blue. Centred with a wide dark margin, about 75% of the canvas width, fully inside the frame, on a plain flat dark void #0a0e15, no glow halo, no stars.
+
+v8: planet B
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Deep-space background art for a game, graffiti line-art style: bold keyline contours, FLAT colour bands, hard highlight strokes on edges, cel-like lighting from the upper left, NO spray paint, NO photographic texture, NO blur, NO soft airbrush gradients, no tiny dust speckle. Palette: near-black void #0a0e15, rust and orange (#ffab4d family), cream, dusty blue (#a9dcff family); a violet/magenta energy glow is allowed ONLY as flat dim muted bands (clearly dimmer and less saturated than a bright violet), no cyan. Dark, calm, low contrast overall (a game sits on top), nothing resembling a ball, brick or pickup, no text. PORTRAIT canvas, taller than wide (about 2:3), content filling the whole canvas edge to edge, no white margins. Reference images show only the graffiti line treatment / shapes to keep, nothing photographic. LAYER L3 (planet): ONE large dim outlined planet, cel-lit from the upper left with a cream crescent highlight and a dark shadow side at lower right, flat colour bands in rust, orange and dusty blue. Centred with a wide dark margin, about 75% of the canvas width, fully inside the frame, on a plain flat dark void #0a0e15, no glow halo, no stars.
+
+v9: composite A
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Deep-space background art for a game, graffiti line-art style: bold keyline contours, FLAT colour bands, hard highlight strokes on edges, cel-like lighting from the upper left, NO spray paint, NO photographic texture, NO blur, NO soft airbrush gradients, no tiny dust speckle. Palette: near-black void #0a0e15, rust and orange (#ffab4d family), cream, dusty blue (#a9dcff family); a violet/magenta energy glow is allowed ONLY as flat dim muted bands (clearly dimmer and less saturated than a bright violet), no cyan. Dark, calm, low contrast overall (a game sits on top), nothing resembling a ball, brick or pickup, no text. PORTRAIT canvas, taller than wide (about 2:3), content filling the whole canvas edge to edge, no white margins. Reference images show only the graffiti line treatment / shapes to keep, nothing photographic. COMPOSITE MOCK of all layers together. Layout: an energy nebula in the upper left with a bright core, a few large outlined cloud masses around it and down the left side, a big empty dark centre, and one dim outlined planet at the lower right cut off by the right edge. Energy nebula core with graffiti glow bands and outlined forked lightning, outlined cloud masses with flat bands, sparse outlined stars, the planet partly cut off by the lower-right edge. Dim clouds behind the middle rows.
+
+v10: composite B
+Sci-fi space-age game art in a graffiti line-art style: bold clean contour outlines
+with a dark keyline and a second offset inner line in off-white (#e2dfd2), warm
+orange (#d98c64) or muted teal (#5f8f8f); flat graffiti colour blocking with strong
+value contrast; crisp hard white highlight strokes and edge shines; stylised cel-like
+lighting. Smooth rounded steel forms and flowing contour lines. No spray paint: no
+drips, overspray, mist, speckle, stencil fuzz, tags or lettering.
+Cold blue-white key light from the upper left (#a9dcff), warm amber bounce from the
+lower right (#ffab4d). Dark hangar palette: void #0a0e15, structural steel #16202c,
+polished steel #a9bacd, cyan energy #4fd8ff used only for energy fields. Restrained
+glow, high readability at small size, strong silhouette. Absolutely no text,
+lettering, numbers, logos, watermarks, borders or UI.
+
+Deep-space background art for a game, graffiti line-art style: bold keyline contours, FLAT colour bands, hard highlight strokes on edges, cel-like lighting from the upper left, NO spray paint, NO photographic texture, NO blur, NO soft airbrush gradients, no tiny dust speckle. Palette: near-black void #0a0e15, rust and orange (#ffab4d family), cream, dusty blue (#a9dcff family); a violet/magenta energy glow is allowed ONLY as flat dim muted bands (clearly dimmer and less saturated than a bright violet), no cyan. Dark, calm, low contrast overall (a game sits on top), nothing resembling a ball, brick or pickup, no text. PORTRAIT canvas, taller than wide (about 2:3), content filling the whole canvas edge to edge, no white margins. Reference images show only the graffiti line treatment / shapes to keep, nothing photographic. COMPOSITE MOCK of all layers together. Layout: an energy nebula in the upper left with a bright core, a few large outlined cloud masses around it and down the left side, a big empty dark centre, and one dim outlined planet at the lower right cut off by the right edge. Energy nebula core with graffiti glow bands and outlined forked lightning, outlined cloud masses with flat bands, sparse outlined stars, the planet partly cut off by the lower-right edge. Dim clouds behind the middle rows.
