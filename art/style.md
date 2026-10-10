@@ -204,6 +204,21 @@ brick wall, masonry, lego, studs, toy
 The asset contract's size goes to `--control-size`. Settings live in the
 graphs (cfg 10, 50 steps; `art/comfy/README.md`).
 
+## UI (panels, buttons, HUD plates)
+
+Added 2026-10-10 for sim-3rd (user-approved). The "no borders / frames / UI / lettering"
+rules elsewhere in this guide apply to sprites and backgrounds; UI art follows this section.
+
+- UI art may have panels, plates, borders, frames and button shapes.
+- **Mockups** may show placeholder lettering (`TITLE`, `SCORE`, `START`, `SECTOR 03`).
+  **Production** UI art has no text: the game draws Bevy text on top.
+- No logo or wordmark until the game's name is chosen; show a title slot instead.
+- Same graffiti line-art as everything else: dark keylines, flat colour blocking, hard
+  highlights, no spray.
+- The cyan EMITTER accent marks focus (selected/hovered button) and nothing else.
+- Keep colour in flat fills and accents so the skin can be recoloured per galaxy; no
+  baked-in gradients.
+
 ## Do / Don't
 
 **Do**
