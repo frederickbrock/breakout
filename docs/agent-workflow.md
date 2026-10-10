@@ -247,10 +247,12 @@ write the implementation. Think of it as a kata the team sets for you.
    the main checkout, so point `BEADS_DIR` at it:
    ```bash
    export BEADS_DIR=~/Projects/breakout/.beads
-   br update sim-x --remove-label owner-wip --add-label stage:review --assignee "" --actor owner
+   br update sim-x --remove-label owner-wip --remove-label stage:ready --remove-label rework \
+     --add-label stage:review --assignee "" --actor owner
    ```
 5. From there it's an ordinary PR: reviewer → tester → pr-manager. A bounce
-   comes back to you (`owner-wip` again), not to the coder.
+   comes back to you (`owner-wip` again), not to the coder; fix it and run
+   the same command (it also clears the bounce's `stage:ready` and `rework`).
 
 While an issue carries `owner-wip`, no agent touches it. The full protocol is
 in the `beads-queue` skill (*Human-code lane*).
