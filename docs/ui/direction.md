@@ -491,7 +491,19 @@ use its own clock.
 
 ### 3.9 Tests that will have to change
 
-These assert exact colours, layout maths, child order or same-frame state changes.
+**Recommendation:** keep the existing behaviour tests and change *how they look things up*, not what they check.
+- `test_support::app()` makes transitions instant and turns reduced motion on (3.8), so state-flow tests stay as they are.
+- Labels, plates and looks are found by marker or role (`ButtonLabel`, `SkinRole`), not by child index or colour constant.
+- Layout tests assert containment (text inside its plate, plate inside its panel), not exact sizes.
+- New animation tests opt in to real durations and step `Time<Real>` by hand.
+
+**Alternative:** a `settle()` helper that every state-flow test calls after a key press to wait out the wipe. It's explicit,
+but it touches ~15 tests and couples them to transition timing.
+
+**Why:** the tests pin *behaviour* (Start begins a run, focus wraps, the plate covers the score). The reskin changes the look and
+the timing, and decoupling the two keeps the reskin PRs from rewriting the test suite.
+
+These assert exact colours, layout maths, child order or same-frame state changes:
 
 - **Button look:**
   - `focus_is_visible` (`src/menu/tests.rs:40`): `BORDER_FOCUSED` / `BORDER_NORMAL`.
