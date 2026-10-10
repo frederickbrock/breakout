@@ -49,8 +49,7 @@ use crate::bricks::sparks::{Spark, SparkClass};
 use crate::bricks::{damage_look, BrickClass, DamageLook};
 use crate::frame::{FramePanel, FramePiece};
 use crate::paddle::{PaddleField, PaddleProng};
-use crate::powerups::capsules::CapsuleIcon;
-use crate::powerups::{IconTint, PowerUp};
+use crate::powerups::{IconTint, PowerUpIcon, PowerUpKind};
 use crate::theme;
 use crate::world::{PLAYFIELD_HEIGHT, PLAYFIELD_WIDTH};
 use bevy::platform::collections::HashMap;
@@ -62,7 +61,17 @@ const BALL_PATH: &str = "sprites/ball.png";
 const PRONG_LEFT_PATH: &str = "sprites/paddle_prong_left.png";
 const PRONG_RIGHT_PATH: &str = "sprites/paddle_prong_right.png";
 const PADDLE_FIELD_PATH: &str = "sprites/paddle_field.png";
-const POWER_UP_PATH: &str = "sprites/powerup.png";
+/// The blank capsule a power-up kind without its own image draws, tinted
+/// with its [`IconTint`].
+const POWER_UP_SHELL_PATH: &str = "sprites/powerups/shell.png";
+
+/// `kind`'s own capsule image, or `None` to draw the tinted shell.
+fn power_up_path(kind: PowerUpKind) -> Option<&'static str> {
+    match kind {
+        PowerUpKind::SuperSizer => Some("sprites/powerups/super_sizer.png"),
+        PowerUpKind::Collapse => Some("sprites/powerups/collapse.png"),
+    }
+}
 const FRAME_LEFT_PATH: &str = "sprites/frame_left.png";
 const FRAME_RIGHT_PATH: &str = "sprites/frame_right.png";
 /// Which brick sprite a brick draws: one per material. The three explosive
@@ -170,8 +179,11 @@ pub struct GameSprites {
     pub prong_right: Handle<Image>,
     /// Fully opaque glow core, stretched to fill between the prongs.
     pub paddle_field: Handle<Image>,
-    /// One icon for every power-up kind, for now.
-    pub power_up: Handle<Image>,
+    /// Each power-up kind's own capsule image (falling pickup and panel
+    /// icon); a kind missing here draws [`Self::power_up_shell`].
+    pub power_ups: HashMap<PowerUpKind, Handle<Image>>,
+    /// The blank capsule, tinted per kind.
+    pub power_up_shell: Handle<Image>,
     /// Intact brick plates, in [`BrickSprite::ALL`] order.
     pub bricks: [Handle<Image>; 7],
     /// Every damage plate that ships, per material
@@ -205,12 +217,13 @@ impl GameSprites {
             &self.prong_left,
             &self.prong_right,
             &self.paddle_field,
-            &self.power_up,
+            &self.power_up_shell,
             &self.frame_left,
             &self.frame_right,
         ]
         .into_iter()
         .chain(&self.bricks)
+        .chain(self.power_ups.values())
         .chain(self.damaged.values())
         .chain(&self.parallax)
         .chain(&self.outlines)
@@ -269,7 +282,11 @@ fn load_sprites(
         prong_left: assets.load(PRONG_LEFT_PATH),
         prong_right: assets.load(PRONG_RIGHT_PATH),
         paddle_field: assets.load(PADDLE_FIELD_PATH),
-        power_up: assets.load(POWER_UP_PATH),
+        power_ups: PowerUpKind::ALL
+            .into_iter()
+            .filter_map(|kind| Some((kind, assets.load(power_up_path(kind)?))))
+            .collect(),
+        power_up_shell: assets.load(POWER_UP_SHELL_PATH),
         bricks: BrickSprite::ALL.map(|sprite| assets.load(sprite.path())),
         damaged: BrickSprite::ALL
             .into_iter()
@@ -296,8 +313,9 @@ fn load_sprites(
     });
 }
 
-/// Falling power-ups and the time capsules' icons share the power-up image.
-type UnskinnedPowerUpIcon = (Or<(With<PowerUp>, With<CapsuleIcon>)>, Without<Skinned>);
+/// Falling power-ups and time-capsule icons not skinned yet, or whose kind
+/// just changed (a capsule moved up a slot).
+type UnskinnedPowerUpIcon = Or<(Without<Skinned>, Changed<PowerUpIcon>)>;
 /// The paddle field still showing its shape look (disjoint from the prongs).
 type UnskinnedField = (With<PaddleField>, Without<Skinned>, Without<PaddleProng>);
 
@@ -389,20 +407,32 @@ fn skin_paddle(
     }
 }
 
+/// Each falling power-up and capsule icon draws its kind's own image,
+/// untinted; a kind without one draws the shell in its [`IconTint`]. It
+/// waits (flat colour) until that image is loaded, and re-skins when a
+/// capsule's kind changes.
 fn skin_power_ups(
     mut commands: Commands,
     sprites: Res<GameSprites>,
     images: Res<Assets<Image>>,
-    mut power_ups: Query<(Entity, &mut Sprite, Option<&IconTint>), UnskinnedPowerUpIcon>,
+    mut power_ups: Query<
+        (Entity, &mut Sprite, &PowerUpIcon, Option<&IconTint>),
+        UnskinnedPowerUpIcon,
+    >,
 ) {
-    let Some(image) = loaded(&sprites.power_up, &images) else {
-        return;
-    };
-    for (entity, mut sprite, tint) in &mut power_ups {
+    for (entity, mut sprite, icon, tint) in &mut power_ups {
+        let (image, tint) = match sprites.power_ups.get(&icon.0) {
+            Some(own) => (own, None),
+            None => (&sprites.power_up_shell, tint.map(|t| t.0)),
+        };
+        let Some(image) = loaded(image, &images) else {
+            // Not loaded yet: retry next frame (a re-kinded capsule too).
+            commands.entity(entity).remove::<Skinned>();
+            continue;
+        };
         apply(&mut sprite, image);
-        // A kind with its own colour (Collapse) keeps it on the skinned icon.
         if let Some(tint) = tint {
-            sprite.color = tint.0;
+            sprite.color = tint;
         }
         commands.entity(entity).insert(Skinned);
     }
