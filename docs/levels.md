@@ -30,7 +30,7 @@ On the web, trunk copies the whole `assets/` folder into `dist/`
 ```
 # comments start with #
 name: Rainbow Bands
-speed_factor: 1.5      # optional; ball speed = 300 x factor; default ramps 1.8, 1.9, ... 2.5 per round
+speed_factor: 1.5      # optional; ball speed = 400 x factor; default ramps 1.8, 1.925, ... 2.5 per round
 powerups: 6            # optional; N extra random bricks get a power-up; default 0
 legend:                # optional; add or override symbols for this file
   k = titanium hits=4
@@ -48,7 +48,7 @@ Keys come before `grid:`, one `key: value` per line.
 | Key | Default | Meaning |
 |---|---|---|
 | `name` | the file name without extension | The level's name (shown in the log for now). |
-| `speed_factor` | the round's ramp value (`speed_factor(round)` in `src/ball.rs`): 1.8 in round 1, +0.1 per round, capped at 2.5 from round 8 | The ball's speed factor: the ball moves at 300 × factor world units per second, so round 1's 1.8 is 540, round 2's 1.9 is 570, the 2.5 cap is 750, and `2.0` is 600. Setting it fixes this level's speed whatever its round. Must be a number greater than 0. It is independent of `GAME_SCALE`. There is no upper limit, but very high speeds can make the ball pass through bricks. |
+| `speed_factor` | the round's ramp value (`speed_factor(round)` in `src/ball.rs`): 1.8 in round 1, +0.125 per round, capped at 2.5 from round 7 | The ball's speed factor: the ball moves at 400 × factor world units per second (`speed_per_factor` in `assets/game.tuning.ron`), so round 1's 1.8 is 720, round 2's 1.925 is 770, the 2.5 cap is 1000, and `2.0` is 800. Setting it fixes this level's speed whatever its round. Must be a number greater than 0. It is independent of `GAME_SCALE`. There is no upper limit, but very high speeds can make the ball pass through bricks. |
 | `powerups` | `0` | How many extra bricks drop a power-up (see below). A whole number, 0 or more. |
 
 Any other key is an error.

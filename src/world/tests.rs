@@ -52,7 +52,7 @@ fn gameplay_sizes_are_the_old_design_times_game_scale() {
     }
     // The ball's speed is the exception: its own tunable scale.
     assert_eq!(BALL_SPEED_SCALE, 1.8);
-    assert_eq!(BALL_SPEED, 300.0 * BALL_SPEED_SCALE);
+    assert_eq!(BALL_SPEED, 400.0 * BALL_SPEED_SCALE);
     // Unit-free tuning stays put.
     assert_eq!(PADDLE_MASS, 3.0);
     assert_eq!(PADDLE_LINEAR_DAMPING, 4.0);

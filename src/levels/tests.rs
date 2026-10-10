@@ -175,8 +175,8 @@ fn the_default_ball_speed_is_the_ball_speed_constant() {
         BallSpeed::from_factor(BALL_SPEED_SCALE),
         BallSpeed::default()
     );
-    assert_eq!(BallSpeed::default().0, 540.0);
-    assert_eq!(BallSpeed::from_factor(2.0).0, 600.0);
+    assert_eq!(BallSpeed::default().0, 720.0);
+    assert_eq!(BallSpeed::from_factor(2.0).0, 800.0);
 }
 
 #[test]
@@ -261,7 +261,7 @@ fn a_powerup_flagged_ceramic_drops_a_power_up() {
 #[test]
 fn a_level_speed_factor_sets_the_serve_speed() {
     let mut app = app_with_level(level("speed_factor: 2.0\ngrid:\nC"));
-    let speed = 600.0;
+    let speed = 800.0;
     assert_eq!(app.world().resource::<BallSpeed>().0, speed);
     tap(&mut app, KeyCode::Space);
     let ball = ball(&mut app);
@@ -288,10 +288,10 @@ fn a_changed_level_applies_at_the_next_run_not_mid_board() {
     app.insert_resource(CampaignLevels(vec![level("speed_factor: 2.0\ngrid:\nCCC")]));
     app.update();
     assert_eq!(count::<With<Brick>>(&mut app), 2, "not mid-board");
-    assert_eq!(app.world().resource::<BallSpeed>().0, 300.0);
+    assert_eq!(app.world().resource::<BallSpeed>().0, 400.0);
     restart(&mut app);
     assert_eq!(count::<With<Brick>>(&mut app), 3);
-    assert_eq!(app.world().resource::<BallSpeed>().0, 600.0);
+    assert_eq!(app.world().resource::<BallSpeed>().0, 800.0);
 }
 
 #[test]
