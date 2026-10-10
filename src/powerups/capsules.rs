@@ -11,8 +11,9 @@
 //!
 //! A capsule is drawn in world space, like the HUD in the left panel. From
 //! left to right it has:
-//! - the power-up's icon ([`CapsuleIcon`], skinned with `powerup.png` by
-//!   `sprites`)
+//! - the power-up's icon ([`CapsuleIcon`] with the effect's
+//!   [`PowerUpIcon`] kind, skinned with that kind's capsule image by
+//!   `sprites`; it follows the slot's effect when capsules move up)
 //! - a pill-shaped gauge (light outline, dark pill, `Capsule2d` meshes) whose
 //!   cyan fill drains from the left as time runs out
 //! - the seconds left, e.g. `6.2s`
@@ -25,7 +26,7 @@
 //! comes from the time left, not the clock, so a paused game (whose effect
 //! timers don't tick) freezes the capsules too.
 
-use super::{ActiveEffects, PowerUpKind, TickActiveEffects};
+use super::{ActiveEffects, PowerUpIcon, PowerUpKind, TickActiveEffects};
 use crate::game_state::AppState;
 use crate::plate::{BackingPlate, PLATE_Z};
 use crate::run::{HUD_BLOCK_SPACING, HUD_MARGIN, HUD_RIGHT_X};
@@ -178,7 +179,8 @@ impl Plugin for CapsulesPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, make_capsule_look).add_systems(
             Update,
-            sync_capsules
+            (sync_capsules, sync_capsule_icons)
+                .chain()
                 .after(TickActiveEffects)
                 .run_if(in_state(AppState::InGame))
                 .run_if(resource_exists::<CapsuleLook>),
@@ -238,6 +240,29 @@ fn sync_capsules(
     }
 }
 
+/// Points each capsule's icon at its slot's effect kind, which changes when
+/// an earlier effect ends and the capsules move up (`sprites` then re-skins
+/// it).
+fn sync_capsule_icons(
+    active: Res<ActiveEffects>,
+    capsules: Query<(&Capsule, &Children)>,
+    mut icons: Query<&mut PowerUpIcon, With<CapsuleIcon>>,
+) {
+    let views = capsule_views(&active);
+    for (capsule, children) in &capsules {
+        let Some(view) = views.get(capsule.slot) else {
+            continue;
+        };
+        for child in children.iter() {
+            if let Ok(mut icon) = icons.get_mut(child) {
+                if icon.0 != view.kind {
+                    icon.0 = view.kind;
+                }
+            }
+        }
+    }
+}
+
 /// The fill is anchored at the gauge's right end and shrinks toward it, so
 /// it drains from the left.
 fn set_fill(sprite: &mut Sprite, transform: &mut Transform, view: &CapsuleView) {
@@ -272,6 +297,7 @@ fn spawn_capsule(commands: &mut Commands, look: &CapsuleLook, slot: usize, view:
             ),
             (
                 CapsuleIcon,
+                PowerUpIcon(view.kind),
                 Sprite::from_color(theme::POWER_UP, Vec2::splat(ICON_SIZE)),
                 Transform::from_xyz(ICON_X, 0.0, 0.0),
             ),
