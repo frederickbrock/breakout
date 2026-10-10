@@ -11,6 +11,7 @@ fills in a few nodes, so you can change the look without touching code.
 | `sprite.json` | Sprites: SDXL base + fp16-fix VAE, LoRA `stlbrk_graffiti_v1-step00001500` 0.8 (the project's own graffiti LoRA, sim-7bu.4; recipe in `art/lora/graffiti-v1/`), ControlNet-Union promax (canny/lineart type, strength 0.8, steps 0–80%) fed by the asset-shape silhouette, 50 steps, cfg 10 (sim-7bu.1 sweep, user pick), dpmpp_2m karras |
 | `transparent.json` | Transparent sprites: the `sprite.json` pipeline, then ComfyUI's **built-in** background removal (BiRefNet: `LoadBackgroundRemovalModel` → `RemoveBackground` → `InvertMask` → `JoinImageWithAlpha`) and an RGBA `SaveImage`. No keying, so `artgen process --bg none --trim --size WxH` |
 | `tile_bg.json` | Seamless tiling backgrounds and parallax layers: a private SDXL instance (`unCLIPCheckpointLoader`) + the graffiti LoRA (step 1500 @ 0.8), with its model and VAE made circular (`SeamlessTile`, `MakeCircularVAE`; seamless-tiling pack). No ControlNet; `--size WxH` for wide layers |
+| `img2img.json` | Close variants and recolours **of an existing image**: `--ref <png>` → `VAEEncode` → the custom sampler (`RandomNoise` = `artgen:seed`, `BasicScheduler` = `artgen:denoise`, `CFGGuider` cfg 10, `dpmpp_2m` karras, 50 steps) → `VAEDecode`. Same checkpoint, VAE and graffiti LoRA as `sprite.json`; no ControlNet (the ref is the shape). The latent is the ref itself, snapped by artgen to the SDXL bucket for its aspect (a 160×60 plate → 1536×640) |
 | `ref_style.json` | Keep a picked look: `sprite.json` plus IP-Adapter plus SDXL (`style transfer`, weight 0.6, steps 0–100%) fed by `--ref <png>` through `artgen:ref`, greyscaled first (`art.comfy.ref_prep: grey`). The silhouette still sets the shape |
 
 `.claude/workflow.yaml` → `art.comfy.workflow` says which file the
@@ -29,13 +30,17 @@ graph must keep the titled nodes (right-click a node → *Title*):
 | `artgen:size` | EmptyLatentImage | `width`/`height` ← `--size`, or the SDXL bucket for `--control-size` | |
 | `artgen:control` | LoadImage | `image` ← the uploaded control PNG (`--control-size` silhouette or `--control`) | |
 | `artgen:ref` | LoadImage | `image` ← the uploaded `--ref` image (one only) | |
+| `artgen:denoise` | BasicScheduler (or a KSampler without `artgen:seed`) | `denoise` ← `--denoise` (default 0.45 when the graph has this slot) | img2img |
 | `artgen:output` | SaveImage | the image artgen downloads | |
 
 Slots per graph: `sprite.json` and `transparent.json` have all of the
 above except `artgen:ref`. `ref_style.json` adds `artgen:ref` (a LoadImage
 for the `--ref` image, required for that graph). `tile_bg.json` has prompt,
 negative, seed, size and output: no control, so don't pass
-`--control-size`.
+`--control-size`. `img2img.json` has prompt, negative, seed, ref, denoise
+and output: it needs `--ref`, takes no `--size` or `--control-size`, and
+uses the split sampler so that seed and denoise can each have their own
+titled node.
 
 `artgen comfy-info --workflow art/comfy/sprite.json` lists the slots a file
 has. A missing required slot, or a flag for a slot the graph lacks, fails
@@ -98,6 +103,19 @@ keeps the object to that shape. Comfy rounds cost $0, count toward
   every image (sim-2vw). Any other reference is sent unchanged. `grey` does
   the same and then makes the reference greyscale. `none` sends it as-is.
   `round-N/ref.png` is the prepared image.
+- **Close variants or a recolour of one image** (a pick, or a shipped
+  sprite): `img2img.json --ref <png> --denoise <d>`. How far it moves from
+  the ref (sim-7bu.3 sheet, a titanium plate):
+  - **0.3–0.4:** the same plate with small detail changes. Composition,
+    silhouette and colour all kept.
+  - **0.5–0.6:** new seams, panel lines and wear on the same silhouette.
+  - **0.7 and up:** the prompt takes over; use `sprite.json` instead.
+  - **Recolours:** a colour prompt barely tints a **neutral** source (grey
+    titanium stayed grey at 0.5 and was only faintly violet at a weighted
+    0.65). Run `artgen recolor <in> <out> --color #hex` first, then
+    `img2img.json` at 0.35–0.5 with the colour in the prompt. The tint holds
+    and the plate is re-rendered with its shading and highlights. A source
+    that already has a colour can shift with a colour prompt at 0.5–0.65.
 - **Anything else:** `sprite.json`.
 
 Installed models, node packs and their hashes and licences:
