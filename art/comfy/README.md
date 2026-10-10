@@ -115,7 +115,8 @@ keeps the object to that shape. Comfy rounds cost $0, count toward
     0.65). Run `artgen recolor <in> <out> --color #hex` first, then
     `img2img.json` at 0.35–0.5 with the colour in the prompt. The tint holds
     and the plate is re-rendered with its shading and highlights. A source
-    that already has a colour can shift with a colour prompt at 0.5–0.65.
+    that already has a colour may shift with a colour prompt at 0.5–0.65
+    (not measured in sim-7bu.3).
 - **Anything else:** `sprite.json`.
 
 Installed models, node packs and their hashes and licences:
