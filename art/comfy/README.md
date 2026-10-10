@@ -102,7 +102,10 @@ keeps the object to that shape. Comfy rounds cost $0, count toward
   background to plain light grey (`#d0d0d0`), so the key doesn't bleed into
   every image (sim-2vw). Any other reference is sent unchanged. `grey` does
   the same and then makes the reference greyscale. `none` sends it as-is.
-  `round-N/ref.png` is the prepared image.
+  `round-N/ref.png` is the prepared image. `art.comfy.ref_prep` is for
+  ref-style rounds only. An img2img ref is the start image, so artgen
+  turns `grey` into `auto` there, warns, and records `requested: grey`
+  in `meta.json`'s `ref_prep`.
 - **Close variants or a recolour of one image** (a pick, or a shipped
   sprite): `img2img.json --ref <png> --denoise <d>`. How far it moves from
   the ref (sim-7bu.3 sheet, a titanium plate):
@@ -110,6 +113,10 @@ keeps the object to that shape. Comfy rounds cost $0, count toward
     silhouette and colour all kept.
   - **0.5–0.6:** new seams, panel lines and wear on the same silhouette.
   - **0.7 and up:** the prompt takes over; use `sprite.json` instead.
+  - **Aspect:** the bucket snap stretches the ref to the bucket's aspect,
+    so it isn't uniform. A 160×60 plate (2.67:1) becomes 1536×640 (2.4:1),
+    and the variants come back about 10% narrower. Crop or pad the source
+    close to an SDXL aspect first when the exact proportions matter.
   - **Recolours:** a colour prompt barely tints a **neutral** source (grey
     titanium stayed grey at 0.5 and was only faintly violet at a weighted
     0.65). Run `artgen recolor <in> <out> --color #hex` first, then
