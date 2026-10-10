@@ -65,6 +65,7 @@ flowchart LR
 | 4 | Coder issue for wiring the art | pm | **Approve the spec** (always required) |
 | 5 | Code PR green | pr-manager | **Merge** it |
 | 6 | Polish or feel work | you → pm | Write or edit a **feel brief** in [`docs/vision/`](vision/README.md), then ask the pm to spec it |
+| 7 | Code you want to write yourself | you → pm, then coder | **Human-code lane**: the coder writes failing tests, you implement them (see below) |
 | — | Anything escalated (`needs-human`) | pm / art-director | Decide: raise a limit, clarify, or drop |
 
 Everything between those points runs on its own.
@@ -225,6 +226,34 @@ rewrite: [paddle hit](vision/briefs/paddle-hit.md),
 reads that folder first and turns a brief into a small epic whose acceptance
 criteria use the brief's concrete levers (numbers, not adjectives). Where the
 docs are silent it asks you instead of inventing taste.
+
+**Human-code lane** (sim-w60.2). For small, isolated behaviours you want to
+code yourself to keep your skills sharp. The agents write the tests and you
+write the implementation. Think of it as a kata the team sets for you.
+
+1. **Pick a behaviour.** Tell the pm, or point it at your design notes. It
+   files a spec labelled `human-code` (module, behaviour, the API the tests
+   will call) and you approve it as usual.
+2. **Ask the coder for the tests.** "Write the human-code tests for sim-x."
+   The coder never picks these up by itself: its queue skips `human-code`.
+   It opens a **tests-only draft PR**:
+   - Failing tests that compile against `todo!()` stubs.
+   - A brief at the top of the PR: what to build, where, the API, how to run
+     it.
+   It then hands the issue to you with the label `owner-wip`.
+3. **Implement it** on that PR's branch in your own clone, until
+   `cargo test` and `cargo clippy --all-targets -- -D warnings` pass. Push.
+4. **Hand it to the reviewer** from your clone. The shared beads DB lives in
+   the main checkout, so point `BEADS_DIR` at it:
+   ```bash
+   export BEADS_DIR=~/Projects/breakout/.beads
+   br update sim-x --remove-label owner-wip --add-label stage:review --assignee "" --actor owner
+   ```
+5. From there it's an ordinary PR: reviewer → tester → pr-manager. A bounce
+   comes back to you (`owner-wip` again), not to the coder.
+
+While an issue carries `owner-wip`, no agent touches it. The full protocol is
+in the `beads-queue` skill (*Human-code lane*).
 
 ---
 
