@@ -153,6 +153,20 @@ boundary, and the material was lost (tungsten came out as a blank grey slab).
    from the subject tags.
 3. **Isolation tags** (below).
 
+**Glowing or glyph-like detail** (runes, sigils, symbols, lights; sim-7bu.8,
+sheet `art/concepts/sim-7bu.8/sheet.png`). Written as prose ("glowing magenta
+rune engravings along the seams"), the detail lost to the sprite block: every
+brick got a glowing magenta *edge* and no runes. What brought them back:
+- **Weighted tags right after the material:** `(glowing magenta runes:1.3),
+  (emissive:1.2), glow, rune engravings`. Unweighted tags gave runes only now
+  and then.
+- **For glyph-like detail, drop `lettering, text, letters, numbers` from that
+  round's negative.** Those tags suppress anything that looks like writing. Keep
+  the rest of the negative. With both changes, half of a fresh 4-image round
+  showed glowing rune sigils.
+- **LoRA strength:** the default 0.8 is fine. At 1.0 the runes flattened into
+  plain glowing panels, and 0.6 was no better than 0.8, so no change.
+
 **Positive (backgrounds)**, first in every background or parallax-layer prompt:
 
 ```
