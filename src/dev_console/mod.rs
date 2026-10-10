@@ -12,6 +12,11 @@
 //! - **Ball:** start speed factor, ramp step and max, min vertical share, and
 //!   the current `BallSpeed` (written directly, for instant feel).
 //! - **Paddle:** every `Tuning.paddle` field, and starting lives.
+//! - **Bricks** and **Power-ups** (`sections.rs`): every `Tuning.bricks` and
+//!   `Tuning.powerups` field. Values that only reach bricks spawned after the
+//!   change (hits, fill weights, the fallback board's power-ups) are marked
+//!   *next board*. The sections are written against a small `Controls`
+//!   trait, so a headless test drives every control.
 //! - **Save** writes the whole `Tuning` to `assets/game.tuning.ron`
 //!   (`tuning::tuning_file_text`); the hot reload that follows changes
 //!   nothing.
@@ -24,6 +29,11 @@ use bevy::prelude::*;
 
 pub struct DevConsolePlugin;
 
+#[cfg(all(feature = "dev", debug_assertions, not(target_arch = "wasm32")))]
+mod sections;
+#[cfg(all(test, feature = "dev", debug_assertions, not(target_arch = "wasm32")))]
+mod tests;
+
 impl Plugin for DevConsolePlugin {
     fn build(&self, _app: &mut App) {
         #[cfg(all(feature = "dev", debug_assertions, not(target_arch = "wasm32")))]
@@ -33,6 +43,7 @@ impl Plugin for DevConsolePlugin {
 
 #[cfg(all(feature = "dev", debug_assertions, not(target_arch = "wasm32")))]
 mod imp {
+    use super::sections::{self, Controls};
     use super::*;
     use crate::ball::BallSpeed;
     use crate::controls::PointerCaptured;
@@ -87,6 +98,24 @@ mod imp {
             .changed()
     }
 
+    /// [`Controls`] as egui sliders and checkboxes.
+    struct EguiControls<'a>(&'a mut egui::Ui);
+
+    impl Controls for EguiControls<'_> {
+        fn f32(&mut self, label: &str, value: &mut f32, range: std::ops::RangeInclusive<f32>) {
+            slider(self.0, label, value, range);
+        }
+        fn u32(&mut self, label: &str, value: &mut u32, range: std::ops::RangeInclusive<u32>) {
+            self.0.add(egui::Slider::new(value, range).text(label));
+        }
+        fn toggle(&mut self, label: &str, value: &mut bool) {
+            self.0.checkbox(value, label);
+        }
+        fn heading(&mut self, text: &str) {
+            self.0.label(egui::RichText::new(text).strong());
+        }
+    }
+
     fn panel(
         mut contexts: EguiContexts,
         mut console: ResMut<Console>,
@@ -103,6 +132,7 @@ mod imp {
         let mut reset = false;
         egui::Window::new("Dev console")
             .default_width(320.0)
+            .vscroll(true)
             .show(contexts.ctx_mut()?, |ui| {
                 egui::CollapsingHeader::new("Ball")
                     .default_open(true)
@@ -151,6 +181,16 @@ mod imp {
                         );
                         ui.add(egui::Slider::new(&mut t.ball.lives, 1..=9).text("starting lives"));
                     });
+                egui::CollapsingHeader::new("Bricks").show(ui, |ui| {
+                    ui.weak(format!(
+                        "\"{}\" values apply to bricks spawned after the change.",
+                        sections::NEXT_BOARD.trim_start_matches(" · ")
+                    ));
+                    sections::bricks(&mut EguiControls(ui), &mut t.bricks);
+                });
+                egui::CollapsingHeader::new("Power-ups").show(ui, |ui| {
+                    sections::powerups(&mut EguiControls(ui), &mut t.powerups);
+                });
                 ui.separator();
                 ui.horizontal(|ui| {
                     save = ui.button("Save").clicked();
