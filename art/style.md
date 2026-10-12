@@ -153,6 +153,29 @@ boundary, and the material was lost (tungsten came out as a blank grey slab).
    from the subject tags.
 3. **Isolation tags** (below).
 
+**Glowing or glyph-like detail** (runes, sigils, symbols, lights; sim-7bu.8,
+sheets `art/concepts/sim-7bu.8/sheet.png` and `recount_sheet.png`). Written as
+prose ("glowing magenta rune engravings along the seams"), the detail lost to
+the sprite block: every brick got a glowing magenta *edge* and no runes. The
+prompt can bring the **glyphs** back, but it can't reliably make them
+**glow**:
+- **Weighted tags right after the material**, naming the glyph and its light
+  separately: `(glowing magenta rune sigils:1.5), (runes emitting magenta
+  light:1.3), (magenta glow halo around the runes:1.2), neon, luminous, bloom`.
+  In a fresh 8-image round (seeds 301–308) this put rune glyphs on 7 of 8
+  bricks, but only 3 of 8 glowed; the rest were flat magenta. Weaker forms did
+  worse: `(glowing magenta runes:1.3), (emissive:1.2), glow` gave 0 of 8
+  glowing glyphs, and prose gave none at all.
+- **For glyph-like detail, drop `lettering, text, letters, numbers` from that
+  round's negative.** Those tags suppress anything that looks like writing. Keep
+  the rest of the negative.
+- **The glow lands on edges, not on the glyphs.** Expect a magenta rim on
+  almost every image. When the glyphs themselves must glow, generate several
+  and pick, or paint the glow on afterwards (img2img over a picked plate, or a
+  glow layer in the game).
+- **LoRA strength:** the default 0.8 is fine. At 1.0 the runes flattened into
+  plain glowing panels, and 0.6 was no better than 0.8, so no change.
+
 **Positive (backgrounds)**, first in every background or parallax-layer prompt:
 
 ```
