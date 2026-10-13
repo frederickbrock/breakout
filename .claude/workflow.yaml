@@ -37,6 +37,7 @@ art:                           # art team (art-pipeline skill); defaults listed 
   alt_models: []
   variations: 4
   max_rounds: 5                # per issue, both backends
+  max_refine_rounds: 10        # per issue: refine/variants rounds (img2img on comfy, sim-7bu.7); not counted in max_rounds
   budget_usd: 2.00             # per issue; comfy rounds cost $0
   concepts_dir: art/concepts
   assets_dir: assets
@@ -66,6 +67,7 @@ art:                           # art team (art-pipeline skill); defaults listed 
       transparent: art/comfy/transparent.json
       tile: art/comfy/tile_bg.json
       ref: art/comfy/ref_style.json
+      img2img: art/comfy/img2img.json   # refine / variants rounds of an existing image
     variations: 4
     # Sprite rounds on comfy use workflows.ref (ref_style.json) with a reference
     # from `artgen ref-pick` (same-family shipped asset; brief `ref:` overrides,
