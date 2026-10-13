@@ -284,3 +284,34 @@ fn a_fresh_run_shows_sector_01_in_ink() {
         .collect();
     assert_eq!(sector, [("01".to_string(), theme::INK)]);
 }
+
+// --- sim-w60.3 (human-code kata): format_score ---------------------------
+
+#[test]
+fn format_score_leaves_numbers_under_a_thousand_alone() {
+    assert_eq!(format_score(0), "0");
+    assert_eq!(format_score(7), "7");
+    assert_eq!(format_score(999), "999");
+}
+
+#[test]
+fn format_score_puts_a_comma_before_the_last_three_digits() {
+    assert_eq!(format_score(1000), "1,000");
+    assert_eq!(format_score(12340), "12,340");
+    assert_eq!(format_score(999_999), "999,999");
+}
+
+#[test]
+fn format_score_groups_every_three_digits() {
+    assert_eq!(format_score(1_000_000), "1,000,000");
+    assert_eq!(format_score(1_234_567), "1,234,567");
+    assert_eq!(format_score(i32::MAX), "2,147,483,647");
+}
+
+#[test]
+fn format_score_keeps_a_minus_sign_outside_the_groups() {
+    assert_eq!(format_score(-5), "-5");
+    assert_eq!(format_score(-1234), "-1,234");
+    assert_eq!(format_score(-999_999), "-999,999");
+    assert_eq!(format_score(i32::MIN), "-2,147,483,648");
+}

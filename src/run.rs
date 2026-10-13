@@ -74,6 +74,17 @@ pub(crate) struct Score(pub(crate) i32);
 #[derive(Resource, Default)]
 pub(crate) struct Lives(pub(crate) i32);
 
+/// `score` with a comma every three digits: `1234567` → `"1,234,567"`,
+/// `-1234` → `"-1,234"`.
+///
+/// Human-code kata sim-w60.3: the owner implements this (tests in
+/// `run/tests.rs`). Remove the `allow` once something outside the tests
+/// calls it (the HUD stretch goal).
+#[allow(dead_code)]
+pub(crate) fn format_score(score: i32) -> String {
+    todo!("sim-w60.3: format {score} with thousands separators")
+}
+
 /// Broadcast at the start of every run (entering [`AppState::InGame`]). Each
 /// subsystem that has its own state to reset (currently just power-ups)
 /// registers an observer on this instead of `start_run` reaching into every
