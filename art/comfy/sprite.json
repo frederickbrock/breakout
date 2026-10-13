@@ -162,7 +162,7 @@
       "denoise": 1.0
     },
     "_meta": {
-      "title": "artgen:seed"
+      "title": "artgen:seed,sampler"
     }
   },
   "12": {
