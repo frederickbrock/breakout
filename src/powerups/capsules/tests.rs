@@ -1,4 +1,4 @@
-use super::super::{ActiveEffect, PowerUpCollected};
+use super::super::{ActiveEffect, PowerUpCollected, PowerUpIcon};
 use super::*;
 use crate::test_support::*;
 use crate::world::PLAYFIELD_WIDTH;
@@ -246,4 +246,44 @@ fn each_capsule_has_one_plate_that_goes_with_it() {
     tap(&mut app, KeyCode::Escape);
     crate::menu::test_helpers::press(&mut app, "Main menu");
     assert!(capsule_plates(&mut app).is_empty());
+}
+
+/// Each capsule's icon kind, by slot.
+fn icon_kinds(app: &mut App) -> Vec<PowerUpKind> {
+    let mut found: Vec<(usize, Entity)> = app
+        .world_mut()
+        .query::<(&Capsule, Entity)>()
+        .iter(app.world())
+        .map(|(c, e)| (c.slot, e))
+        .collect();
+    found.sort_by_key(|(slot, _)| *slot);
+    found
+        .into_iter()
+        .map(|(_, capsule)| {
+            let icon = descendant::<CapsuleIcon>(app, capsule);
+            app.world().get::<PowerUpIcon>(icon).unwrap().0
+        })
+        .collect()
+}
+
+#[test]
+fn a_capsule_icon_follows_its_slots_effect_when_capsules_move_up() {
+    let mut app = app();
+    inject(&mut app, &[1.0]);
+    let mut collapse = effect(10.0, 0.0);
+    collapse.kind = PowerUpKind::Collapse;
+    app.world_mut()
+        .resource_mut::<ActiveEffects>()
+        .0
+        .push(collapse);
+    app.update();
+    assert_eq!(
+        icon_kinds(&mut app),
+        [PowerUpKind::SuperSizer, PowerUpKind::Collapse]
+    );
+    for _ in 0..10 {
+        app.update();
+    }
+    // Super-Sizer ran out; slot 0 now shows the Collapse effect's icon.
+    assert_eq!(icon_kinds(&mut app), [PowerUpKind::Collapse]);
 }

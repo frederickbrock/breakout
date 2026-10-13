@@ -51,7 +51,11 @@ fn app_with_sprites(missing: &[&str]) -> App {
         prong_left: image("prong_left"),
         prong_right: image("prong_right"),
         paddle_field: image("paddle_field"),
-        power_up: image("power_up"),
+        power_ups: crate::powerups::PowerUpKind::ALL
+            .into_iter()
+            .filter_map(|kind| Some((kind, image(power_up_path(kind)?))))
+            .collect(),
+        power_up_shell: image(POWER_UP_SHELL_PATH),
         bricks: BrickSprite::ALL.map(|b| image(b.path())),
         damaged: BrickSprite::ALL
             .into_iter()
@@ -128,59 +132,120 @@ fn a_missing_ball_sprite_keeps_the_ball_as_a_circle() {
     );
 }
 
-#[test]
-fn falling_power_ups_get_the_icon_or_keep_their_colour() {
-    use crate::powerups::test_spawn_power_up;
-    let mut app = app_with_sprites(&[]);
-    let power_up = test_spawn_power_up(&mut app);
-    app.update();
-    let icon = app.world().resource::<GameSprites>().power_up.clone();
-    assert_eq!(app.world().get::<Sprite>(power_up).unwrap().image, icon);
+/// The image `kind`'s own capsule handle points at in `app`'s sprites.
+fn own_icon(app: &App, kind: crate::powerups::PowerUpKind) -> Handle<Image> {
+    app.world().resource::<GameSprites>().power_ups[&kind].clone()
+}
 
-    let mut app = app_with_sprites(&["power_up"]);
+#[test]
+fn each_power_up_kind_loads_its_own_capsule_image() {
+    use crate::powerups::PowerUpKind::*;
+    let mut app = App::new();
+    app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+        .init_asset::<Image>()
+        .init_asset::<TextureAtlasLayout>()
+        .add_plugins(SpritesPlugin);
+    app.update();
+    let path = |h: &Handle<Image>| h.path().map(|p| p.path().to_string_lossy().into_owned());
+    let sprites = app.world().resource::<GameSprites>();
+    for (kind, file) in [
+        (SuperSizer, "sprites/powerups/super_sizer.png"),
+        (Collapse, "sprites/powerups/collapse.png"),
+    ] {
+        assert_eq!(path(&sprites.power_ups[&kind]).as_deref(), Some(file));
+    }
+    assert_eq!(
+        path(&sprites.power_up_shell).as_deref(),
+        Some("sprites/powerups/shell.png")
+    );
+}
+
+#[test]
+fn falling_power_ups_draw_their_kinds_image_untinted() {
+    use crate::powerups::{test_spawn_power_up_of, IconTint, PowerUpKind::*};
+    let mut app = app_with_sprites(&[]);
+    let sizer = test_spawn_power_up_of(&mut app, SuperSizer);
+    let collapse = test_spawn_power_up_of(&mut app, Collapse);
+    // Collapse drops with an orange tint; its own art ignores it.
+    app.world_mut()
+        .entity_mut(collapse)
+        .insert(IconTint(theme::POWER_UP_COLLAPSE));
+    app.update();
+    for (entity, kind) in [(sizer, SuperSizer), (collapse, Collapse)] {
+        let sprite = app.world().get::<Sprite>(entity).unwrap();
+        assert_eq!(sprite.image, own_icon(&app, kind), "{kind:?}");
+        assert_eq!(sprite.color, theme::UNTINTED, "{kind:?}");
+    }
+}
+
+#[test]
+fn a_falling_power_up_waits_for_its_image_with_its_flat_colour() {
+    use crate::powerups::test_spawn_power_up;
+    let mut app = app_with_sprites(&["sprites/powerups/super_sizer.png"]);
     let power_up = test_spawn_power_up(&mut app);
     app.update();
     let sprite = app.world().get::<Sprite>(power_up).unwrap();
     assert_ne!(sprite.color, theme::UNTINTED, "keeps its flat colour");
+    assert!(app.world().get::<Skinned>(power_up).is_none());
 }
 
 #[test]
-fn a_tinted_power_up_keeps_its_tint_when_skinned() {
-    use crate::powerups::{test_spawn_power_up, IconTint};
+fn a_kind_without_its_own_image_draws_the_shell_in_its_tint() {
+    use crate::powerups::{test_spawn_power_up, IconTint, PowerUpKind};
     let mut app = app_with_sprites(&[]);
+    app.world_mut()
+        .resource_mut::<GameSprites>()
+        .power_ups
+        .remove(&PowerUpKind::SuperSizer);
     let tinted = test_spawn_power_up(&mut app);
     app.world_mut()
         .entity_mut(tinted)
         .insert(IconTint(theme::POWER_UP_COLLAPSE));
     let plain = test_spawn_power_up(&mut app);
     app.update();
-    let icon = app.world().resource::<GameSprites>().power_up.clone();
+    let shell = app.world().resource::<GameSprites>().power_up_shell.clone();
     let sprite = app.world().get::<Sprite>(tinted).unwrap();
-    assert_eq!(sprite.image, icon);
+    assert_eq!(sprite.image, shell);
     assert_eq!(sprite.color, theme::POWER_UP_COLLAPSE);
-    assert_eq!(
-        app.world().get::<Sprite>(plain).unwrap().color,
-        theme::UNTINTED
-    );
+    let sprite = app.world().get::<Sprite>(plain).unwrap();
+    assert_eq!(sprite.image, shell);
+    assert_eq!(sprite.color, theme::UNTINTED);
 }
 
 #[test]
-fn time_capsule_icons_use_the_power_up_image() {
+fn a_time_capsule_icon_draws_its_effects_image() {
     use crate::powerups::capsules::CapsuleIcon;
+    use crate::powerups::{PowerUpCollected, PowerUpKind::SuperSizer};
     let mut app = app_with_sprites(&[]);
-    app.world_mut().trigger(crate::powerups::PowerUpCollected {
-        kind: crate::powerups::PowerUpKind::SuperSizer,
-    });
+    app.world_mut()
+        .trigger(PowerUpCollected { kind: SuperSizer });
     app.update(); // the capsule spawns
     app.update(); // and is skinned
-    let icon = app.world().resource::<GameSprites>().power_up.clone();
     let images: Vec<_> = app
         .world_mut()
         .query_filtered::<&Sprite, With<CapsuleIcon>>()
         .iter(app.world())
-        .map(|s| s.image.clone())
+        .map(|s| (s.image.clone(), s.color))
         .collect();
-    assert_eq!(images, [icon]);
+    assert_eq!(images, [(own_icon(&app, SuperSizer), theme::UNTINTED)]);
+}
+
+#[test]
+fn an_icon_whose_kind_changes_is_skinned_again() {
+    use crate::powerups::{test_spawn_power_up, PowerUpIcon, PowerUpKind::*};
+    let mut app = app_with_sprites(&[]);
+    let icon = test_spawn_power_up(&mut app);
+    app.update();
+    assert_eq!(
+        app.world().get::<Sprite>(icon).unwrap().image,
+        own_icon(&app, SuperSizer)
+    );
+    app.world_mut().get_mut::<PowerUpIcon>(icon).unwrap().0 = Collapse;
+    app.update();
+    assert_eq!(
+        app.world().get::<Sprite>(icon).unwrap().image,
+        own_icon(&app, Collapse)
+    );
 }
 
 #[test]
@@ -346,7 +411,9 @@ fn the_ball_paddle_and_power_up_asset_contract_holds() {
         (PRONG_LEFT_PATH, (54, 40)),
         (PRONG_RIGHT_PATH, (54, 40)),
         (PADDLE_FIELD_PATH, (93, 40)),
-        (POWER_UP_PATH, (48, 48)),
+        ("sprites/powerups/super_sizer.png", (48, 48)),
+        ("sprites/powerups/collapse.png", (48, 48)),
+        (POWER_UP_SHELL_PATH, (48, 48)),
     ] {
         assert_eq!(png_size(path), size, "{path}");
     }

@@ -49,12 +49,23 @@ pub type PowerUpSpawner = Spawner<PowerUpKind>;
 /// Every power-up type. Adding a new power-up: add a variant here, and a new
 /// file/module (see [`super_sizer`]) with its own `Plugin` that registers
 /// itself with [`PowerUpSpawner`] and reacts to [`PowerUpCollected`].
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum PowerUpKind {
     SuperSizer,
     /// Every column of bricks drops down to fill its gaps (see [`collapse`]).
     Collapse,
 }
+
+impl PowerUpKind {
+    /// Every kind, e.g. to load each one's icon.
+    pub const ALL: [PowerUpKind; 2] = [PowerUpKind::SuperSizer, PowerUpKind::Collapse];
+}
+
+/// Which kind's icon an entity draws: on a falling [`PowerUp`] and on a
+/// time capsule's icon (whose kind changes when the capsules move up a
+/// slot). `sprites` skins it with that kind's image.
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct PowerUpIcon(pub(crate) PowerUpKind);
 
 #[derive(Component)]
 pub struct PowerUp {
@@ -239,6 +250,7 @@ fn drop_power_up(
         Sprite::from_color(color, Vec2::splat(POWER_UP_SIZE)),
         Transform::from_xyz(on.position.x, on.position.y, 0.5),
         IconTint(tint),
+        PowerUpIcon(kind),
         PowerUp {
             kind,
             velocity: Vec2::ZERO,
@@ -322,12 +334,19 @@ fn reset_on_level_start(
 /// sprite included), for tests in other modules.
 #[cfg(test)]
 pub(crate) fn test_spawn_power_up(app: &mut App) -> Entity {
+    test_spawn_power_up_of(app, PowerUpKind::SuperSizer)
+}
+
+/// [`test_spawn_power_up`] for a given kind.
+#[cfg(test)]
+pub(crate) fn test_spawn_power_up_of(app: &mut App, kind: PowerUpKind) -> Entity {
     app.world_mut()
         .spawn((
             Sprite::from_color(crate::theme::POWER_UP, Vec2::splat(POWER_UP_SIZE)),
             Transform::from_xyz(0.0, 200.0, 0.5),
+            PowerUpIcon(kind),
             PowerUp {
-                kind: PowerUpKind::SuperSizer,
+                kind,
                 velocity: Vec2::ZERO,
                 gravity: BASE_GRAVITY,
             },
