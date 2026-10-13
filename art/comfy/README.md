@@ -25,13 +25,23 @@ graph must keep the titled nodes (right-click a node → *Title*):
 | Title | Node | artgen sets | |
 |---|---|---|---|
 | `artgen:prompt` | CLIPTextEncode | `text` ← the prompt file | required |
-| `artgen:seed` | KSampler | `seed` (one per variation) | required |
+| `artgen:seed` | KSampler (or `RandomNoise`) | `seed` (one per variation) | required |
 | `artgen:negative` | CLIPTextEncode | `text` ← `--negative-file` | |
 | `artgen:size` | EmptyLatentImage | `width`/`height` ← `--size`, or the SDXL bucket for `--control-size` | |
 | `artgen:control` | LoadImage | `image` ← the uploaded control PNG (`--control-size` silhouette or `--control`) | |
 | `artgen:ref` | LoadImage | `image` ← the uploaded `--ref` image (one only) | |
 | `artgen:denoise` | BasicScheduler (or a KSampler without `artgen:seed`) | `denoise` ← `--denoise` (default 0.45 when the graph has this slot) | img2img |
+| `artgen:sampler` | KSampler, or a split sampler's `BasicScheduler` and `CFGGuider` | `steps` ← `--steps` (1–200), `cfg` ← `--cfg` (above 0, at most 30); unset keeps the graph's value | refine rounds |
 | `artgen:output` | SaveImage | the image artgen downloads | |
+
+**One node, several slots.** A title can list slots separated by commas:
+the KSampler in `sprite.json` is `artgen:seed,sampler`. `artgen:sampler` is
+the only slot that may sit on more than one node, because the split sampler
+in `img2img.json` keeps steps (`BasicScheduler`, titled `artgen:denoise,sampler`)
+and cfg (`CFGGuider`, titled `artgen:sampler`) apart. `--steps` sets every
+sampler node that has a `steps` input and `--cfg` every one with a `cfg`
+input; a flag none of them can take is an error. `meta.json` records the
+steps and cfg the round ran with, overridden or not.
 
 Slots per graph: `sprite.json` and `transparent.json` have all of the
 above except `artgen:ref`. `ref_style.json` adds `artgen:ref` (a LoadImage
@@ -40,7 +50,7 @@ negative, seed, size and output: no control, so don't pass
 `--control-size`. `img2img.json` has prompt, negative, seed, ref, denoise
 and output: it needs `--ref`, takes no `--size` or `--control-size`, and
 uses the split sampler so that seed and denoise can each have their own
-titled node.
+titled node. All five graphs carry `artgen:sampler`.
 
 `artgen comfy-info --workflow art/comfy/sprite.json` lists the slots a file
 has. A missing required slot, or a flag for a slot the graph lacks, fails
@@ -124,6 +134,12 @@ keeps the object to that shape. Comfy rounds cost $0, count toward
     and the plate is re-rendered with its shading and highlights. A source
     that already has a colour may shift with a colour prompt at 0.5–0.65
     (not measured in sim-7bu.3).
+- **Refine a pick, variants of a pick, refine shipped art** (sim-7bu.7):
+  `img2img.json --ref <image> --refine refine|variants --refine-from <r3/v2 or
+  asset path>` with the `--denoise`, `--steps` and `--cfg` the user chose.
+  The round's sheet shows the source next to the results. These rounds don't
+  count toward `art.max_rounds`; they have their own `art.max_refine_rounds`
+  in `.claude/workflow.yaml`.
 - **Anything else:** `sprite.json`.
 
 Installed models, node packs and their hashes and licences:
